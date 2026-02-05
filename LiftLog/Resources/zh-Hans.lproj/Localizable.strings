@@ -1,0 +1,154 @@
+/* Tab Bar */
+"tab.today" = "今日";
+"tab.history" = "历史";
+"tab.exercises" = "动作";
+"tab.progress" = "进度";
+"tab.settings" = "设置";
+
+/* Today View */
+"today.noWorkout" = "今日还没有训练";
+"today.noWorkoutDescription" = "点击 + 按钮记录你的第一组训练";
+"today.sets" = "组数";
+"today.volume" = "容量 (kg)";
+"today.exercises" = "动作数";
+"today.addAnotherSet" = "添加下一组";
+"today.duplicate" = "复制";
+
+/* Add Set View */
+"addSet.title" = "记录训练";
+"addSet.exercise" = "动作";
+"addSet.searchExercises" = "搜索动作...";
+"addSet.change" = "更换";
+"addSet.weight" = "重量 (kg)";
+"addSet.reps" = "次数";
+"addSet.notes" = "备注（可选）";
+"addSet.addNote" = "添加备注...";
+"addSet.summary" = "汇总";
+"addSet.setNumber" = "第 %d 组";
+"addSet.volumeLabel" = "容量: %d kg";
+"addSet.est1RM" = "预估极限";
+"addSet.cancel" = "取消";
+"addSet.save" = "保存";
+"addSet.saveAndAddAnother" = "保存并继续添加";
+"addSet.saveAndClose" = "保存并关闭";
+"addSet.savedSet" = "第 %d 组已保存!";
+
+/* Edit Set View */
+"editSet.title" = "编辑训练组";
+
+/* Exercise List View */
+"exercises.title" = "动作库";
+"exercises.search" = "搜索动作";
+"exercises.noExercises" = "暂无动作";
+"exercises.noExercisesDescription" = "点击 + 添加你的第一个动作";
+"exercises.sessions" = "%d 次训练";
+
+/* Exercise Edit View */
+"exerciseEdit.newTitle" = "新建动作";
+"exerciseEdit.editTitle" = "编辑动作";
+"exerciseEdit.name" = "名称";
+"exerciseEdit.namePlaceholder" = "动作名称";
+"exerciseEdit.muscleGroup" = "目标肌群";
+"exerciseEdit.muscleGroupNone" = "无";
+"exerciseEdit.notes" = "备注";
+"exerciseEdit.notesPlaceholder" = "动作要点、技巧、注意事项...";
+"exerciseEdit.delete" = "删除动作";
+"exerciseEdit.deleteAlert" = "确定删除？";
+"exerciseEdit.deleteMessage" = "这将同时删除该动作的所有训练记录，此操作无法撤销。";
+"exerciseEdit.cancel" = "取消";
+"exerciseEdit.save" = "保存";
+
+/* Exercise Detail View */
+"exerciseDetail.done" = "完成";
+"exerciseDetail.edit" = "编辑";
+"exerciseDetail.muscleGroup" = "目标肌群";
+"exerciseDetail.notes" = "备注";
+"exerciseDetail.created" = "创建时间";
+"exerciseDetail.statistics" = "统计数据";
+"exerciseDetail.timesPerformed" = "训练次数";
+"exerciseDetail.sessionsUnit" = "%d 次";
+"exerciseDetail.personalRecord" = "个人记录";
+"exerciseDetail.totalVolume" = "总容量";
+"exerciseDetail.totalSets" = "总组数";
+"exerciseDetail.recentActivity" = "最近训练";
+
+/* History View */
+"history.title" = "历史";
+"history.week" = "本周";
+"history.month" = "本月";
+"history.trainingDays" = "训练天数";
+"history.totalVolume" = "总容量 (kg)";
+"history.noWorkouts" = "暂无记录";
+"history.noWorkoutsDescription" = "该时段内没有训练记录";
+"history.today" = "今天";
+"history.sets" = "%d 组";
+
+/* Day Detail View */
+"dayDetail.done" = "完成";
+"dayDetail.sets" = "组数";
+"dayDetail.exercises" = "动作数";
+"dayDetail.volume" = "容量 (kg)";
+"dayDetail.subtotal" = "小计";
+"dayDetail.setsVolume" = "%d 组 • %d kg";
+
+/* Progress View */
+"progress.title" = "进度";
+"progress.noExercises" = "暂无动作";
+"progress.noExercisesDescription" = "添加动作以追踪你的进步";
+"progress.selectExercise" = "选择动作";
+"progress.selectExerciseDescription" = "在上方选择一个动作查看进度";
+"progress.noData" = "暂无数据";
+"progress.noDataDescription" = "记录该动作的训练数据后可查看进度图表";
+"progress.volumePerSession" = "每次训练容量";
+"progress.maxWeightPerSession" = "每次训练最大重量";
+"progress.estimated1RM" = "预估极限重量 (Epley)";
+"progress.personalRecord" = "个人记录";
+"progress.bestVolume" = "最佳容量";
+"progress.lifetimeVolume" = "累计容量";
+"progress.avgReps" = "平均次数";
+"progress.sessionsPerWeek" = "周训练频率";
+"progress.totalSets" = "总组数";
+
+/* Time Ranges */
+"timeRange.1M" = "1月";
+"timeRange.3M" = "3月";
+"timeRange.6M" = "6月";
+"timeRange.1Y" = "1年";
+"timeRange.all" = "全部";
+
+/* Muscle Groups */
+"muscle.chest" = "胸部";
+"muscle.back" = "背部";
+"muscle.shoulders" = "肩部";
+"muscle.arms" = "手臂";
+"muscle.legs" = "腿部";
+"muscle.core" = "核心";
+"muscle.other" = "其他";
+
+/* Settings View */
+"settings.title" = "设置";
+"settings.language" = "语言";
+"settings.languageSection" = "语言设置";
+"settings.followSystem" = "跟随系统";
+"settings.english" = "English";
+"settings.chinese" = "简体中文";
+"settings.workoutSection" = "训练";
+"settings.defaultSet" = "默认组数据";
+"settings.defaultSet.first" = "第一组（热身组）";
+"settings.defaultSet.last" = "最后一组（正式组）";
+"settings.defaultSet.firstDesc" = "使用上次训练的第一组重量和次数";
+"settings.defaultSet.lastDesc" = "使用上次训练的最后一组重量和次数";
+"settings.defaultSetFooter" = "新的一天开始训练时，使用上次训练的这组数据作为默认值";
+"settings.about" = "关于";
+"settings.version" = "版本";
+"settings.appName" = "LiftLog";
+
+/* Common */
+"common.cancel" = "取消";
+"common.save" = "保存";
+"common.delete" = "删除";
+"common.done" = "完成";
+"common.edit" = "编辑";
+"common.kg" = "公斤";
+"common.reps" = "次";
+"common.set" = "第 %d 组";

@@ -1,0 +1,154 @@
+/* Tab Bar */
+"tab.today" = "Today";
+"tab.history" = "History";
+"tab.exercises" = "Exercises";
+"tab.progress" = "Progress";
+"tab.settings" = "Settings";
+
+/* Today View */
+"today.noWorkout" = "No Workout Yet";
+"today.noWorkoutDescription" = "Tap the + button to log your first set";
+"today.sets" = "Sets";
+"today.volume" = "Volume (kg)";
+"today.exercises" = "Exercises";
+"today.addAnotherSet" = "Add another set";
+"today.duplicate" = "Duplicate";
+
+/* Add Set View */
+"addSet.title" = "Log Set";
+"addSet.exercise" = "Exercise";
+"addSet.searchExercises" = "Search exercises...";
+"addSet.change" = "Change";
+"addSet.weight" = "Weight (kg)";
+"addSet.reps" = "Reps";
+"addSet.notes" = "Notes (Optional)";
+"addSet.addNote" = "Add a note...";
+"addSet.summary" = "Summary";
+"addSet.setNumber" = "Set #%d";
+"addSet.volumeLabel" = "Volume: %d kg";
+"addSet.est1RM" = "Est. 1RM";
+"addSet.cancel" = "Cancel";
+"addSet.save" = "Save";
+"addSet.saveAndAddAnother" = "Save & Add Another";
+"addSet.saveAndClose" = "Save & Close";
+"addSet.savedSet" = "Set %d saved!";
+
+/* Edit Set View */
+"editSet.title" = "Edit Set";
+
+/* Exercise List View */
+"exercises.title" = "Exercises";
+"exercises.search" = "Search exercises";
+"exercises.noExercises" = "No Exercises";
+"exercises.noExercisesDescription" = "Tap + to add your first exercise";
+"exercises.sessions" = "%d sessions";
+
+/* Exercise Edit View */
+"exerciseEdit.newTitle" = "New Exercise";
+"exerciseEdit.editTitle" = "Edit Exercise";
+"exerciseEdit.name" = "Name";
+"exerciseEdit.namePlaceholder" = "Exercise name";
+"exerciseEdit.muscleGroup" = "Muscle Group";
+"exerciseEdit.muscleGroupNone" = "None";
+"exerciseEdit.notes" = "Notes";
+"exerciseEdit.notesPlaceholder" = "Form cues, tips, instructions...";
+"exerciseEdit.delete" = "Delete Exercise";
+"exerciseEdit.deleteAlert" = "Delete Exercise?";
+"exerciseEdit.deleteMessage" = "This will also delete all workout sets for this exercise. This action cannot be undone.";
+"exerciseEdit.cancel" = "Cancel";
+"exerciseEdit.save" = "Save";
+
+/* Exercise Detail View */
+"exerciseDetail.done" = "Done";
+"exerciseDetail.edit" = "Edit";
+"exerciseDetail.muscleGroup" = "Muscle Group";
+"exerciseDetail.notes" = "Notes";
+"exerciseDetail.created" = "Created";
+"exerciseDetail.statistics" = "Statistics";
+"exerciseDetail.timesPerformed" = "Times Performed";
+"exerciseDetail.sessionsUnit" = "%d sessions";
+"exerciseDetail.personalRecord" = "Personal Record";
+"exerciseDetail.totalVolume" = "Total Volume";
+"exerciseDetail.totalSets" = "Total Sets";
+"exerciseDetail.recentActivity" = "Recent Activity";
+
+/* History View */
+"history.title" = "History";
+"history.week" = "Week";
+"history.month" = "Month";
+"history.trainingDays" = "Training Days";
+"history.totalVolume" = "Total Volume (kg)";
+"history.noWorkouts" = "No Workouts";
+"history.noWorkoutsDescription" = "No workouts recorded in this period";
+"history.today" = "Today";
+"history.sets" = "%d sets";
+
+/* Day Detail View */
+"dayDetail.done" = "Done";
+"dayDetail.sets" = "Sets";
+"dayDetail.exercises" = "Exercises";
+"dayDetail.volume" = "Volume (kg)";
+"dayDetail.subtotal" = "Subtotal";
+"dayDetail.setsVolume" = "%d sets • %d kg";
+
+/* Progress View */
+"progress.title" = "Progress";
+"progress.noExercises" = "No Exercises";
+"progress.noExercisesDescription" = "Add exercises to track your progress";
+"progress.selectExercise" = "Select an Exercise";
+"progress.selectExerciseDescription" = "Choose an exercise above to view progress";
+"progress.noData" = "No Data";
+"progress.noDataDescription" = "Log some sets for this exercise to see progress charts";
+"progress.volumePerSession" = "Volume per Session";
+"progress.maxWeightPerSession" = "Max Weight per Session";
+"progress.estimated1RM" = "Estimated 1RM (Epley)";
+"progress.personalRecord" = "Personal Record";
+"progress.bestVolume" = "Best Volume";
+"progress.lifetimeVolume" = "Lifetime Volume";
+"progress.avgReps" = "Avg Reps";
+"progress.sessionsPerWeek" = "Sessions/Week";
+"progress.totalSets" = "Total Sets";
+
+/* Time Ranges */
+"timeRange.1M" = "1M";
+"timeRange.3M" = "3M";
+"timeRange.6M" = "6M";
+"timeRange.1Y" = "1Y";
+"timeRange.all" = "All";
+
+/* Muscle Groups */
+"muscle.chest" = "Chest";
+"muscle.back" = "Back";
+"muscle.shoulders" = "Shoulders";
+"muscle.arms" = "Arms";
+"muscle.legs" = "Legs";
+"muscle.core" = "Core";
+"muscle.other" = "Other";
+
+/* Settings View */
+"settings.title" = "Settings";
+"settings.language" = "Language";
+"settings.languageSection" = "Language";
+"settings.followSystem" = "Follow System";
+"settings.english" = "English";
+"settings.chinese" = "简体中文";
+"settings.workoutSection" = "Workout";
+"settings.defaultSet" = "Default Set";
+"settings.defaultSet.first" = "First Set (Warm-up)";
+"settings.defaultSet.last" = "Last Set (Working)";
+"settings.defaultSet.firstDesc" = "Use previous day's first set weight and reps";
+"settings.defaultSet.lastDesc" = "Use previous day's last set weight and reps";
+"settings.defaultSetFooter" = "When starting a new day, use this set from the previous session as the default";
+"settings.about" = "About";
+"settings.version" = "Version";
+"settings.appName" = "LiftLog";
+
+/* Common */
+"common.cancel" = "Cancel";
+"common.save" = "Save";
+"common.delete" = "Delete";
+"common.done" = "Done";
+"common.edit" = "Edit";
+"common.kg" = "kg";
+"common.reps" = "reps";
+"common.set" = "Set %d";
