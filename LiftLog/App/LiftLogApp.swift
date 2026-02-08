@@ -16,7 +16,18 @@ struct LiftLogApp: App {
         do {
             return try ModelContainer(for: schema, configurations: [modelConfiguration])
         } catch {
-            fatalError("Could not create ModelContainer: \(error)")
+            // Migration failed — delete the old store and recreate
+            let url = modelConfiguration.url
+            print("ModelContainer migration failed, deleting store at \(url): \(error)")
+            try? FileManager.default.removeItem(at: url)
+            // Also remove journal/wal files
+            try? FileManager.default.removeItem(at: url.appendingPathExtension("shm"))
+            try? FileManager.default.removeItem(at: url.appendingPathExtension("wal"))
+            do {
+                return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            } catch {
+                fatalError("Could not create ModelContainer: \(error)")
+            }
         }
     }()
 
@@ -36,10 +47,24 @@ struct LiftLogApp: App {
 
         do {
             let existingExercises = try context.fetch(descriptor)
-            if existingExercises.isEmpty {
-                for exercise in Exercise.sampleExercises() {
+            let existingNames = Set(existingExercises.map { $0.name })
+
+            var changed = false
+            for exercise in Exercise.sampleExercises() {
+                if !existingNames.contains(exercise.name) {
                     context.insert(exercise)
+                    changed = true
                 }
+            }
+
+            // Update existing Plank to timeOnly if it's still weightReps
+            if let plank = existingExercises.first(where: { $0.name == "Plank" }),
+               plank.exerciseType == "weightReps" {
+                plank.exerciseType = "timeOnly"
+                changed = true
+            }
+
+            if changed {
                 try context.save()
             }
         } catch {

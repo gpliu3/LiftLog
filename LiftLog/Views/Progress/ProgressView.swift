@@ -53,6 +53,10 @@ struct ProgressChartView: View {
         return sets.sorted { $0.date < $1.date }
     }
 
+    private var currentExerciseType: String {
+        selectedExercise?.exerciseType ?? "weightReps"
+    }
+
     private var sessionData: [(Date, Double, Double, Double)] {
         let calendar = Calendar.current
         let grouped = Dictionary(grouping: filteredSets) { set in
@@ -67,8 +71,44 @@ struct ProgressChartView: View {
         }.sorted { $0.0 < $1.0 }
     }
 
+    // Duration session data: (date, maxDuration)
+    private var durationSessionData: [(Date, Int)] {
+        let calendar = Calendar.current
+        let grouped = Dictionary(grouping: filteredSets) { set in
+            calendar.startOfDay(for: set.date)
+        }
+        return grouped.map { (date, sets) in
+            let maxDuration = sets.map { $0.durationSeconds }.max() ?? 0
+            return (date, maxDuration)
+        }.sorted { $0.0 < $1.0 }
+    }
+
+    // Reps session data: (date, totalReps)
+    private var repsSessionData: [(Date, Int)] {
+        let calendar = Calendar.current
+        let grouped = Dictionary(grouping: filteredSets) { set in
+            calendar.startOfDay(for: set.date)
+        }
+        return grouped.map { (date, sets) in
+            let totalReps = sets.reduce(0) { $0 + $1.reps }
+            return (date, totalReps)
+        }.sorted { $0.0 < $1.0 }
+    }
+
     private var personalRecord: Double? {
         filteredSets.map { $0.weightKg }.max()
+    }
+
+    private var bestDuration: Int? {
+        filteredSets.map { $0.durationSeconds }.max()
+    }
+
+    private var bestRepsInSession: Int? {
+        let calendar = Calendar.current
+        let grouped = Dictionary(grouping: filteredSets) { calendar.startOfDay(for: $0.date) }
+        return grouped.values.map { sets in
+            sets.reduce(0) { $0 + $1.reps }
+        }.max()
     }
 
     private var bestVolume: Double? {
@@ -81,6 +121,10 @@ struct ProgressChartView: View {
 
     private var totalLifetimeVolume: Double {
         selectedExercise?.workoutSets.reduce(0) { $0 + $1.volume } ?? 0
+    }
+
+    private var totalLifetimeReps: Int {
+        selectedExercise?.workoutSets.reduce(0) { $0 + $1.reps } ?? 0
     }
 
     private var averageReps: Double {
@@ -147,7 +191,7 @@ struct ProgressChartView: View {
                     Button {
                         selectedExercise = exercise
                     } label: {
-                        Text(exercise.name)
+                        Text(exercise.displayName)
                             .font(.subheadline)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
@@ -184,14 +228,24 @@ struct ProgressChartView: View {
     private var progressContent: some View {
         ScrollView {
             VStack(spacing: 20) {
-                volumeChart
-                maxWeightChart
-                oneRMChart
-                statsCards
+                if currentExerciseType == "weightReps" {
+                    volumeChart
+                    maxWeightChart
+                    oneRMChart
+                    weightRepsStatsCards
+                } else if currentExerciseType == "timeOnly" {
+                    durationChart
+                    timeOnlyStatsCards
+                } else {
+                    repsChart
+                    repsOnlyStatsCards
+                }
             }
             .padding()
         }
     }
+
+    // MARK: - Weight × Reps Charts
 
     private var volumeChart: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -277,7 +331,77 @@ struct ProgressChartView: View {
         .cornerRadius(12)
     }
 
-    private var statsCards: some View {
+    // MARK: - Time Only Chart
+
+    private var durationChart: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("progress.durationPerSession".localized)
+                .font(.headline)
+
+            Chart(durationSessionData, id: \.0) { item in
+                LineMark(
+                    x: .value("Date", item.0),
+                    y: .value("Duration", item.1)
+                )
+                .foregroundStyle(Color.orange)
+
+                AreaMark(
+                    x: .value("Date", item.0),
+                    y: .value("Duration", item.1)
+                )
+                .foregroundStyle(Color.orange.opacity(0.1))
+
+                PointMark(
+                    x: .value("Date", item.0),
+                    y: .value("Duration", item.1)
+                )
+                .foregroundStyle(Color.orange)
+            }
+            .frame(height: 200)
+            .chartYAxisLabel("common.seconds".localized)
+        }
+        .padding()
+        .background(Color(.secondarySystemBackground))
+        .cornerRadius(12)
+    }
+
+    // MARK: - Reps Only Chart
+
+    private var repsChart: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("progress.repsPerSession".localized)
+                .font(.headline)
+
+            Chart(repsSessionData, id: \.0) { item in
+                LineMark(
+                    x: .value("Date", item.0),
+                    y: .value("Reps", item.1)
+                )
+                .foregroundStyle(Color.orange)
+
+                AreaMark(
+                    x: .value("Date", item.0),
+                    y: .value("Reps", item.1)
+                )
+                .foregroundStyle(Color.orange.opacity(0.1))
+
+                PointMark(
+                    x: .value("Date", item.0),
+                    y: .value("Reps", item.1)
+                )
+                .foregroundStyle(Color.orange)
+            }
+            .frame(height: 200)
+            .chartYAxisLabel("common.reps".localized)
+        }
+        .padding()
+        .background(Color(.secondarySystemBackground))
+        .cornerRadius(12)
+    }
+
+    // MARK: - Stats Cards
+
+    private var weightRepsStatsCards: some View {
         LazyVGrid(columns: [
             GridItem(.flexible()),
             GridItem(.flexible())
@@ -291,6 +415,36 @@ struct ProgressChartView: View {
             }
 
             StatCard(title: "progress.lifetimeVolume".localized, value: "\(Int(totalLifetimeVolume)) kg", icon: "sum", color: .blue)
+            StatCard(title: "progress.avgReps".localized, value: String(format: "%.1f", averageReps), icon: "repeat", color: .purple)
+            StatCard(title: "progress.sessionsPerWeek".localized, value: String(format: "%.1f", sessionsPerWeek), icon: "calendar", color: .green)
+            StatCard(title: "progress.totalSets".localized, value: "\(filteredSets.count)", icon: "number", color: .indigo)
+        }
+    }
+
+    private var timeOnlyStatsCards: some View {
+        LazyVGrid(columns: [
+            GridItem(.flexible()),
+            GridItem(.flexible())
+        ], spacing: 12) {
+            if let best = bestDuration, best > 0 {
+                StatCard(title: "progress.bestDuration".localized, value: WorkoutSet.formatDuration(best), icon: "trophy.fill", color: .yellow)
+            }
+
+            StatCard(title: "progress.sessionsPerWeek".localized, value: String(format: "%.1f", sessionsPerWeek), icon: "calendar", color: .green)
+            StatCard(title: "progress.totalSets".localized, value: "\(filteredSets.count)", icon: "number", color: .indigo)
+        }
+    }
+
+    private var repsOnlyStatsCards: some View {
+        LazyVGrid(columns: [
+            GridItem(.flexible()),
+            GridItem(.flexible())
+        ], spacing: 12) {
+            if let best = bestRepsInSession {
+                StatCard(title: "progress.bestReps".localized, value: "\(best)", icon: "trophy.fill", color: .yellow)
+            }
+
+            StatCard(title: "progress.totalReps".localized, value: "\(totalLifetimeReps)", icon: "sum", color: .blue)
             StatCard(title: "progress.avgReps".localized, value: String(format: "%.1f", averageReps), icon: "repeat", color: .purple)
             StatCard(title: "progress.sessionsPerWeek".localized, value: String(format: "%.1f", sessionsPerWeek), icon: "calendar", color: .green)
             StatCard(title: "progress.totalSets".localized, value: "\(filteredSets.count)", icon: "number", color: .indigo)

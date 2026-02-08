@@ -8,6 +8,7 @@ struct ExerciseEditView: View {
     let exercise: Exercise?
 
     @State private var name: String = ""
+    @State private var exerciseType: String = "weightReps"
     @State private var muscleGroup: String = ""
     @State private var notes: String = ""
     @State private var showingDeleteAlert = false
@@ -28,6 +29,15 @@ struct ExerciseEditView: View {
                         .textInputAutocapitalization(.words)
                 }
 
+                Section("exerciseEdit.exerciseType".localized) {
+                    Picker("exerciseEdit.exerciseType".localized, selection: $exerciseType) {
+                        ForEach(Exercise.localizedExerciseTypes, id: \.key) { type in
+                            Text(type.display).tag(type.key)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
+
                 Section("exerciseEdit.muscleGroup".localized) {
                     Picker("exerciseEdit.muscleGroup".localized, selection: $muscleGroup) {
                         Text("exerciseEdit.muscleGroupNone".localized).tag("")
@@ -39,8 +49,17 @@ struct ExerciseEditView: View {
                 }
 
                 Section("exerciseEdit.notes".localized) {
-                    TextField("exerciseEdit.notesPlaceholder".localized, text: $notes, axis: .vertical)
+                    let defaultNotes = exercise?.displayNotes ?? ""
+                    let placeholder = !defaultNotes.isEmpty && notes.isEmpty
+                        ? defaultNotes
+                        : "exerciseEdit.notesPlaceholder".localized
+                    TextField(placeholder, text: $notes, axis: .vertical)
                         .lineLimit(3...6)
+                    if !defaultNotes.isEmpty && notes.isEmpty {
+                        Text("exerciseEdit.defaultNotesHint".localized)
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
                 }
 
                 if isEditing {
@@ -78,6 +97,7 @@ struct ExerciseEditView: View {
             .onAppear {
                 if let exercise = exercise {
                     name = exercise.name
+                    exerciseType = exercise.exerciseType
                     muscleGroup = exercise.muscleGroup
                     notes = exercise.notes
                 }
@@ -89,6 +109,7 @@ struct ExerciseEditView: View {
         if let exercise = exercise {
             // Update existing
             exercise.name = name.trimmingCharacters(in: .whitespaces)
+            exercise.exerciseType = exerciseType
             exercise.muscleGroup = muscleGroup
             exercise.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
         } else {
@@ -96,7 +117,8 @@ struct ExerciseEditView: View {
             let newExercise = Exercise(
                 name: name.trimmingCharacters(in: .whitespaces),
                 notes: notes.trimmingCharacters(in: .whitespacesAndNewlines),
-                muscleGroup: muscleGroup
+                muscleGroup: muscleGroup,
+                exerciseType: exerciseType
             )
             modelContext.insert(newExercise)
         }

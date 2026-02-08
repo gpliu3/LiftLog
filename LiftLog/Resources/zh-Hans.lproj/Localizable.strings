@@ -52,6 +52,7 @@
 "exerciseEdit.muscleGroupNone" = "无";
 "exerciseEdit.notes" = "备注";
 "exerciseEdit.notesPlaceholder" = "动作要点、技巧、注意事项...";
+"exerciseEdit.defaultNotesHint" = "留空则使用默认备注";
 "exerciseEdit.delete" = "删除动作";
 "exerciseEdit.deleteAlert" = "确定删除？";
 "exerciseEdit.deleteMessage" = "这将同时删除该动作的所有训练记录，此操作无法撤销。";
@@ -116,6 +117,50 @@
 "timeRange.1Y" = "1年";
 "timeRange.all" = "全部";
 
+/* Exercise Names */
+"exercise.benchPress" = "卧推";
+"exercise.squat" = "深蹲";
+"exercise.deadlift" = "硬拉";
+"exercise.overheadPress" = "过头推举";
+"exercise.barbellRow" = "杠铃划船";
+"exercise.pullUps" = "引体向上";
+"exercise.dumbbellCurl" = "哑铃弯举";
+"exercise.tricepPushdown" = "三头下压";
+"exercise.latPulldown" = "高位下拉";
+"exercise.legPress" = "腿举";
+"exercise.dumbbellBenchPress" = "哑铃卧推";
+"exercise.dumbbellShoulderPress" = "哑铃肩推";
+"exercise.romanianDeadlift" = "罗马尼亚硬拉";
+"exercise.legCurl" = "腿弯举";
+"exercise.legExtension" = "腿屈伸";
+"exercise.cableFly" = "龙门架夹胸";
+"exercise.facePull" = "面拉";
+"exercise.lateralRaise" = "侧平举";
+"exercise.barbellCurl" = "杠铃弯举";
+"exercise.plank" = "平板支撑";
+
+/* Exercise Notes */
+"exercise.benchPress.notes" = "肩胛骨收紧后缩，双脚平放在地面";
+"exercise.squat.notes" = "髋膝同时屈曲，挺胸抬头";
+"exercise.deadlift.notes" = "髋关节铰链，杠铃贴近身体";
+"exercise.overheadPress.notes" = "收紧核心，垂直向上推举";
+"exercise.barbellRow.notes" = "身体前倾约45°，拉至下胸";
+"exercise.pullUps.notes" = "完全悬挂至下巴过杠，控制下放";
+"exercise.dumbbellCurl.notes" = "肘部固定，控制离心阶段";
+"exercise.tricepPushdown.notes" = "固定上臂，底部充分收缩";
+"exercise.latPulldown.notes" = "下拉至上胸，收紧肩胛骨";
+"exercise.legPress.notes" = "全程运动范围，膝盖不要锁死";
+"exercise.dumbbellBenchPress.notes" = "下放至胸部水平，向上微微内收推起";
+"exercise.dumbbellShoulderPress.notes" = "从肩部高度开始，推至完全锁定";
+"exercise.romanianDeadlift.notes" = "膝盖微屈，屈髋至腘绳肌拉伸感";
+"exercise.legCurl.notes" = "控制动作节奏，顶峰收缩";
+"exercise.legExtension.notes" = "完全伸展，缓慢下放";
+"exercise.cableFly.notes" = "肘部微屈，在中间位置挤压胸肌";
+"exercise.facePull.notes" = "拉至面部高度，末端外旋";
+"exercise.lateralRaise.notes" = "身体微微前倾，举至肩部高度";
+"exercise.barbellCurl.notes" = "动作严格，不要借力摆动";
+"exercise.plank.notes" = "身体保持一条直线，收紧核心，均匀呼吸";
+
 /* Muscle Groups */
 "muscle.chest" = "胸部";
 "muscle.back" = "背部";
@@ -142,6 +187,31 @@
 "settings.about" = "关于";
 "settings.version" = "版本";
 "settings.appName" = "LiftLog";
+
+/* Exercise Types */
+"exerciseType.weightReps" = "重量 × 次数";
+"exerciseType.repsOnly" = "仅次数";
+"exerciseType.timeOnly" = "仅时间";
+"exerciseEdit.exerciseType" = "动作类型";
+
+/* Duration */
+"common.seconds" = "秒";
+"common.duration" = "时长";
+
+/* Today View - Exercise Types */
+"today.totalReps" = "总次数";
+"today.totalTime" = "总时长";
+
+/* Progress - Exercise Types */
+"progress.durationPerSession" = "每次训练时长";
+"progress.repsPerSession" = "每次训练次数";
+"progress.bestDuration" = "最长时长";
+"progress.totalReps" = "总次数";
+"progress.bestReps" = "最多次数";
+
+/* Day Detail - Exercise Types */
+"dayDetail.setsReps" = "%d 组 • %d 次";
+"dayDetail.setsDuration" = "%d 组 • %@";
 
 /* Common */
 "common.cancel" = "取消";

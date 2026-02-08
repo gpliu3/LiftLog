@@ -9,12 +9,19 @@ struct EditSetView: View {
 
     @State private var weight: Double
     @State private var reps: Int
+    @State private var durationSeconds: Int
     @State private var notes: String
+    @State private var showNotes: Bool = false
+
+    private var exerciseType: String {
+        workoutSet.exercise?.exerciseType ?? "weightReps"
+    }
 
     init(workoutSet: WorkoutSet) {
         self.workoutSet = workoutSet
         _weight = State(initialValue: workoutSet.weightKg)
         _reps = State(initialValue: workoutSet.reps)
+        _durationSeconds = State(initialValue: workoutSet.durationSeconds)
         _notes = State(initialValue: workoutSet.notes)
     }
 
@@ -22,9 +29,15 @@ struct EditSetView: View {
         NavigationStack {
             Form {
                 exerciseInfo
-                weightSection
-                repsSection
-                notesSection
+                if exerciseType == "weightReps" {
+                    weightSection
+                }
+                if exerciseType == "weightReps" || exerciseType == "repsOnly" {
+                    repsSection
+                }
+                if exerciseType == "timeOnly" {
+                    durationSection
+                }
                 summarySection
             }
             .navigationTitle("editSet.title".localized)
@@ -49,18 +62,39 @@ struct EditSetView: View {
         Section {
             if let exercise = workoutSet.exercise {
                 HStack {
-                    VStack(alignment: .leading) {
-                        Text(exercise.name)
-                            .font(.headline)
-                        if !exercise.muscleGroup.isEmpty {
-                            Text(exercise.localizedMuscleGroup)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                    Text(exercise.displayName)
+                        .font(.headline)
+
+                    Button {
+                        withAnimation {
+                            showNotes.toggle()
+                            if showNotes && notes.isEmpty && !exercise.displayNotes.isEmpty {
+                                notes = exercise.displayNotes
+                            }
                         }
+                    } label: {
+                        Image(systemName: "info.circle")
+                            .font(.subheadline)
+                            .foregroundStyle(showNotes ? .orange : .blue)
                     }
+                    .buttonStyle(.plain)
+
                     Spacer()
+
                     Text("common.set".localized(with: workoutSet.setNumber))
                         .foregroundStyle(.secondary)
+                }
+
+                if !exercise.muscleGroup.isEmpty {
+                    Text(exercise.localizedMuscleGroup)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                if showNotes {
+                    TextEditor(text: $notes)
+                        .font(.subheadline)
+                        .frame(minHeight: 60)
                 }
             }
         }
@@ -142,33 +176,78 @@ struct EditSetView: View {
         }
     }
 
-    private var notesSection: some View {
-        Section("addSet.notes".localized) {
-            TextField("addSet.addNote".localized, text: $notes, axis: .vertical)
-                .lineLimit(2...4)
+    private var durationSection: some View {
+        Section("common.duration".localized) {
+            HStack {
+                Button {
+                    durationSeconds = max(5, durationSeconds - 5)
+                } label: {
+                    Image(systemName: "minus.circle.fill")
+                        .font(.title)
+                        .foregroundStyle(.orange)
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                Text(WorkoutSet.formatDuration(durationSeconds))
+                    .font(.title.bold())
+                    .frame(width: 100)
+                    .multilineTextAlignment(.center)
+
+                Text("common.seconds".localized)
+                    .foregroundStyle(.secondary)
+
+                Spacer()
+
+                Button {
+                    durationSeconds += 5
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title)
+                        .foregroundStyle(.orange)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.vertical, 8)
         }
     }
 
     private var summarySection: some View {
         Section("addSet.summary".localized) {
-            HStack {
-                Text("addSet.volumeLabel".localized(with: Int(weight * Double(reps))))
-                Spacer()
-            }
+            if exerciseType == "timeOnly" {
+                HStack {
+                    Text("common.duration".localized)
+                    Spacer()
+                    Text(WorkoutSet.formatDuration(durationSeconds))
+                        .foregroundStyle(.secondary)
+                }
+            } else if exerciseType == "repsOnly" {
+                HStack {
+                    Text("\(reps) \("common.reps".localized)")
+                    Spacer()
+                }
+            } else {
+                HStack {
+                    Text("addSet.volumeLabel".localized(with: Int(weight * Double(reps))))
+                    Spacer()
+                }
 
-            HStack {
-                Text("addSet.est1RM".localized)
-                Spacer()
-                Text("\(String(format: "%.1f", weight * (1 + Double(reps) / 30))) kg")
-                    .foregroundStyle(.orange)
-                    .fontWeight(.medium)
+                HStack {
+                    Text("addSet.est1RM".localized)
+                    Spacer()
+                    Text("\(String(format: "%.1f", weight * (1 + Double(reps) / 30))) kg")
+                        .foregroundStyle(.orange)
+                        .fontWeight(.medium)
+                }
             }
         }
     }
 
     private func saveChanges() {
-        workoutSet.weightKg = weight
-        workoutSet.reps = reps
+        workoutSet.weightKg = exerciseType == "weightReps" ? weight : 0
+        workoutSet.reps = exerciseType == "timeOnly" ? 0 : reps
+        workoutSet.durationSeconds = exerciseType == "timeOnly" ? durationSeconds : 0
         workoutSet.notes = notes
 
         let generator = UINotificationFeedbackGenerator()

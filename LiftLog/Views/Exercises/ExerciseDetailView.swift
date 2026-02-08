@@ -18,8 +18,16 @@ struct ExerciseDetailView: View {
         exercise.workoutSets.map { $0.weightKg }.max()
     }
 
+    private var durationPR: Int? {
+        exercise.workoutSets.map { $0.durationSeconds }.max()
+    }
+
     private var totalVolume: Double {
         exercise.workoutSets.reduce(0) { $0 + $1.volume }
+    }
+
+    private var totalReps: Int {
+        exercise.workoutSets.reduce(0) { $0 + $1.reps }
     }
 
     var body: some View {
@@ -32,7 +40,7 @@ struct ExerciseDetailView: View {
                     recentActivitySection
                 }
             }
-            .navigationTitle(exercise.name)
+            .navigationTitle(exercise.displayName)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -58,12 +66,16 @@ struct ExerciseDetailView: View {
                 LabeledContent("exerciseDetail.muscleGroup".localized, value: exercise.localizedMuscleGroup)
             }
 
-            if !exercise.notes.isEmpty {
+            if !exercise.isWeightReps {
+                LabeledContent("exerciseEdit.exerciseType".localized, value: exercise.localizedExerciseType)
+            }
+
+            if !exercise.displayNotes.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("exerciseDetail.notes".localized)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                    Text(exercise.notes)
+                    Text(exercise.displayNotes)
                 }
             }
 
@@ -77,16 +89,28 @@ struct ExerciseDetailView: View {
         Section("exerciseDetail.statistics".localized) {
             LabeledContent("exerciseDetail.timesPerformed".localized, value: "exerciseDetail.sessionsUnit".localized(with: exercise.timesPerformed))
 
-            if let pr = personalRecord {
-                LabeledContent("exerciseDetail.personalRecord".localized) {
-                    Text("\(String(format: "%.1f", pr)) kg")
-                        .foregroundStyle(.orange)
-                        .fontWeight(.semibold)
+            if exercise.isWeightReps {
+                if let pr = personalRecord {
+                    LabeledContent("exerciseDetail.personalRecord".localized) {
+                        Text("\(String(format: "%.1f", pr)) kg")
+                            .foregroundStyle(.orange)
+                            .fontWeight(.semibold)
+                    }
                 }
-            }
 
-            LabeledContent("exerciseDetail.totalVolume".localized) {
-                Text("\(String(format: "%.0f", totalVolume)) kg")
+                LabeledContent("exerciseDetail.totalVolume".localized) {
+                    Text("\(String(format: "%.0f", totalVolume)) kg")
+                }
+            } else if exercise.isTimeOnly {
+                if let pr = durationPR, pr > 0 {
+                    LabeledContent("progress.bestDuration".localized) {
+                        Text(WorkoutSet.formatDuration(pr))
+                            .foregroundStyle(.orange)
+                            .fontWeight(.semibold)
+                    }
+                }
+            } else if exercise.isRepsOnly {
+                LabeledContent("progress.totalReps".localized, value: "\(totalReps)")
             }
 
             LabeledContent("exerciseDetail.totalSets".localized, value: "\(exercise.workoutSets.count)")
@@ -107,8 +131,16 @@ struct ExerciseDetailView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
-                    Text("\(String(format: "%.1f", set.weightKg)) kg × \(set.reps)")
-                        .fontWeight(.medium)
+                    if exercise.isTimeOnly {
+                        Text(set.formattedDuration)
+                            .fontWeight(.medium)
+                    } else if exercise.isRepsOnly {
+                        Text("\(set.reps) \("common.reps".localized)")
+                            .fontWeight(.medium)
+                    } else {
+                        Text("\(String(format: "%.1f", set.weightKg)) kg × \(set.reps)")
+                            .fontWeight(.medium)
+                    }
                 }
             }
         }

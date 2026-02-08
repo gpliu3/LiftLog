@@ -10,11 +10,15 @@ struct TodayView: View {
 
     @State private var showingAddSet = false
     @State private var editingSet: WorkoutSet?
+    @State private var editingExercise: Exercise?
+    @State private var expandedNotes: Set<UUID> = []
 
     private var todaySets: [WorkoutSet] {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
-        return allSets.filter { calendar.startOfDay(for: $0.date) == today }
+        return allSets.filter {
+            calendar.startOfDay(for: $0.date) == today && $0.exercise != nil
+        }
     }
 
     private var groupedSets: [(Exercise, [WorkoutSet])] {
@@ -22,7 +26,7 @@ struct TodayView: View {
         return grouped.compactMap { (exercise, sets) in
             guard let exercise = exercise else { return nil }
             return (exercise, sets.sorted { $0.setNumber < $1.setNumber })
-        }.sorted { $0.0.name < $1.0.name }
+        }.sorted { $0.0.displayName < $1.0.displayName }
     }
 
     private var totalVolume: Double {
@@ -51,6 +55,9 @@ struct TodayView: View {
             .sheet(item: $editingSet) { set in
                 EditSetView(workoutSet: set)
             }
+            .sheet(item: $editingExercise) { exercise in
+                ExerciseEditView(exercise: exercise)
+            }
         }
         .id(languageManager.currentLanguage)
     }
@@ -69,8 +76,13 @@ struct TodayView: View {
 
             ForEach(groupedSets, id: \.0.id) { exercise, sets in
                 Section {
+                    if expandedNotes.contains(exercise.id) {
+                        NotesEditorRow(exercise: exercise)
+                            .listRowBackground(Color.blue.opacity(0.05))
+                    }
+
                     ForEach(sets) { set in
-                        SetRowView(set: set, onDuplicate: {
+                        SetRowView(workoutSet: set, onDuplicate: {
                             quickAddSet(for: exercise, basedOn: set)
                         }, onEdit: {
                             editingSet = set
@@ -83,10 +95,23 @@ struct TodayView: View {
                     // Quick add row at bottom of each exercise
                     quickAddRow(for: exercise, sets: sets)
                 } header: {
-                    ExerciseHeaderView(exercise: exercise, sets: sets) {
-                        // Add another set for this exercise
-                        quickAddSet(for: exercise, basedOn: sets.last)
-                    }
+                    ExerciseHeaderView(
+                        exercise: exercise,
+                        sets: sets,
+                        hasNotes: !exercise.displayNotes.isEmpty,
+                        onAddSet: {
+                            quickAddSet(for: exercise, basedOn: sets.last)
+                        },
+                        onInfoTap: {
+                            withAnimation {
+                                if expandedNotes.contains(exercise.id) {
+                                    expandedNotes.remove(exercise.id)
+                                } else {
+                                    expandedNotes.insert(exercise.id)
+                                }
+                            }
+                        }
+                    )
                 }
             }
         }
@@ -94,8 +119,6 @@ struct TodayView: View {
 
     private func quickAddRow(for exercise: Exercise, sets: [WorkoutSet]) -> some View {
         let lastSet = sets.last
-        let displayWeight = lastSet?.weightKg ?? 0
-        let displayReps = lastSet?.reps ?? 0
 
         return Button {
             quickAddSet(for: exercise, basedOn: lastSet)
@@ -106,10 +129,20 @@ struct TodayView: View {
                 Text("today.addAnotherSet".localized)
                     .foregroundStyle(.orange)
                 Spacer()
-                if lastSet != nil {
-                    Text("\(String(format: "%.1f", displayWeight)) kg × \(displayReps)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                if let lastSet = lastSet {
+                    if exercise.isTimeOnly {
+                        Text(lastSet.formattedDuration)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else if exercise.isRepsOnly {
+                        Text("\(lastSet.reps) \("common.reps".localized)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("\(String(format: "%.1f", lastSet.weightKg)) kg × \(lastSet.reps)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
         }
@@ -118,24 +151,29 @@ struct TodayView: View {
 
     /// Directly add a new set without showing modal
     private func quickAddSet(for exercise: Exercise, basedOn referenceSet: WorkoutSet?) {
-        // Get today's sets for this exercise to determine next set number
-        let todayExerciseSets = todaySets.filter { $0.exercise?.id == exercise.id }
-        let nextSetNumber = todayExerciseSets.count + 1
+        // Use exercise.workoutSets relationship (updated in-memory) instead of @Query
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let todayExerciseSets = exercise.workoutSets.filter {
+            calendar.startOfDay(for: $0.date) == today
+        }
+        let nextSetNumber = (todayExerciseSets.map { $0.setNumber }.max() ?? 0) + 1
 
-        // Determine weight and reps from reference set or previous day
-        var weight: Double = 20.0
-        var reps: Int = 10
+        // Determine values from reference set or previous day
+        var weight: Double = exercise.isWeightReps ? 20.0 : 0
+        var reps: Int = exercise.isTimeOnly ? 0 : 10
+        var duration: Int = exercise.isTimeOnly ? 30 : 0
 
         if let ref = referenceSet {
-            // Use the reference set (usually the last set)
             weight = ref.weightKg
             reps = ref.reps
+            duration = ref.durationSeconds
         } else {
-            // No sets today - look for previous day's data
             if let previousSet = getPreviousDaySet(for: exercise) {
                 weight = previousSet.weightKg
                 reps = previousSet.reps
-            } else if let lastWeight = exercise.lastWeight {
+                duration = previousSet.durationSeconds
+            } else if exercise.isWeightReps, let lastWeight = exercise.lastWeight {
                 weight = lastWeight
             }
         }
@@ -145,6 +183,7 @@ struct TodayView: View {
             date: Date(),
             weightKg: weight,
             reps: reps,
+            durationSeconds: duration,
             setNumber: nextSetNumber
         )
 
@@ -242,32 +281,44 @@ struct TodayView: View {
 }
 
 struct SetRowView: View {
-    let set: WorkoutSet
+    let workoutSet: WorkoutSet
     var onDuplicate: (() -> Void)?
     var onEdit: (() -> Void)?
 
+    private var exerciseType: String {
+        workoutSet.exercise?.exerciseType ?? "weightReps"
+    }
+
     var body: some View {
         HStack {
-            Text("common.set".localized(with: set.setNumber))
+            Text("common.set".localized(with: workoutSet.setNumber))
                 .foregroundStyle(.secondary)
                 .frame(width: 60, alignment: .leading)
 
             Spacer()
 
-            Text("\(String(format: "%.1f", set.weightKg)) kg")
-                .fontWeight(.medium)
+            if exerciseType == "timeOnly" {
+                Text(workoutSet.formattedDuration)
+                    .fontWeight(.medium)
+            } else if exerciseType == "repsOnly" {
+                Text("\(workoutSet.reps) \("common.reps".localized)")
+                    .fontWeight(.medium)
+            } else {
+                Text("\(String(format: "%.1f", workoutSet.weightKg)) kg")
+                    .fontWeight(.medium)
 
-            Text("×")
-                .foregroundStyle(.secondary)
+                Text("×")
+                    .foregroundStyle(.secondary)
 
-            Text("\(set.reps) \("common.reps".localized)")
-                .fontWeight(.medium)
+                Text("\(workoutSet.reps) \("common.reps".localized)")
+                    .fontWeight(.medium)
 
-            Spacer()
+                Spacer()
 
-            Text("\(Int(set.volume)) kg")
-                .foregroundStyle(.secondary)
-                .font(.caption)
+                Text("\(Int(workoutSet.volume)) kg")
+                    .foregroundStyle(.secondary)
+                    .font(.caption)
+            }
         }
         .contentShape(Rectangle())
         .onLongPressGesture {
@@ -289,17 +340,46 @@ struct SetRowView: View {
 struct ExerciseHeaderView: View {
     let exercise: Exercise
     let sets: [WorkoutSet]
+    var hasNotes: Bool = false
     var onAddSet: (() -> Void)?
+    var onInfoTap: (() -> Void)?
 
     private var totalVolume: Double {
         sets.reduce(0) { $0 + $1.volume }
     }
 
+    private var subtitle: String {
+        if exercise.isTimeOnly {
+            let totalSeconds = sets.reduce(0) { $0 + $1.durationSeconds }
+            return "\(sets.count) \("today.sets".localized) • \(WorkoutSet.formatDuration(totalSeconds))"
+        } else if exercise.isRepsOnly {
+            let totalReps = sets.reduce(0) { $0 + $1.reps }
+            return "\(sets.count) \("today.sets".localized) • \(totalReps) \("common.reps".localized)"
+        } else {
+            return "\(sets.count) \("today.sets".localized) • \(Int(totalVolume)) kg"
+        }
+    }
+
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text(exercise.name)
-                Text("\(sets.count) \("today.sets".localized) • \(Int(totalVolume)) kg")
+                HStack(spacing: 4) {
+                    Text(exercise.displayName)
+
+                    if hasNotes, let onInfoTap = onInfoTap {
+                        Button {
+                            onInfoTap()
+                        } label: {
+                            Image(systemName: "info.circle")
+                                .font(.body)
+                                .foregroundStyle(.blue)
+                                .frame(width: 32, height: 32)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                Text(subtitle)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
@@ -338,6 +418,28 @@ struct StatItemView: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
+    }
+}
+
+struct NotesEditorRow: View {
+    @Bindable var exercise: Exercise
+    @State private var editableNotes: String = ""
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            TextEditor(text: $editableNotes)
+                .font(.subheadline)
+                .frame(minHeight: 50)
+                .focused($isFocused)
+                .onChange(of: editableNotes) {
+                    exercise.notes = editableNotes
+                }
+        }
+        .onAppear {
+            // Load: use custom notes if set, otherwise default notes
+            editableNotes = exercise.notes.isEmpty ? exercise.displayNotes : exercise.notes
+        }
     }
 }
 

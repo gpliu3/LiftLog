@@ -52,6 +52,7 @@
 "exerciseEdit.muscleGroupNone" = "None";
 "exerciseEdit.notes" = "Notes";
 "exerciseEdit.notesPlaceholder" = "Form cues, tips, instructions...";
+"exerciseEdit.defaultNotesHint" = "Leave blank to use default notes";
 "exerciseEdit.delete" = "Delete Exercise";
 "exerciseEdit.deleteAlert" = "Delete Exercise?";
 "exerciseEdit.deleteMessage" = "This will also delete all workout sets for this exercise. This action cannot be undone.";
@@ -116,6 +117,50 @@
 "timeRange.1Y" = "1Y";
 "timeRange.all" = "All";
 
+/* Exercise Names */
+"exercise.benchPress" = "Bench Press";
+"exercise.squat" = "Squat";
+"exercise.deadlift" = "Deadlift";
+"exercise.overheadPress" = "Overhead Press";
+"exercise.barbellRow" = "Barbell Row";
+"exercise.pullUps" = "Pull-ups";
+"exercise.dumbbellCurl" = "Dumbbell Curl";
+"exercise.tricepPushdown" = "Tricep Pushdown";
+"exercise.latPulldown" = "Lat Pulldown";
+"exercise.legPress" = "Leg Press";
+"exercise.dumbbellBenchPress" = "Dumbbell Bench Press";
+"exercise.dumbbellShoulderPress" = "Dumbbell Shoulder Press";
+"exercise.romanianDeadlift" = "Romanian Deadlift";
+"exercise.legCurl" = "Leg Curl";
+"exercise.legExtension" = "Leg Extension";
+"exercise.cableFly" = "Cable Fly";
+"exercise.facePull" = "Face Pull";
+"exercise.lateralRaise" = "Lateral Raise";
+"exercise.barbellCurl" = "Barbell Curl";
+"exercise.plank" = "Plank";
+
+/* Exercise Notes */
+"exercise.benchPress.notes" = "Keep shoulder blades retracted, feet flat on floor";
+"exercise.squat.notes" = "Break at hips and knees together, chest up";
+"exercise.deadlift.notes" = "Hinge at hips, keep bar close to body";
+"exercise.overheadPress.notes" = "Brace core, press straight overhead";
+"exercise.barbellRow.notes" = "Hinge forward ~45°, pull to lower chest";
+"exercise.pullUps.notes" = "Full hang to chin over bar, control the descent";
+"exercise.dumbbellCurl.notes" = "Keep elbows pinned, control the negative";
+"exercise.tricepPushdown.notes" = "Lock upper arms, squeeze at bottom";
+"exercise.latPulldown.notes" = "Pull to upper chest, squeeze shoulder blades";
+"exercise.legPress.notes" = "Full range of motion, don't lock knees";
+"exercise.dumbbellBenchPress.notes" = "Lower to chest level, press up and slightly in";
+"exercise.dumbbellShoulderPress.notes" = "Start at shoulder height, press to full lockout";
+"exercise.romanianDeadlift.notes" = "Slight knee bend, hinge until hamstring stretch";
+"exercise.legCurl.notes" = "Control the movement, squeeze at peak contraction";
+"exercise.legExtension.notes" = "Full extension, slow negative";
+"exercise.cableFly.notes" = "Slight elbow bend, squeeze at center";
+"exercise.facePull.notes" = "Pull to face level, externally rotate at end";
+"exercise.lateralRaise.notes" = "Slight forward lean, raise to shoulder height";
+"exercise.barbellCurl.notes" = "Strict form, no swinging";
+"exercise.plank.notes" = "Keep body straight, brace core, breathe steadily";
+
 /* Muscle Groups */
 "muscle.chest" = "Chest";
 "muscle.back" = "Back";
@@ -142,6 +187,31 @@
 "settings.about" = "About";
 "settings.version" = "Version";
 "settings.appName" = "LiftLog";
+
+/* Exercise Types */
+"exerciseType.weightReps" = "Weight × Reps";
+"exerciseType.repsOnly" = "Reps Only";
+"exerciseType.timeOnly" = "Time Only";
+"exerciseEdit.exerciseType" = "Exercise Type";
+
+/* Duration */
+"common.seconds" = "seconds";
+"common.duration" = "Duration";
+
+/* Today View - Exercise Types */
+"today.totalReps" = "Total Reps";
+"today.totalTime" = "Total Time";
+
+/* Progress - Exercise Types */
+"progress.durationPerSession" = "Duration per Session";
+"progress.repsPerSession" = "Reps per Session";
+"progress.bestDuration" = "Best Duration";
+"progress.totalReps" = "Total Reps";
+"progress.bestReps" = "Best Reps";
+
+/* Day Detail - Exercise Types */
+"dayDetail.setsReps" = "%d sets • %d reps";
+"dayDetail.setsDuration" = "%d sets • %@";
 
 /* Common */
 "common.cancel" = "Cancel";

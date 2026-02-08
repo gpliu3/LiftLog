@@ -14,16 +14,25 @@ struct AddSetView: View {
     @State private var selectedExercise: Exercise?
     @State private var weight: Double = 20.0
     @State private var reps: Int = 10
+    @State private var durationSeconds: Int = 30
     @State private var notes: String = ""
+    @State private var showNotes: Bool = false
     @State private var searchText: String = ""
     @State private var justSaved: Bool = false
     @State private var savedSetNumber: Int = 0
+
+    private var exerciseType: String {
+        selectedExercise?.exerciseType ?? "weightReps"
+    }
 
     private var filteredExercises: [Exercise] {
         if searchText.isEmpty {
             return exercises
         }
-        return exercises.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        return exercises.filter {
+            $0.name.localizedCaseInsensitiveContains(searchText) ||
+            $0.displayName.localizedCaseInsensitiveContains(searchText)
+        }
     }
 
     private var nextSetNumber: Int {
@@ -33,7 +42,7 @@ struct AddSetView: View {
         let todaySets = exercise.workoutSets.filter {
             calendar.startOfDay(for: $0.date) == today
         }
-        return todaySets.count + 1
+        return (todaySets.map { $0.setNumber }.max() ?? 0) + 1
     }
 
     var body: some View {
@@ -55,9 +64,15 @@ struct AddSetView: View {
                 }
 
                 exerciseSection
-                weightSection
-                repsSection
-                notesSection
+                if exerciseType == "weightReps" {
+                    weightSection
+                }
+                if exerciseType == "weightReps" || exerciseType == "repsOnly" {
+                    repsSection
+                }
+                if exerciseType == "timeOnly" {
+                    durationSection
+                }
                 summarySection
             }
             .navigationTitle("addSet.title".localized)
@@ -112,16 +127,25 @@ struct AddSetView: View {
         Section("addSet.exercise".localized) {
             if let exercise = selectedExercise {
                 HStack {
-                    VStack(alignment: .leading) {
-                        Text(exercise.name)
-                            .font(.headline)
-                        if !exercise.muscleGroup.isEmpty {
-                            Text(exercise.localizedMuscleGroup)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                    Text(exercise.displayName)
+                        .font(.headline)
+
+                    Button {
+                        withAnimation {
+                            showNotes.toggle()
+                            if showNotes && notes.isEmpty && !exercise.displayNotes.isEmpty {
+                                notes = exercise.displayNotes
+                            }
                         }
+                    } label: {
+                        Image(systemName: "info.circle")
+                            .font(.subheadline)
+                            .foregroundStyle(showNotes ? .orange : .blue)
                     }
+                    .buttonStyle(.plain)
+
                     Spacer()
+
                     // Only show change button if not preselected (quick add mode)
                     if preselectedExercise == nil {
                         Button("addSet.change".localized) {
@@ -129,6 +153,18 @@ struct AddSetView: View {
                         }
                         .font(.subheadline)
                     }
+                }
+
+                if !exercise.muscleGroup.isEmpty {
+                    Text(exercise.localizedMuscleGroup)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                if showNotes {
+                    TextEditor(text: $notes)
+                        .font(.subheadline)
+                        .frame(minHeight: 60)
                 }
             } else {
                 TextField("addSet.searchExercises".localized, text: $searchText)
@@ -141,7 +177,7 @@ struct AddSetView: View {
                         loadLastWeight()
                     } label: {
                         HStack {
-                            Text(exercise.name)
+                            Text(exercise.displayName)
                             Spacer()
                             if !exercise.muscleGroup.isEmpty {
                                 Text(exercise.localizedMuscleGroup)
@@ -236,10 +272,40 @@ struct AddSetView: View {
         }
     }
 
-    private var notesSection: some View {
-        Section("addSet.notes".localized) {
-            TextField("addSet.addNote".localized, text: $notes, axis: .vertical)
-                .lineLimit(2...4)
+    private var durationSection: some View {
+        Section("common.duration".localized) {
+            HStack {
+                Button {
+                    durationSeconds = max(5, durationSeconds - 5)
+                } label: {
+                    Image(systemName: "minus.circle.fill")
+                        .font(.title)
+                        .foregroundStyle(.orange)
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                Text(WorkoutSet.formatDuration(durationSeconds))
+                    .font(.title.bold())
+                    .frame(width: 100)
+                    .multilineTextAlignment(.center)
+
+                Text("common.seconds".localized)
+                    .foregroundStyle(.secondary)
+
+                Spacer()
+
+                Button {
+                    durationSeconds += 5
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title)
+                        .foregroundStyle(.orange)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.vertical, 8)
         }
     }
 
@@ -250,16 +316,26 @@ struct AddSetView: View {
                 HStack {
                     Text("addSet.setNumber".localized(with: nextSetNumber))
                     Spacer()
-                    Text("addSet.volumeLabel".localized(with: Int(weight * Double(reps))))
-                        .foregroundStyle(.secondary)
+                    if exerciseType == "timeOnly" {
+                        Text(WorkoutSet.formatDuration(durationSeconds))
+                            .foregroundStyle(.secondary)
+                    } else if exerciseType == "repsOnly" {
+                        Text("\(reps) \("common.reps".localized)")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("addSet.volumeLabel".localized(with: Int(weight * Double(reps))))
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
-                HStack {
-                    Text("addSet.est1RM".localized)
-                    Spacer()
-                    Text("\(String(format: "%.1f", weight * (1 + Double(reps) / 30))) kg")
-                        .foregroundStyle(.orange)
-                        .fontWeight(.medium)
+                if exerciseType == "weightReps" {
+                    HStack {
+                        Text("addSet.est1RM".localized)
+                        Spacer()
+                        Text("\(String(format: "%.1f", weight * (1 + Double(reps) / 30))) kg")
+                            .foregroundStyle(.orange)
+                            .fontWeight(.medium)
+                    }
                 }
             } header: {
                 Text("addSet.summary".localized)
@@ -278,11 +354,16 @@ struct AddSetView: View {
 
         let setNumber = nextSetNumber
 
+        let saveWeight: Double = exercise.isWeightReps ? weight : 0
+        let saveReps: Int = exercise.isTimeOnly ? 0 : reps
+        let saveDuration: Int = exercise.isTimeOnly ? durationSeconds : 0
+
         let workoutSet = WorkoutSet(
             exercise: exercise,
             date: Date(),
-            weightKg: weight,
-            reps: reps,
+            weightKg: saveWeight,
+            reps: saveReps,
+            durationSeconds: saveDuration,
             setNumber: setNumber,
             notes: notes
         )

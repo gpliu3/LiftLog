@@ -16,6 +16,7 @@ struct ExerciseListView: View {
         }
         return exercises.filter {
             $0.name.localizedCaseInsensitiveContains(searchText) ||
+            $0.displayName.localizedCaseInsensitiveContains(searchText) ||
             $0.muscleGroup.localizedCaseInsensitiveContains(searchText) ||
             $0.localizedMuscleGroup.localizedCaseInsensitiveContains(searchText)
         }
@@ -98,11 +99,11 @@ struct ExerciseRowView: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text(exercise.name)
+                Text(exercise.displayName)
                     .font(.headline)
 
-                if !exercise.notes.isEmpty {
-                    Text(exercise.notes)
+                if !exercise.displayNotes.isEmpty {
+                    Text(exercise.displayNotes)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
