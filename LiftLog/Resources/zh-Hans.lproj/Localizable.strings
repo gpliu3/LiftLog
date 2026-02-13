@@ -186,7 +186,7 @@
 "settings.defaultSetFooter" = "新的一天开始训练时，使用上次训练的这组数据作为默认值";
 "settings.about" = "关于";
 "settings.version" = "版本";
-"settings.appName" = "LiftLog";
+"settings.appName" = "GymLog";
 
 /* Exercise Types */
 "exerciseType.weightReps" = "重量 × 次数";

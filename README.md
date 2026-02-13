@@ -1,4 +1,4 @@
-# LiftLog
+# GymLog
 
 A clean, modern iOS strength training tracker built with SwiftUI and SwiftData.
 

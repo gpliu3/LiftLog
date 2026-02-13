@@ -186,7 +186,7 @@
 "settings.defaultSetFooter" = "When starting a new day, use this set from the previous session as the default";
 "settings.about" = "About";
 "settings.version" = "Version";
-"settings.appName" = "LiftLog";
+"settings.appName" = "GymLog";
 
 /* Exercise Types */
 "exerciseType.weightReps" = "Weight × Reps";
