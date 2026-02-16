@@ -5,6 +5,7 @@ struct AddSetView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \Exercise.name) private var exercises: [Exercise]
+    @Query private var allSets: [WorkoutSet]
 
     // Pre-selected exercise (for quick add)
     var preselectedExercise: Exercise?
@@ -12,11 +13,12 @@ struct AddSetView: View {
     var prefilledReps: Int?
 
     @State private var selectedExercise: Exercise?
+    @State private var selectedDate: Date = Date()
     @State private var weight: Double = 20.0
     @State private var reps: Int = 10
     @State private var durationSeconds: Int = 30
-    @State private var notes: String = ""
-    @State private var showNotes: Bool = false
+    @State private var setNotes: String = ""
+    @State private var showExerciseNotes: Bool = false
     @State private var searchText: String = ""
     @State private var justSaved: Bool = false
     @State private var savedSetNumber: Int = 0
@@ -26,23 +28,116 @@ struct AddSetView: View {
     }
 
     private var filteredExercises: [Exercise] {
+        let source: [Exercise]
         if searchText.isEmpty {
-            return exercises
+            source = exercises
+        } else {
+            source = exercises.filter {
+                $0.name.localizedCaseInsensitiveContains(searchText) ||
+                $0.displayName.localizedCaseInsensitiveContains(searchText)
+            }
         }
-        return exercises.filter {
-            $0.name.localizedCaseInsensitiveContains(searchText) ||
-            $0.displayName.localizedCaseInsensitiveContains(searchText)
+
+        return source.sorted { lhs, rhs in
+            switch (lhs.lastTrainedDate, rhs.lastTrainedDate) {
+            case let (l?, r?):
+                if l != r { return l < r } // long due first, short due last
+                return lhs.displayName < rhs.displayName
+            case (_?, nil):
+                return true // ever trained before never trained
+            case (nil, _?):
+                return false
+            case (nil, nil):
+                return lhs.displayName < rhs.displayName
+            }
+        }
+    }
+
+    private func lastTrainedLabel(for exercise: Exercise) -> String {
+        guard let lastTrained = exercise.lastTrainedDate else {
+            return "addSet.neverTrained".localized
+        }
+
+        let calendar = Calendar.current
+        if calendar.isDateInToday(lastTrained) {
+            return "addSet.lastTrainedToday".localized
+        }
+
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.locale = LanguageManager.shared.currentLanguage.locale ?? Locale.current
+        return "addSet.lastTrained".localized(with: formatter.string(from: lastTrained))
+    }
+
+    private var neverTrainedCount: Int {
+        filteredExercises.filter { $0.lastTrainedDate == nil }.count
+    }
+
+    private var trainedCount: Int {
+        filteredExercises.count - neverTrainedCount
+    }
+
+    private var exerciseOrderingHint: String {
+        if filteredExercises.isEmpty { return "" }
+        return "addSet.orderingHint".localized(with: trainedCount, neverTrainedCount)
+    }
+
+    @ViewBuilder
+    private var exerciseSearchSectionFooter: some View {
+        if exerciseOrderingHint.isEmpty {
+            EmptyView()
+        } else {
+            Text(exerciseOrderingHint)
+        }
+    }
+
+    private var searchableExerciseSection: some View {
+        Group {
+            TextField("addSet.searchExercises".localized, text: $searchText)
+                .textFieldStyle(.plain)
+
+            ForEach(filteredExercises) { exercise in
+                Button {
+                    selectedExercise = exercise
+                    showExerciseNotes = false
+                    searchText = ""
+                    loadLastWeight()
+                } label: {
+                    HStack(alignment: .top, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(exercise.displayName)
+                            Text(lastTrainedLabel(for: exercise))
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Spacer()
+
+                        if !exercise.muscleGroup.isEmpty {
+                            Text(exercise.localizedMuscleGroup)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 2)
+                                .background(Color.orange.opacity(0.2))
+                                .cornerRadius(4)
+                        }
+                    }
+                }
+                .foregroundStyle(.primary)
+            }
         }
     }
 
     private var nextSetNumber: Int {
         guard let exercise = selectedExercise else { return 1 }
         let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-        let todaySets = exercise.workoutSets.filter {
-            calendar.startOfDay(for: $0.date) == today
+        let targetDay = calendar.startOfDay(for: selectedDate)
+        let targetDaySets = allSets.filter {
+            $0.exercise?.id == exercise.id &&
+            calendar.startOfDay(for: $0.date) == targetDay
         }
-        return (todaySets.map { $0.setNumber }.max() ?? 0) + 1
+        return (targetDaySets.map { $0.setNumber }.max() ?? 0) + 1
     }
 
     var body: some View {
@@ -73,6 +168,8 @@ struct AddSetView: View {
                 if exerciseType == "timeOnly" {
                     durationSection
                 }
+                dateSection
+                notesSection
                 summarySection
             }
             .navigationTitle("addSet.title".localized)
@@ -109,6 +206,18 @@ struct AddSetView: View {
         }
     }
 
+    private var dateSection: some View {
+        Section("addSet.date".localized) {
+            DatePicker(
+                "addSet.date".localized,
+                selection: $selectedDate,
+                in: ...Date(),
+                displayedComponents: .date
+            )
+            .datePickerStyle(.compact)
+        }
+    }
+
     private func setupInitialValues() {
         if let exercise = preselectedExercise {
             selectedExercise = exercise
@@ -124,7 +233,7 @@ struct AddSetView: View {
     }
 
     private var exerciseSection: some View {
-        Section("addSet.exercise".localized) {
+        Section {
             if let exercise = selectedExercise {
                 HStack {
                     Text(exercise.displayName)
@@ -132,17 +241,16 @@ struct AddSetView: View {
 
                     Button {
                         withAnimation {
-                            showNotes.toggle()
-                            if showNotes && notes.isEmpty && !exercise.displayNotes.isEmpty {
-                                notes = exercise.displayNotes
-                            }
+                            showExerciseNotes.toggle()
                         }
                     } label: {
                         Image(systemName: "info.circle")
                             .font(.subheadline)
-                            .foregroundStyle(showNotes ? .orange : .blue)
+                            .foregroundStyle(showExerciseNotes ? .orange : .blue)
                     }
                     .buttonStyle(.plain)
+                    .disabled(exercise.displayNotes.isEmpty)
+                    .opacity(exercise.displayNotes.isEmpty ? 0.4 : 1)
 
                     Spacer()
 
@@ -150,6 +258,7 @@ struct AddSetView: View {
                     if preselectedExercise == nil {
                         Button("addSet.change".localized) {
                             selectedExercise = nil
+                            showExerciseNotes = false
                         }
                         .font(.subheadline)
                     }
@@ -161,38 +270,36 @@ struct AddSetView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                if showNotes {
-                    TextEditor(text: $notes)
-                        .font(.subheadline)
-                        .frame(minHeight: 60)
+                if showExerciseNotes, !exercise.displayNotes.isEmpty {
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: "lightbulb.fill")
+                            .foregroundStyle(.orange)
+                            .padding(.top, 2)
+
+                        Text(exercise.displayNotes)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(10)
+                    .background(Color.orange.opacity(0.08))
+                    .cornerRadius(10)
                 }
             } else {
-                TextField("addSet.searchExercises".localized, text: $searchText)
-                    .textFieldStyle(.plain)
-
-                ForEach(filteredExercises) { exercise in
-                    Button {
-                        selectedExercise = exercise
-                        searchText = ""
-                        loadLastWeight()
-                    } label: {
-                        HStack {
-                            Text(exercise.displayName)
-                            Spacer()
-                            if !exercise.muscleGroup.isEmpty {
-                                Text(exercise.localizedMuscleGroup)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 2)
-                                    .background(Color.orange.opacity(0.2))
-                                    .cornerRadius(4)
-                            }
-                        }
-                    }
-                    .foregroundStyle(.primary)
-                }
+                searchableExerciseSection
             }
+        } header: {
+            Text("addSet.exercise".localized)
+        } footer: {
+            if selectedExercise == nil {
+                exerciseSearchSectionFooter
+            }
+        }
+    }
+
+    private var notesSection: some View {
+        Section("addSet.notes".localized) {
+            TextField("addSet.addNote".localized, text: $setNotes, axis: .vertical)
+                .lineLimit(2...5)
         }
     }
 
@@ -357,15 +464,16 @@ struct AddSetView: View {
         let saveWeight: Double = exercise.isWeightReps ? weight : 0
         let saveReps: Int = exercise.isTimeOnly ? 0 : reps
         let saveDuration: Int = exercise.isTimeOnly ? durationSeconds : 0
+        let saveDate = combinedDateWithCurrentTime(selectedDate)
 
         let workoutSet = WorkoutSet(
             exercise: exercise,
-            date: Date(),
+            date: saveDate,
             weightKg: saveWeight,
             reps: saveReps,
             durationSeconds: saveDuration,
             setNumber: setNumber,
-            notes: notes
+            notes: setNotes.trimmingCharacters(in: .whitespacesAndNewlines)
         )
 
         modelContext.insert(workoutSet)
@@ -378,7 +486,7 @@ struct AddSetView: View {
             // Show success message and reset for next set
             savedSetNumber = setNumber
             justSaved = true
-            notes = "" // Clear notes for next set
+            setNotes = "" // Clear notes for next set
 
             // Hide success message after delay
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
@@ -389,6 +497,16 @@ struct AddSetView: View {
         } else {
             dismiss()
         }
+    }
+
+    private func combinedDateWithCurrentTime(_ day: Date) -> Date {
+        let calendar = Calendar.current
+        var dayComponents = calendar.dateComponents([.year, .month, .day], from: day)
+        let timeComponents = calendar.dateComponents([.hour, .minute, .second], from: Date())
+        dayComponents.hour = timeComponents.hour
+        dayComponents.minute = timeComponents.minute
+        dayComponents.second = timeComponents.second
+        return calendar.date(from: dayComponents) ?? day
     }
 }
 

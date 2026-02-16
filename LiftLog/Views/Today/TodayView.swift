@@ -3,6 +3,7 @@ import SwiftData
 
 struct TodayView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
     @Query private var allSets: [WorkoutSet]
     @Query private var exercises: [Exercise]
     @State private var languageManager = LanguageManager.shared
@@ -12,12 +13,13 @@ struct TodayView: View {
     @State private var editingSet: WorkoutSet?
     @State private var editingExercise: Exercise?
     @State private var expandedNotes: Set<UUID> = []
+    @State private var inlineEditingSetID: UUID?
+    @State private var todayAnchor = Calendar.current.startOfDay(for: Date())
 
     private var todaySets: [WorkoutSet] {
         let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
         return allSets.filter {
-            calendar.startOfDay(for: $0.date) == today && $0.exercise != nil
+            calendar.startOfDay(for: $0.date) == todayAnchor && $0.exercise != nil
         }
     }
 
@@ -59,6 +61,14 @@ struct TodayView: View {
                 ExerciseEditView(exercise: exercise)
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
+            refreshTodayAnchor()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                refreshTodayAnchor()
+            }
+        }
         .id(languageManager.currentLanguage)
     }
 
@@ -82,11 +92,25 @@ struct TodayView: View {
                     }
 
                     ForEach(sets) { set in
-                        SetRowView(workoutSet: set, onDuplicate: {
-                            quickAddSet(for: exercise, basedOn: set)
-                        }, onEdit: {
-                            editingSet = set
-                        })
+                        VStack(spacing: 4) {
+                            SetRowView(workoutSet: set, onTap: {
+                                withAnimation(.easeInOut(duration: 0.18)) {
+                                    inlineEditingSetID = (inlineEditingSetID == set.id) ? nil : set.id
+                                }
+                            }, onDuplicate: {
+                                quickAddSet(for: exercise, basedOn: set)
+                            }, onEdit: {
+                                editingSet = set
+                            })
+
+                            if inlineEditingSetID == set.id {
+                                InlineSetEditorRow(workoutSet: set, onDone: {
+                                    withAnimation(.easeInOut(duration: 0.18)) {
+                                        inlineEditingSetID = nil
+                                    }
+                                })
+                            }
+                        }
                     }
                     .onDelete { indexSet in
                         deleteSet(at: indexSet, from: sets)
@@ -99,9 +123,6 @@ struct TodayView: View {
                         exercise: exercise,
                         sets: sets,
                         hasNotes: !exercise.displayNotes.isEmpty,
-                        onAddSet: {
-                            quickAddSet(for: exercise, basedOn: sets.last)
-                        },
                         onInfoTap: {
                             withAnimation {
                                 if expandedNotes.contains(exercise.id) {
@@ -115,6 +136,8 @@ struct TodayView: View {
                 }
             }
         }
+        .listStyle(.plain)
+        .environment(\.defaultMinListRowHeight, 32)
     }
 
     private func quickAddRow(for exercise: Exercise, sets: [WorkoutSet]) -> some View {
@@ -151,11 +174,10 @@ struct TodayView: View {
 
     /// Directly add a new set without showing modal
     private func quickAddSet(for exercise: Exercise, basedOn referenceSet: WorkoutSet?) {
-        // Use exercise.workoutSets relationship (updated in-memory) instead of @Query
         let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-        let todayExerciseSets = exercise.workoutSets.filter {
-            calendar.startOfDay(for: $0.date) == today
+        let todayExerciseSets = allSets.filter {
+            $0.exercise?.id == exercise.id &&
+            calendar.startOfDay(for: $0.date) == todayAnchor
         }
         let nextSetNumber = (todayExerciseSets.map { $0.setNumber }.max() ?? 0) + 1
 
@@ -197,7 +219,7 @@ struct TodayView: View {
     /// Get the appropriate set from the previous day based on user preference
     private func getPreviousDaySet(for exercise: Exercise) -> WorkoutSet? {
         let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
+        let today = todayAnchor
 
         // Find the most recent day before today with sets for this exercise
         let previousSets = exercise.workoutSets
@@ -247,7 +269,7 @@ struct TodayView: View {
                     icon: "dumbbell"
                 )
             }
-            .padding(.vertical, 8)
+            .padding(.vertical, 2)
         }
     }
 
@@ -256,25 +278,32 @@ struct TodayView: View {
             showingAddSet = true
         } label: {
             Image(systemName: "plus")
-                .font(.title2.bold())
+                .font(.title3.bold())
                 .foregroundStyle(.white)
-                .frame(width: 56, height: 56)
+                .frame(width: 50, height: 50)
                 .background(Color.orange)
                 .clipShape(Circle())
                 .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
         }
-        .padding()
+        .padding(12)
     }
 
     private var todayDateString: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "EEEE, MMM d"
         formatter.locale = LanguageManager.shared.currentLanguage.locale ?? Locale.current
-        return formatter.string(from: Date())
+        return formatter.string(from: todayAnchor)
+    }
+
+    private func refreshTodayAnchor() {
+        todayAnchor = Calendar.current.startOfDay(for: Date())
     }
 
     private func deleteSet(at offsets: IndexSet, from sets: [WorkoutSet]) {
         for index in offsets {
+            if inlineEditingSetID == sets[index].id {
+                inlineEditingSetID = nil
+            }
             modelContext.delete(sets[index])
         }
     }
@@ -282,6 +311,7 @@ struct TodayView: View {
 
 struct SetRowView: View {
     let workoutSet: WorkoutSet
+    var onTap: (() -> Void)?
     var onDuplicate: (() -> Void)?
     var onEdit: (() -> Void)?
 
@@ -293,7 +323,8 @@ struct SetRowView: View {
         HStack {
             Text("common.set".localized(with: workoutSet.setNumber))
                 .foregroundStyle(.secondary)
-                .frame(width: 60, alignment: .leading)
+                .font(.footnote)
+                .frame(width: 52, alignment: .leading)
 
             Spacer()
 
@@ -320,7 +351,11 @@ struct SetRowView: View {
                     .font(.caption)
             }
         }
+        .padding(.vertical, 1)
         .contentShape(Rectangle())
+        .onTapGesture {
+            onTap?()
+        }
         .onLongPressGesture {
             let generator = UIImpactFeedbackGenerator(style: .medium)
             generator.impactOccurred()
@@ -337,11 +372,109 @@ struct SetRowView: View {
     }
 }
 
+struct InlineSetEditorRow: View {
+    let workoutSet: WorkoutSet
+    var onDone: (() -> Void)?
+
+    @State private var weightText: String
+    @State private var reps: Int
+    @State private var durationSeconds: Int
+
+    private var exerciseType: String {
+        workoutSet.exercise?.exerciseType ?? "weightReps"
+    }
+
+    init(workoutSet: WorkoutSet, onDone: (() -> Void)? = nil) {
+        self.workoutSet = workoutSet
+        self.onDone = onDone
+        _weightText = State(initialValue: String(format: "%.1f", workoutSet.weightKg))
+        _reps = State(initialValue: max(1, workoutSet.reps))
+        _durationSeconds = State(initialValue: max(5, workoutSet.durationSeconds))
+    }
+
+    var body: some View {
+        VStack(spacing: 8) {
+            if exerciseType == "weightReps" {
+                HStack(spacing: 8) {
+                    Text("kg")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    TextField("0", text: $weightText)
+                        .keyboardType(.decimalPad)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 90)
+
+                    Spacer()
+
+                    Stepper(value: $reps, in: 1...200) {
+                        Text("\(reps) \("common.reps".localized)")
+                            .font(.subheadline)
+                    }
+                }
+            } else if exerciseType == "repsOnly" {
+                Stepper(value: $reps, in: 1...500) {
+                    Text("\(reps) \("common.reps".localized)")
+                        .font(.subheadline)
+                }
+            } else {
+                Stepper(value: $durationSeconds, in: 5...3600, step: 5) {
+                    Text(WorkoutSet.formatDuration(durationSeconds))
+                        .font(.subheadline)
+                }
+            }
+
+            HStack {
+                Button("common.cancel".localized) {
+                    onDone?()
+                }
+                .font(.caption)
+
+                Spacer()
+
+                Button("common.save".localized) {
+                    saveChanges()
+                    onDone?()
+                }
+                .font(.caption.weight(.semibold))
+                .buttonStyle(.borderedProminent)
+                .tint(.orange)
+            }
+        }
+        .padding(8)
+        .background(Color.orange.opacity(0.08))
+        .cornerRadius(10)
+    }
+
+    private func saveChanges() {
+        if exerciseType == "weightReps" {
+            workoutSet.weightKg = parsedWeight()
+            workoutSet.reps = max(1, reps)
+            workoutSet.durationSeconds = 0
+        } else if exerciseType == "repsOnly" {
+            workoutSet.weightKg = 0
+            workoutSet.reps = max(1, reps)
+            workoutSet.durationSeconds = 0
+        } else {
+            workoutSet.weightKg = 0
+            workoutSet.reps = 0
+            workoutSet.durationSeconds = max(5, durationSeconds)
+        }
+
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.impactOccurred()
+    }
+
+    private func parsedWeight() -> Double {
+        let normalized = weightText.replacingOccurrences(of: ",", with: ".")
+        let value = Double(normalized) ?? 0
+        return max(0, value)
+    }
+}
+
 struct ExerciseHeaderView: View {
     let exercise: Exercise
     let sets: [WorkoutSet]
     var hasNotes: Bool = false
-    var onAddSet: (() -> Void)?
     var onInfoTap: (() -> Void)?
 
     private var totalVolume: Double {
@@ -365,6 +498,7 @@ struct ExerciseHeaderView: View {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
                     Text(exercise.displayName)
+                        .font(.subheadline.weight(.semibold))
 
                     if hasNotes, let onInfoTap = onInfoTap {
                         Button {
@@ -385,17 +519,6 @@ struct ExerciseHeaderView: View {
             }
 
             Spacer()
-
-            if let onAddSet = onAddSet {
-                Button {
-                    onAddSet()
-                } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title3)
-                        .foregroundStyle(.orange)
-                }
-                .buttonStyle(.plain)
-            }
         }
     }
 }
@@ -406,15 +529,16 @@ struct StatItemView: View {
     let icon: String
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 2) {
             Image(systemName: icon)
                 .foregroundStyle(.orange)
+                .font(.caption)
 
             Text(value)
-                .font(.title2.bold())
+                .font(.headline.bold())
 
             Text(label)
-                .font(.caption)
+                .font(.caption2)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)

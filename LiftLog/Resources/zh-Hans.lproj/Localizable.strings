@@ -19,6 +19,7 @@
 "addSet.exercise" = "动作";
 "addSet.searchExercises" = "搜索动作...";
 "addSet.change" = "更换";
+"addSet.date" = "日期";
 "addSet.weight" = "重量 (kg)";
 "addSet.reps" = "次数";
 "addSet.notes" = "备注（可选）";
@@ -32,6 +33,10 @@
 "addSet.saveAndAddAnother" = "保存并继续添加";
 "addSet.saveAndClose" = "保存并关闭";
 "addSet.savedSet" = "第 %d 组已保存!";
+"addSet.lastTrained" = "上次训练：%@";
+"addSet.lastTrainedToday" = "上次训练：今天";
+"addSet.neverTrained" = "从未训练";
+"addSet.orderingHint" = "按逾期程度排序：已训练 %d 个在前，从未训练 %d 个在底部。";
 
 /* Edit Set View */
 "editSet.title" = "编辑训练组";
@@ -83,6 +88,27 @@
 "history.noWorkoutsDescription" = "该时段内没有训练记录";
 "history.today" = "今天";
 "history.sets" = "%d 组";
+"history.export" = "导出";
+"history.export.title" = "导出 CSV";
+"history.export.range" = "日期范围";
+"history.export.range.last7" = "7天";
+"history.export.range.last30" = "30天";
+"history.export.range.thisMonth" = "本月";
+"history.export.range.custom" = "自定义";
+"history.export.customRange" = "自定义日期";
+"history.export.from" = "开始";
+"history.export.to" = "结束";
+"history.export.preview" = "预览";
+"history.export.sets" = "组数";
+"history.export.exercises" = "动作数";
+"history.export.actions" = "导出";
+"history.export.generate" = "生成 CSV";
+"history.export.share" = "分享 CSV";
+"history.export.copy" = "复制 CSV";
+"history.export.copied" = "CSV 已复制到剪贴板";
+"history.export.footer" = "CSV 使用 UTF-8 BOM 编码，兼容 Excel 中文显示。";
+"history.export.errorTitle" = "导出失败";
+"history.export.errorMessage" = "无法生成 CSV 文件，请重试。";
 
 /* Day Detail View */
 "dayDetail.done" = "完成";
@@ -184,6 +210,13 @@
 "settings.defaultSet.firstDesc" = "使用上次训练的第一组重量和次数";
 "settings.defaultSet.lastDesc" = "使用上次训练的最后一组重量和次数";
 "settings.defaultSetFooter" = "新的一天开始训练时，使用上次训练的这组数据作为默认值";
+"settings.exerciseLibrary" = "动作库";
+"settings.restoreDefaults" = "恢复默认动作";
+"settings.restoreDefaultsDescription" = "补回当前缺失的内置动作。";
+"settings.restoreDefaultsConfirmTitle" = "恢复默认动作？";
+"settings.restoreDefaultsConfirmMessage" = "将添加缺失的默认动作，不会修改你现有动作和训练数据。";
+"settings.restoreDefaultsAction" = "恢复";
+"settings.restoreDefaultsResult" = "已恢复 %d 个默认动作。";
 "settings.about" = "关于";
 "settings.version" = "版本";
 "settings.appName" = "GymLog";

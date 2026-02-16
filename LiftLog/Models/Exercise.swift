@@ -48,6 +48,10 @@ final class Exercise {
             .first?.weightKg
     }
 
+    var lastTrainedDate: Date? {
+        workoutSets.map(\.date).max()
+    }
+
     var localizedMuscleGroup: String {
         guard !muscleGroup.isEmpty else { return "" }
         return Exercise.localizedMuscleGroupName(for: muscleGroup)

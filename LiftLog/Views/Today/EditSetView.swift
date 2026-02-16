@@ -11,7 +11,7 @@ struct EditSetView: View {
     @State private var reps: Int
     @State private var durationSeconds: Int
     @State private var notes: String
-    @State private var showNotes: Bool = false
+    @State private var showExerciseNotes: Bool = false
 
     private var exerciseType: String {
         workoutSet.exercise?.exerciseType ?? "weightReps"
@@ -38,6 +38,7 @@ struct EditSetView: View {
                 if exerciseType == "timeOnly" {
                     durationSection
                 }
+                notesSection
                 summarySection
             }
             .navigationTitle("editSet.title".localized)
@@ -67,17 +68,16 @@ struct EditSetView: View {
 
                     Button {
                         withAnimation {
-                            showNotes.toggle()
-                            if showNotes && notes.isEmpty && !exercise.displayNotes.isEmpty {
-                                notes = exercise.displayNotes
-                            }
+                            showExerciseNotes.toggle()
                         }
                     } label: {
                         Image(systemName: "info.circle")
                             .font(.subheadline)
-                            .foregroundStyle(showNotes ? .orange : .blue)
+                            .foregroundStyle(showExerciseNotes ? .orange : .blue)
                     }
                     .buttonStyle(.plain)
+                    .disabled(exercise.displayNotes.isEmpty)
+                    .opacity(exercise.displayNotes.isEmpty ? 0.4 : 1)
 
                     Spacer()
 
@@ -91,12 +91,28 @@ struct EditSetView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                if showNotes {
-                    TextEditor(text: $notes)
-                        .font(.subheadline)
-                        .frame(minHeight: 60)
+                if showExerciseNotes, !exercise.displayNotes.isEmpty {
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: "lightbulb.fill")
+                            .foregroundStyle(.orange)
+                            .padding(.top, 2)
+
+                        Text(exercise.displayNotes)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(10)
+                    .background(Color.orange.opacity(0.08))
+                    .cornerRadius(10)
                 }
             }
+        }
+    }
+
+    private var notesSection: some View {
+        Section("addSet.notes".localized) {
+            TextField("addSet.addNote".localized, text: $notes, axis: .vertical)
+                .lineLimit(2...5)
         }
     }
 

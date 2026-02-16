@@ -3,11 +3,13 @@ import SwiftData
 import Charts
 
 struct ProgressChartView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @Query(sort: \Exercise.name) private var exercises: [Exercise]
     @State private var languageManager = LanguageManager.shared
 
     @State private var selectedExercise: Exercise?
     @State private var selectedTimeRange: TimeRange = .threeMonths
+    @State private var now = Date()
 
     enum TimeRange: String, CaseIterable {
         case oneMonth = "1M"
@@ -39,7 +41,7 @@ struct ProgressChartView: View {
 
     private var startDate: Date? {
         guard let months = selectedTimeRange.months else { return nil }
-        return Calendar.current.date(byAdding: .month, value: -months, to: Date())
+        return Calendar.current.date(byAdding: .month, value: -months, to: now)
     }
 
     private var filteredSets: [WorkoutSet] {
@@ -181,7 +183,19 @@ struct ProgressChartView: View {
                 }
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
+            refreshNow()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                refreshNow()
+            }
+        }
         .id(languageManager.currentLanguage)
+    }
+
+    private func refreshNow() {
+        now = Date()
     }
 
     private var exercisePicker: some View {

@@ -11,7 +11,7 @@ struct DayDetailView: View {
     private var daySets: [WorkoutSet] {
         let calendar = Calendar.current
         let dayStart = calendar.startOfDay(for: date)
-        return allSets.filter { calendar.startOfDay(for: $0.date) == dayStart }
+        return allSets.filter { calendar.startOfDay(for: $0.date) == dayStart && $0.exercise != nil }
     }
 
     private var groupedByExercise: [(Exercise, [WorkoutSet])] {

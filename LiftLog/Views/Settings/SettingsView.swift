@@ -1,19 +1,51 @@
 import SwiftUI
+import SwiftData
 
 struct SettingsView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \Exercise.name) private var exercises: [Exercise]
     @State private var languageManager = LanguageManager.shared
     @State private var settingsManager = SettingsManager.shared
+    @State private var showingRestoreDefaultsAlert = false
+    @State private var restoredExerciseCount = 0
+    @State private var showRestoreResult = false
 
     var body: some View {
         NavigationStack {
             List {
+                if showRestoreResult {
+                    restoreResultSection
+                }
                 languageSection
                 workoutSection
+                exerciseLibrarySection
                 aboutSection
             }
             .navigationTitle("settings.title".localized)
+            .alert("settings.restoreDefaultsConfirmTitle".localized, isPresented: $showingRestoreDefaultsAlert) {
+                Button("common.cancel".localized, role: .cancel) {}
+                Button("settings.restoreDefaultsAction".localized) {
+                    restoreDefaultExercises()
+                }
+            } message: {
+                Text("settings.restoreDefaultsConfirmMessage".localized)
+            }
         }
         .id(languageManager.currentLanguage)
+    }
+
+    private var restoreResultSection: some View {
+        Section {
+            HStack(spacing: 10) {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                Text("settings.restoreDefaultsResult".localized(with: restoredExerciseCount))
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+            .padding(.vertical, 4)
+        }
+        .listRowBackground(Color.green.opacity(0.1))
     }
 
     private var languageSection: some View {
@@ -47,6 +79,59 @@ struct SettingsView: View {
             Text("settings.workoutSection".localized)
         } footer: {
             Text("settings.defaultSetFooter".localized)
+        }
+    }
+
+    private var exerciseLibrarySection: some View {
+        Section("settings.exerciseLibrary".localized) {
+            Button {
+                showingRestoreDefaultsAlert = true
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "arrow.counterclockwise.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(.orange)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("settings.restoreDefaults".localized)
+                            .foregroundStyle(.primary)
+                        Text("settings.restoreDefaultsDescription".localized)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                }
+                .padding(.vertical, 2)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func restoreDefaultExercises() {
+        let existingNames = Set(exercises.map(\.name))
+        var inserted = 0
+
+        for exercise in Exercise.sampleExercises() where !existingNames.contains(exercise.name) {
+            modelContext.insert(exercise)
+            inserted += 1
+        }
+
+        if inserted > 0 {
+            do {
+                try modelContext.save()
+            } catch {
+                print("Failed to restore default exercises: \(error)")
+            }
+        }
+
+        restoredExerciseCount = inserted
+        withAnimation {
+            showRestoreResult = true
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            withAnimation {
+                showRestoreResult = false
+            }
         }
     }
 
@@ -133,4 +218,5 @@ struct DefaultSetSelectionView: View {
 
 #Preview {
     SettingsView()
+        .modelContainer(for: [Exercise.self, WorkoutSet.self], inMemory: true)
 }

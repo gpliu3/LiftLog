@@ -19,6 +19,7 @@
 "addSet.exercise" = "Exercise";
 "addSet.searchExercises" = "Search exercises...";
 "addSet.change" = "Change";
+"addSet.date" = "Date";
 "addSet.weight" = "Weight (kg)";
 "addSet.reps" = "Reps";
 "addSet.notes" = "Notes (Optional)";
@@ -32,6 +33,10 @@
 "addSet.saveAndAddAnother" = "Save & Add Another";
 "addSet.saveAndClose" = "Save & Close";
 "addSet.savedSet" = "Set %d saved!";
+"addSet.lastTrained" = "Last: %@";
+"addSet.lastTrainedToday" = "Last: Today";
+"addSet.neverTrained" = "Never trained";
+"addSet.orderingHint" = "Sorted by due: %d trained first, %d never-trained at bottom.";
 
 /* Edit Set View */
 "editSet.title" = "Edit Set";
@@ -83,6 +88,27 @@
 "history.noWorkoutsDescription" = "No workouts recorded in this period";
 "history.today" = "Today";
 "history.sets" = "%d sets";
+"history.export" = "Export";
+"history.export.title" = "Export CSV";
+"history.export.range" = "Date Range";
+"history.export.range.last7" = "7D";
+"history.export.range.last30" = "30D";
+"history.export.range.thisMonth" = "Month";
+"history.export.range.custom" = "Custom";
+"history.export.customRange" = "Custom Dates";
+"history.export.from" = "From";
+"history.export.to" = "To";
+"history.export.preview" = "Preview";
+"history.export.sets" = "Sets";
+"history.export.exercises" = "Exercises";
+"history.export.actions" = "Export";
+"history.export.generate" = "Generate CSV";
+"history.export.share" = "Share CSV";
+"history.export.copy" = "Copy CSV";
+"history.export.copied" = "CSV copied to clipboard";
+"history.export.footer" = "CSV is UTF-8 with BOM for better Excel compatibility.";
+"history.export.errorTitle" = "Export Failed";
+"history.export.errorMessage" = "Unable to generate CSV file. Please try again.";
 
 /* Day Detail View */
 "dayDetail.done" = "Done";
@@ -184,6 +210,13 @@
 "settings.defaultSet.firstDesc" = "Use previous day's first set weight and reps";
 "settings.defaultSet.lastDesc" = "Use previous day's last set weight and reps";
 "settings.defaultSetFooter" = "When starting a new day, use this set from the previous session as the default";
+"settings.exerciseLibrary" = "Exercise Library";
+"settings.restoreDefaults" = "Restore Default Exercises";
+"settings.restoreDefaultsDescription" = "Add any built-in exercises that are currently missing.";
+"settings.restoreDefaultsConfirmTitle" = "Restore Default Exercises?";
+"settings.restoreDefaultsConfirmMessage" = "This adds missing default exercises and keeps your existing exercises and training data unchanged.";
+"settings.restoreDefaultsAction" = "Restore";
+"settings.restoreDefaultsResult" = "Restored %d default exercises.";
 "settings.about" = "About";
 "settings.version" = "Version";
 "settings.appName" = "GymLog";
