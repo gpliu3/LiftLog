@@ -87,10 +87,11 @@ struct ExerciseListView: View {
                     }
                     .onDelete { indexSet in
                         deleteExercises(at: indexSet, from: exercises)
-                    }
-                }
             }
         }
+        .environment(\.defaultMinListRowHeight, 28)
+    }
+}
     }
 
     private func deleteExercises(at offsets: IndexSet, from exercises: [Exercise]) {
@@ -137,7 +138,7 @@ struct ExerciseRowView: View {
 
     var body: some View {
         HStack {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(exercise.displayName)
                     .font(.headline)
 
@@ -181,7 +182,7 @@ struct ExerciseRowView: View {
                 .buttonStyle(.plain)
             }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 2)
     }
 }
 

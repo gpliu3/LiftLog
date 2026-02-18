@@ -18,8 +18,13 @@ struct DayDetailView: View {
         let grouped = Dictionary(grouping: daySets) { $0.exercise }
         return grouped.compactMap { (exercise, sets) in
             guard let exercise = exercise else { return nil }
-            return (exercise, sets.sorted { $0.setNumber < $1.setNumber })
-        }.sorted { $0.0.displayName < $1.0.displayName }
+            return (exercise, sets.sorted(by: WorkoutSet.trainingOrder(lhs:rhs:)))
+        }.sorted { lhs, rhs in
+            let lhsLatest = lhs.1.map(\.date).max() ?? .distantPast
+            let rhsLatest = rhs.1.map(\.date).max() ?? .distantPast
+            if lhsLatest != rhsLatest { return lhsLatest > rhsLatest }
+            return lhs.0.displayName < rhs.0.displayName
+        }
     }
 
     private var totalVolume: Double {
@@ -38,7 +43,10 @@ struct DayDetailView: View {
                 ForEach(groupedByExercise, id: \.0.id) { exercise, sets in
                     Section {
                         ForEach(sets) { set in
-                            DaySetRowView(workoutSet: set)
+                            DaySetRowView(
+                                workoutSet: set,
+                                isPersonalBest: set.isPersonalBest(in: allSets)
+                            )
                         }
                         .onDelete { indexSet in
                             deleteSets(at: indexSet, from: sets)
@@ -60,6 +68,7 @@ struct DayDetailView: View {
             }
             .navigationTitle(formattedDate)
             .navigationBarTitleDisplayMode(.inline)
+            .environment(\.defaultMinListRowHeight, 28)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("dayDetail.done".localized) {
@@ -104,7 +113,7 @@ struct DayDetailView: View {
                 }
                 .frame(maxWidth: .infinity)
             }
-            .padding(.vertical, 8)
+            .padding(.vertical, 2)
         }
     }
 
@@ -149,18 +158,18 @@ struct DayDetailView: View {
 
 struct DaySetRowView: View {
     let workoutSet: WorkoutSet
+    let isPersonalBest: Bool
 
     private var exerciseType: String {
         workoutSet.exercise?.exerciseType ?? "weightReps"
     }
 
     var body: some View {
-        HStack {
+        HStack(spacing: 8) {
             Text("common.set".localized(with: workoutSet.setNumber))
                 .foregroundStyle(.secondary)
-                .frame(width: 60, alignment: .leading)
-
-            Spacer()
+                .font(.caption)
+                .frame(width: 44, alignment: .leading)
 
             if exerciseType == "timeOnly" {
                 Text(workoutSet.formattedDuration)
@@ -177,11 +186,26 @@ struct DaySetRowView: View {
 
                 Text("\(workoutSet.reps) \("common.reps".localized)")
                     .fontWeight(.medium)
-
-                Spacer()
-
                 Text("\(Int(workoutSet.volume)) kg")
                     .foregroundStyle(.secondary)
+                    .font(.caption2)
+            }
+
+            Spacer(minLength: 6)
+
+            if let rir = workoutSet.rir {
+                Text("RIR \(rir)")
+                    .font(.caption2.weight(.semibold))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.blue.opacity(0.15))
+                    .foregroundStyle(.blue)
+                    .clipShape(Capsule())
+            }
+
+            if isPersonalBest {
+                Image(systemName: "sparkles")
+                    .foregroundStyle(.orange)
                     .font(.caption)
             }
         }

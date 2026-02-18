@@ -61,6 +61,7 @@ struct ExerciseDetailView: View {
                     recentActivitySection
                 }
             }
+            .environment(\.defaultMinListRowHeight, 28)
             .navigationTitle(exercise.displayName)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -141,9 +142,9 @@ struct ExerciseDetailView: View {
     private var recentActivitySection: some View {
         Section("exerciseDetail.recentActivity".localized) {
             ForEach(recentSets) { set in
-                HStack {
+                HStack(spacing: 8) {
                     Text(set.date, style: .date)
-                        .font(.subheadline)
+                        .font(.caption)
                         .foregroundStyle(.secondary)
 
                     Spacer()
@@ -161,6 +162,22 @@ struct ExerciseDetailView: View {
                     } else {
                         Text("\(String(format: "%.1f", set.weightKg)) kg × \(set.reps)")
                             .fontWeight(.medium)
+                    }
+
+                    if let rir = set.rir {
+                        Text("RIR \(rir)")
+                            .font(.caption2.weight(.semibold))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.blue.opacity(0.15))
+                            .foregroundStyle(.blue)
+                            .clipShape(Capsule())
+                    }
+
+                    if set.isPersonalBest(in: exercise.workoutSets) {
+                        Image(systemName: "sparkles")
+                            .foregroundStyle(.orange)
+                            .font(.caption)
                     }
                 }
             }

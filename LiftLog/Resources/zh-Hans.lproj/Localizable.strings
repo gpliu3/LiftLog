@@ -28,6 +28,7 @@
 "addSet.setNumber" = "第 %d 组";
 "addSet.volumeLabel" = "容量: %d kg";
 "addSet.est1RM" = "预估极限";
+"addSet.rir" = "RIR";
 "addSet.cancel" = "取消";
 "addSet.save" = "保存";
 "addSet.saveAndAddAnother" = "保存并继续添加";
@@ -260,3 +261,4 @@
 "common.kg" = "公斤";
 "common.reps" = "次";
 "common.set" = "第 %d 组";
+"common.noneShort" = "-";

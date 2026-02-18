@@ -10,6 +10,7 @@ struct EditSetView: View {
     @State private var weight: Double
     @State private var reps: Int
     @State private var durationSeconds: Int
+    @State private var rirSelection: Int
     @State private var notes: String
     @State private var showExerciseNotes: Bool = false
 
@@ -22,6 +23,7 @@ struct EditSetView: View {
         _weight = State(initialValue: workoutSet.weightKg)
         _reps = State(initialValue: workoutSet.reps)
         _durationSeconds = State(initialValue: workoutSet.durationSeconds)
+        _rirSelection = State(initialValue: workoutSet.rir ?? -1)
         _notes = State(initialValue: workoutSet.notes)
     }
 
@@ -38,6 +40,7 @@ struct EditSetView: View {
                 if exerciseType == "timeOnly" {
                     durationSection
                 }
+                rirSection
                 notesSection
                 summarySection
             }
@@ -113,6 +116,18 @@ struct EditSetView: View {
         Section("addSet.notes".localized) {
             TextField("addSet.addNote".localized, text: $notes, axis: .vertical)
                 .lineLimit(2...5)
+        }
+    }
+
+    private var rirSection: some View {
+        Section("addSet.rir".localized) {
+            Picker("addSet.rir".localized, selection: $rirSelection) {
+                Text("common.noneShort".localized).tag(-1)
+                Text("0").tag(0)
+                Text("1").tag(1)
+                Text("2").tag(2)
+            }
+            .pickerStyle(.segmented)
         }
     }
 
@@ -261,6 +276,7 @@ struct EditSetView: View {
         workoutSet.weightKg = exerciseType == "weightReps" ? weight : 0
         workoutSet.reps = exerciseType == "timeOnly" ? 0 : reps
         workoutSet.durationSeconds = exerciseType == "timeOnly" ? durationSeconds : 0
+        workoutSet.rir = rirSelection < 0 ? nil : rirSelection
         workoutSet.notes = notes
 
         let generator = UINotificationFeedbackGenerator()

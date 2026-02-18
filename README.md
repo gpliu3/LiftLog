@@ -9,7 +9,9 @@ A clean, modern iOS strength training tracker built with SwiftUI and SwiftData.
 ## Features
 
 - **Quick Logging** — Tap to instantly add sets with one tap. Tap a set to edit inline, or long press for full edit view.
-- **Smart Defaults** — New training days auto-fill from your previous session. Choose whether to carry over your warm-up (first set) or working (last set) values.
+- **Smart Defaults** — New training days auto-fill from the first (starting) set of your previous training day for that exercise.
+- **PR Highlights** — Sets that hit personal bests (weight/volume/duration/reps up to that day) get a celebration marker.
+- **RIR Tracking** — Optional RIR input (0/1/2) per set, editable later and shown only when set.
 - **Progress Charts** — Track volume, max weight, and estimated 1RM over time with Swift Charts.
 - **Exercise Library** — Create and manage exercises with muscle group tags and form notes.
 - **Exercise Quick Add** — In Exercises, each row shows last-trained date plus "X days ago" and a direct Quick Add button.
@@ -33,6 +35,8 @@ A clean, modern iOS strength training tracker built with SwiftUI and SwiftData.
 | Edit a set (full view) | Long press any set |
 | Delete a set | Swipe left on any set |
 | Quick add from Exercises | Exercises tab → tap **Quick Add** on any exercise |
+| Set optional RIR | In Log Set / Edit Set choose **RIR**: `-`, `0`, `1`, `2` |
+| Spot PR sets | Look for the sparkle marker on set rows |
 | Export records | History tab → Export button → Generate/Share/Copy CSV |
 
 ## Tech Stack
@@ -76,7 +80,7 @@ LiftLog/
 ## Settings
 
 - **Language** — Follow system, English, or 简体中文
-- **Default Set** — Choose whether a new day pulls from the first set (warm-up) or last set (working) of the previous session
+- **Default Start Value** — New day set defaults use the first set from the most recent previous training day
 - **Restore Default Exercises** — Add missing built-in exercises without modifying existing user data
 
 ## Requirements

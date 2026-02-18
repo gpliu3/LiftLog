@@ -103,7 +103,7 @@ struct HistoryView: View {
     }
 
     private var periodPicker: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 8) {
             Picker("Period", selection: $selectedPeriod) {
                 ForEach(TimePeriod.allCases, id: \.self) { period in
                     Text(period.localized).tag(period)
@@ -112,7 +112,7 @@ struct HistoryView: View {
             .pickerStyle(.segmented)
             .padding(.horizontal)
 
-            HStack(spacing: 32) {
+            HStack(spacing: 20) {
                 VStack {
                     Text("\(trainingDaysCount)")
                         .font(.title.bold())
@@ -129,9 +129,9 @@ struct HistoryView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .padding(.bottom, 8)
+            .padding(.bottom, 4)
         }
-        .padding(.top)
+        .padding(.top, 8)
         .background(Color(.systemGroupedBackground))
     }
 
@@ -153,6 +153,7 @@ struct HistoryView: View {
                     }
             }
         }
+        .environment(\.defaultMinListRowHeight, 28)
     }
 }
 
@@ -380,6 +381,7 @@ private enum CSVExporter {
         "weight_kg",
         "reps",
         "duration_seconds",
+        "rir",
         "notes",
         "volume_kg"
     ].joined(separator: ",")
@@ -407,6 +409,7 @@ private enum CSVExporter {
                 String(format: "%.2f", set.weightKg),
                 "\(set.reps)",
                 "\(set.durationSeconds)",
+                set.rir.map(String.init) ?? "",
                 csvEscape(set.notes),
                 String(format: "%.2f", set.volume)
             ]
@@ -442,8 +445,13 @@ struct DayRowView: View {
     let sets: [WorkoutSet]
 
     private var exerciseNames: [String] {
-        let names = Set(sets.compactMap { $0.exercise?.name })
-        return Array(names).sorted()
+        let grouped = Dictionary(grouping: sets) { $0.exercise?.id }
+        let ordered = grouped.compactMap { (_, groupedSets) -> (String, Date)? in
+            guard let name = groupedSets.first?.exercise?.displayName else { return nil }
+            let latest = groupedSets.map(\.date).max() ?? .distantPast
+            return (name, latest)
+        }
+        return ordered.sorted { $0.1 > $1.1 }.map(\.0)
     }
 
     private var totalVolume: Double {
@@ -456,7 +464,7 @@ struct DayRowView: View {
 
     var body: some View {
         HStack {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Text(date, style: .date)
                         .font(.headline)
@@ -473,9 +481,9 @@ struct DayRowView: View {
                 }
 
                 Text(exerciseNames.joined(separator: ", "))
-                    .font(.subheadline)
+                    .font(.caption)
                     .foregroundStyle(.secondary)
-                    .lineLimit(2)
+                    .lineLimit(1)
             }
 
             Spacer()
@@ -493,7 +501,7 @@ struct DayRowView: View {
                 .font(.caption)
                 .foregroundStyle(.tertiary)
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 2)
     }
 }
 

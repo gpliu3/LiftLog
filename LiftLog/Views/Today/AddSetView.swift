@@ -17,6 +17,7 @@ struct AddSetView: View {
     @State private var weight: Double = 20.0
     @State private var reps: Int = 10
     @State private var durationSeconds: Int = 30
+    @State private var rirSelection: Int = -1
     @State private var setNotes: String = ""
     @State private var showExerciseNotes: Bool = false
     @State private var searchText: String = ""
@@ -116,7 +117,7 @@ struct AddSetView: View {
                     selectedExercise = exercise
                     showExerciseNotes = false
                     searchText = ""
-                    loadLastWeight()
+                    applySuggestedDefaults(for: exercise)
                 } label: {
                     HStack(alignment: .top, spacing: 8) {
                         VStack(alignment: .leading, spacing: 2) {
@@ -183,6 +184,7 @@ struct AddSetView: View {
                 if exerciseType == "timeOnly" {
                     durationSection
                 }
+                rirSection
                 dateSection
                 notesSection
                 summarySection
@@ -224,6 +226,11 @@ struct AddSetView: View {
             .onAppear {
                 setupInitialValues()
             }
+            .onChange(of: selectedDate) { _, _ in
+                if let exercise = selectedExercise {
+                    applySuggestedDefaults(for: exercise)
+                }
+            }
         }
     }
 
@@ -242,10 +249,9 @@ struct AddSetView: View {
     private func setupInitialValues() {
         if let exercise = preselectedExercise {
             selectedExercise = exercise
+            applySuggestedDefaults(for: exercise)
             if let w = prefilledWeight {
                 weight = w
-            } else if let lastWeight = exercise.lastWeight {
-                weight = lastWeight
             }
             if let r = prefilledReps {
                 reps = r
@@ -321,6 +327,18 @@ struct AddSetView: View {
         Section("addSet.notes".localized) {
             TextField("addSet.addNote".localized, text: $setNotes, axis: .vertical)
                 .lineLimit(2...5)
+        }
+    }
+
+    private var rirSection: some View {
+        Section("addSet.rir".localized) {
+            Picker("addSet.rir".localized, selection: $rirSelection) {
+                Text("common.noneShort".localized).tag(-1)
+                Text("0").tag(0)
+                Text("1").tag(1)
+                Text("2").tag(2)
+            }
+            .pickerStyle(.segmented)
         }
     }
 
@@ -462,16 +480,67 @@ struct AddSetView: View {
                             .fontWeight(.medium)
                     }
                 }
+
+                if rirSelection >= 0 {
+                    HStack {
+                        Text("addSet.rir".localized)
+                        Spacer()
+                        Text("RIR \(rirSelection)")
+                            .foregroundStyle(.secondary)
+                    }
+                }
             } header: {
                 Text("addSet.summary".localized)
             }
         }
     }
 
-    private func loadLastWeight() {
-        if let exercise = selectedExercise, let lastWeight = exercise.lastWeight {
+    private func applySuggestedDefaults(for exercise: Exercise) {
+        let currentDaySets = targetDaySets(for: exercise, on: selectedDate)
+
+        if let latestTodaySet = currentDaySets.sorted(by: WorkoutSet.trainingOrder(lhs:rhs:)).last {
+            weight = latestTodaySet.weightKg
+            reps = latestTodaySet.reps > 0 ? latestTodaySet.reps : reps
+            durationSeconds = latestTodaySet.durationSeconds > 0 ? latestTodaySet.durationSeconds : durationSeconds
+            rirSelection = latestTodaySet.rir ?? -1
+            return
+        }
+
+        if let previousStartSet = previousDayStartingSet(for: exercise, before: selectedDate) {
+            weight = previousStartSet.weightKg
+            reps = previousStartSet.reps > 0 ? previousStartSet.reps : reps
+            durationSeconds = previousStartSet.durationSeconds > 0 ? previousStartSet.durationSeconds : durationSeconds
+            rirSelection = previousStartSet.rir ?? -1
+            return
+        }
+
+        if let lastWeight = exercise.lastWeight {
             weight = lastWeight
         }
+        rirSelection = -1
+    }
+
+    private func targetDaySets(for exercise: Exercise, on date: Date) -> [WorkoutSet] {
+        let calendar = Calendar.current
+        let targetDay = calendar.startOfDay(for: date)
+        return allSets.filter {
+            $0.exercise?.id == exercise.id && calendar.startOfDay(for: $0.date) == targetDay
+        }
+    }
+
+    private func previousDayStartingSet(for exercise: Exercise, before date: Date) -> WorkoutSet? {
+        let calendar = Calendar.current
+        let targetDay = calendar.startOfDay(for: date)
+        let previousSets = exercise.workoutSets
+            .filter { calendar.startOfDay(for: $0.date) < targetDay }
+            .sorted { $0.date > $1.date }
+
+        guard let recentPrevious = previousSets.first else { return nil }
+        let previousDay = calendar.startOfDay(for: recentPrevious.date)
+        return previousSets
+            .filter { calendar.startOfDay(for: $0.date) == previousDay }
+            .sorted(by: WorkoutSet.trainingOrder(lhs:rhs:))
+            .first
     }
 
     private func saveSet(andContinue: Bool) {
@@ -491,6 +560,7 @@ struct AddSetView: View {
             reps: saveReps,
             durationSeconds: saveDuration,
             setNumber: setNumber,
+            rir: rirSelection < 0 ? nil : rirSelection,
             notes: setNotes.trimmingCharacters(in: .whitespacesAndNewlines)
         )
 

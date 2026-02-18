@@ -7,7 +7,6 @@ struct TodayView: View {
     @Query private var allSets: [WorkoutSet]
     @Query private var exercises: [Exercise]
     @State private var languageManager = LanguageManager.shared
-    @State private var settingsManager = SettingsManager.shared
 
     @State private var showingAddSet = false
     @State private var editingSet: WorkoutSet?
@@ -28,7 +27,12 @@ struct TodayView: View {
         return grouped.compactMap { (exercise, sets) in
             guard let exercise = exercise else { return nil }
             return (exercise, sets.sorted { $0.setNumber < $1.setNumber })
-        }.sorted { $0.0.displayName < $1.0.displayName }
+        }.sorted { lhs, rhs in
+            let lhsLatest = lhs.1.map(\.date).max() ?? .distantPast
+            let rhsLatest = rhs.1.map(\.date).max() ?? .distantPast
+            if lhsLatest != rhsLatest { return lhsLatest > rhsLatest }
+            return lhs.0.displayName < rhs.0.displayName
+        }
     }
 
     private var totalVolume: Double {
@@ -93,7 +97,7 @@ struct TodayView: View {
 
                     ForEach(sets) { set in
                         VStack(spacing: 4) {
-                            SetRowView(workoutSet: set, onTap: {
+                            SetRowView(workoutSet: set, isPersonalBest: set.isPersonalBest(in: allSets), onTap: {
                                 withAnimation(.easeInOut(duration: 0.18)) {
                                     inlineEditingSetID = (inlineEditingSetID == set.id) ? nil : set.id
                                 }
@@ -137,7 +141,7 @@ struct TodayView: View {
             }
         }
         .listStyle(.plain)
-        .environment(\.defaultMinListRowHeight, 32)
+        .environment(\.defaultMinListRowHeight, 28)
     }
 
     private func quickAddRow(for exercise: Exercise, sets: [WorkoutSet]) -> some View {
@@ -172,7 +176,7 @@ struct TodayView: View {
         .listRowBackground(Color.orange.opacity(0.05))
     }
 
-    /// Directly add a new set without showing modal
+    /// Directly add a new set without showing modal.
     private func quickAddSet(for exercise: Exercise, basedOn referenceSet: WorkoutSet?) {
         let calendar = Calendar.current
         let todayExerciseSets = allSets.filter {
@@ -185,16 +189,19 @@ struct TodayView: View {
         var weight: Double = exercise.isWeightReps ? 20.0 : 0
         var reps: Int = exercise.isTimeOnly ? 0 : 10
         var duration: Int = exercise.isTimeOnly ? 30 : 0
+        var rir: Int? = nil
 
         if let ref = referenceSet {
             weight = ref.weightKg
             reps = ref.reps
             duration = ref.durationSeconds
+            rir = ref.rir
         } else {
-            if let previousSet = getPreviousDaySet(for: exercise) {
-                weight = previousSet.weightKg
-                reps = previousSet.reps
-                duration = previousSet.durationSeconds
+            if let previousStartingSet = getPreviousDayStartingSet(for: exercise) {
+                weight = previousStartingSet.weightKg
+                reps = previousStartingSet.reps
+                duration = previousStartingSet.durationSeconds
+                rir = previousStartingSet.rir
             } else if exercise.isWeightReps, let lastWeight = exercise.lastWeight {
                 weight = lastWeight
             }
@@ -206,7 +213,8 @@ struct TodayView: View {
             weightKg: weight,
             reps: reps,
             durationSeconds: duration,
-            setNumber: nextSetNumber
+            setNumber: nextSetNumber,
+            rir: rir
         )
 
         modelContext.insert(workoutSet)
@@ -216,12 +224,11 @@ struct TodayView: View {
         generator.impactOccurred()
     }
 
-    /// Get the appropriate set from the previous day based on user preference
-    private func getPreviousDaySet(for exercise: Exercise) -> WorkoutSet? {
+    /// Get the first set from the most recent previous training day.
+    private func getPreviousDayStartingSet(for exercise: Exercise) -> WorkoutSet? {
         let calendar = Calendar.current
         let today = todayAnchor
 
-        // Find the most recent day before today with sets for this exercise
         let previousSets = exercise.workoutSets
             .filter { calendar.startOfDay(for: $0.date) < today }
             .sorted { $0.date > $1.date }
@@ -234,19 +241,12 @@ struct TodayView: View {
             .sorted { $0.setNumber < $1.setNumber }
 
         guard !setsOnThatDay.isEmpty else { return nil }
-
-        // Return first or last based on preference
-        switch settingsManager.defaultSetPreference {
-        case .firstSet:
-            return setsOnThatDay.first
-        case .lastSet:
-            return setsOnThatDay.last
-        }
+        return setsOnThatDay.first
     }
 
     private var statsCard: some View {
         Section {
-            HStack(spacing: 20) {
+            HStack(spacing: 12) {
                 StatItemView(
                     value: "\(todaySets.count)",
                     label: "today.sets".localized,
@@ -280,7 +280,7 @@ struct TodayView: View {
             Image(systemName: "plus")
                 .font(.title3.bold())
                 .foregroundStyle(.white)
-                .frame(width: 50, height: 50)
+                .frame(width: 46, height: 46)
                 .background(Color.orange)
                 .clipShape(Circle())
                 .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
@@ -311,6 +311,7 @@ struct TodayView: View {
 
 struct SetRowView: View {
     let workoutSet: WorkoutSet
+    let isPersonalBest: Bool
     var onTap: (() -> Void)?
     var onDuplicate: (() -> Void)?
     var onEdit: (() -> Void)?
@@ -320,13 +321,11 @@ struct SetRowView: View {
     }
 
     var body: some View {
-        HStack {
+        HStack(spacing: 8) {
             Text("common.set".localized(with: workoutSet.setNumber))
                 .foregroundStyle(.secondary)
-                .font(.footnote)
-                .frame(width: 52, alignment: .leading)
-
-            Spacer()
+                .font(.caption)
+                .frame(width: 44, alignment: .leading)
 
             if exerciseType == "timeOnly" {
                 Text(workoutSet.formattedDuration)
@@ -344,14 +343,30 @@ struct SetRowView: View {
                 Text("\(workoutSet.reps) \("common.reps".localized)")
                     .fontWeight(.medium)
 
-                Spacer()
-
                 Text("\(Int(workoutSet.volume)) kg")
                     .foregroundStyle(.secondary)
+                    .font(.caption2)
+            }
+
+            Spacer(minLength: 6)
+
+            if let rir = workoutSet.rir {
+                Text("RIR \(rir)")
+                    .font(.caption2.weight(.semibold))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.blue.opacity(0.15))
+                    .foregroundStyle(.blue)
+                    .clipShape(Capsule())
+            }
+
+            if isPersonalBest {
+                Image(systemName: "sparkles")
+                    .foregroundStyle(.orange)
                     .font(.caption)
             }
         }
-        .padding(.vertical, 1)
+        .padding(.vertical, 0)
         .contentShape(Rectangle())
         .onTapGesture {
             onTap?()
@@ -379,6 +394,7 @@ struct InlineSetEditorRow: View {
     @State private var weightText: String
     @State private var reps: Int
     @State private var durationSeconds: Int
+    @State private var rirSelection: Int
 
     private var exerciseType: String {
         workoutSet.exercise?.exerciseType ?? "weightReps"
@@ -390,10 +406,11 @@ struct InlineSetEditorRow: View {
         _weightText = State(initialValue: String(format: "%.1f", workoutSet.weightKg))
         _reps = State(initialValue: max(1, workoutSet.reps))
         _durationSeconds = State(initialValue: max(5, workoutSet.durationSeconds))
+        _rirSelection = State(initialValue: workoutSet.rir ?? -1)
     }
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
             if exerciseType == "weightReps" {
                 HStack(spacing: 8) {
                     Text("kg")
@@ -422,6 +439,14 @@ struct InlineSetEditorRow: View {
                         .font(.subheadline)
                 }
             }
+
+            Picker("addSet.rir".localized, selection: $rirSelection) {
+                Text("common.noneShort".localized).tag(-1)
+                Text("0").tag(0)
+                Text("1").tag(1)
+                Text("2").tag(2)
+            }
+            .pickerStyle(.segmented)
 
             HStack {
                 Button("common.cancel".localized) {
@@ -459,6 +484,7 @@ struct InlineSetEditorRow: View {
             workoutSet.reps = 0
             workoutSet.durationSeconds = max(5, durationSeconds)
         }
+        workoutSet.rir = rirSelection < 0 ? nil : rirSelection
 
         let generator = UIImpactFeedbackGenerator(style: .light)
         generator.impactOccurred()
@@ -529,13 +555,13 @@ struct StatItemView: View {
     let icon: String
 
     var body: some View {
-        VStack(spacing: 2) {
+        VStack(spacing: 1) {
             Image(systemName: icon)
                 .foregroundStyle(.orange)
                 .font(.caption)
 
             Text(value)
-                .font(.headline.bold())
+                .font(.subheadline.bold())
 
             Text(label)
                 .font(.caption2)

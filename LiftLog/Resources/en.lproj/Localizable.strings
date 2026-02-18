@@ -28,6 +28,7 @@
 "addSet.setNumber" = "Set #%d";
 "addSet.volumeLabel" = "Volume: %d kg";
 "addSet.est1RM" = "Est. 1RM";
+"addSet.rir" = "RIR";
 "addSet.cancel" = "Cancel";
 "addSet.save" = "Save";
 "addSet.saveAndAddAnother" = "Save & Add Another";
@@ -260,3 +261,4 @@
 "common.kg" = "kg";
 "common.reps" = "reps";
 "common.set" = "Set %d";
+"common.noneShort" = "-";
