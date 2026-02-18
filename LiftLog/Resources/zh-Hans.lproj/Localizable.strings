@@ -51,6 +51,7 @@
 "exercises.noExercises" = "暂无动作";
 "exercises.noExercisesDescription" = "点击 + 添加你的第一个动作";
 "exercises.sessions" = "%d 次训练";
+"exercises.quickAdd" = "快速记录";
 
 /* Exercise Edit View */
 "exerciseEdit.newTitle" = "新建动作";

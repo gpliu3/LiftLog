@@ -51,6 +51,7 @@
 "exercises.noExercises" = "No Exercises";
 "exercises.noExercisesDescription" = "Tap + to add your first exercise";
 "exercises.sessions" = "%d sessions";
+"exercises.quickAdd" = "Quick Add";
 
 /* Exercise Edit View */
 "exerciseEdit.newTitle" = "New Exercise";

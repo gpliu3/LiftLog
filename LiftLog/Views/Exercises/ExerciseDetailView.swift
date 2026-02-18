@@ -8,10 +8,31 @@ struct ExerciseDetailView: View {
     @State private var showingEditSheet = false
 
     private var recentSets: [WorkoutSet] {
-        exercise.workoutSets
-            .sorted { $0.createdAt > $1.createdAt }
+        orderedRecentSets
             .prefix(20)
             .map { $0 }
+    }
+
+    private var orderedRecentSets: [WorkoutSet] {
+        let calendar = Calendar.current
+        return exercise.workoutSets.sorted { lhs, rhs in
+            let lhsDay = calendar.startOfDay(for: lhs.date)
+            let rhsDay = calendar.startOfDay(for: rhs.date)
+
+            if lhsDay != rhsDay {
+                return lhsDay > rhsDay
+            }
+
+            if lhs.setNumber != rhs.setNumber {
+                return lhs.setNumber < rhs.setNumber
+            }
+
+            if lhs.date != rhs.date {
+                return lhs.date < rhs.date
+            }
+
+            return lhs.createdAt < rhs.createdAt
+        }
     }
 
     private var personalRecord: Double? {

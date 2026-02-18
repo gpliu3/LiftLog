@@ -12,6 +12,7 @@ A clean, modern iOS strength training tracker built with SwiftUI and SwiftData.
 - **Smart Defaults** — New training days auto-fill from your previous session. Choose whether to carry over your warm-up (first set) or working (last set) values.
 - **Progress Charts** — Track volume, max weight, and estimated 1RM over time with Swift Charts.
 - **Exercise Library** — Create and manage exercises with muscle group tags and form notes.
+- **Exercise Quick Add** — In Exercises, each row shows last-trained date plus "X days ago" and a direct Quick Add button.
 - **Training History** — Browse past workouts by week or month with per-day breakdowns.
 - **CSV Export** — Export selected date-range training records to CSV for Excel analysis, share, or copy/paste.
 - **Backdated Logging** — Choose a date (default today) when adding a set to log past training days.
@@ -31,6 +32,7 @@ A clean, modern iOS strength training tracker built with SwiftUI and SwiftData.
 | Edit a set quickly | Tap any set row (inline editor) |
 | Edit a set (full view) | Long press any set |
 | Delete a set | Swipe left on any set |
+| Quick add from Exercises | Exercises tab → tap **Quick Add** on any exercise |
 | Export records | History tab → Export button → Generate/Share/Copy CSV |
 
 ## Tech Stack
