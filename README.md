@@ -15,6 +15,8 @@ A clean, modern iOS strength training tracker built with SwiftUI and SwiftData.
 - **Training History** — Browse past workouts by week or month with per-day breakdowns.
 - **CSV Export** — Export selected date-range training records to CSV for Excel analysis, share, or copy/paste.
 - **Backdated Logging** — Choose a date (default today) when adding a set to log past training days.
+- **Due-Aware Exercise Picker** — In Log Set, exercises show last-trained date plus "X days ago", ordered by longest due first.
+- **One-Tap Save Actions** — Log Set provides direct **Save & Add Another** and **Save & Close** buttons (no extra menu step).
 - **Bilingual** — Full English and Chinese (简体中文) support with in-app language switching.
 
 ## How It Works
@@ -22,6 +24,7 @@ A clean, modern iOS strength training tracker built with SwiftUI and SwiftData.
 | Action | How |
 |---|---|
 | Log a new set | Tap the **+** FAB button |
+| Save in one tap | Use **Save & Add Another** or **Save & Close** directly at the bottom of Log Set |
 | Choose log date | In Log Set, pick **Date** (defaults to today) |
 | Add another set | Tap "Add another set" at the bottom of an exercise group |
 | Duplicate a set | Swipe right on any set |

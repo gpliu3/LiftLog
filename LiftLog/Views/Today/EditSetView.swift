@@ -211,9 +211,6 @@ struct EditSetView: View {
                     .frame(width: 100)
                     .multilineTextAlignment(.center)
 
-                Text("common.seconds".localized)
-                    .foregroundStyle(.secondary)
-
                 Spacer()
 
                 Button {

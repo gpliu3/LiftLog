@@ -35,6 +35,10 @@
 "addSet.savedSet" = "Set %d saved!";
 "addSet.lastTrained" = "Last: %@";
 "addSet.lastTrainedToday" = "Last: Today";
+"addSet.lastTrainedWithRelative" = "Last: %@ (%@)";
+"addSet.lastTrainedTodayWithDays" = "Last: Today (0 days ago)";
+"addSet.daysAgo.one" = "1 day ago";
+"addSet.daysAgo.other" = "%d days ago";
 "addSet.neverTrained" = "Never trained";
 "addSet.orderingHint" = "Sorted by due: %d trained first, %d never-trained at bottom.";
 

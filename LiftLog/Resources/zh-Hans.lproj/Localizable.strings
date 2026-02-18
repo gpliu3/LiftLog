@@ -35,6 +35,10 @@
 "addSet.savedSet" = "第 %d 组已保存!";
 "addSet.lastTrained" = "上次训练：%@";
 "addSet.lastTrainedToday" = "上次训练：今天";
+"addSet.lastTrainedWithRelative" = "上次训练：%@（%@）";
+"addSet.lastTrainedTodayWithDays" = "上次训练：今天（0 天前）";
+"addSet.daysAgo.one" = "1 天前";
+"addSet.daysAgo.other" = "%d 天前";
 "addSet.neverTrained" = "从未训练";
 "addSet.orderingHint" = "按逾期程度排序：已训练 %d 个在前，从未训练 %d 个在底部。";
 

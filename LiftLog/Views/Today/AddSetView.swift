@@ -60,13 +60,28 @@ struct AddSetView: View {
 
         let calendar = Calendar.current
         if calendar.isDateInToday(lastTrained) {
-            return "addSet.lastTrainedToday".localized
+            return "addSet.lastTrainedTodayWithDays".localized
         }
 
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.locale = LanguageManager.shared.currentLanguage.locale ?? Locale.current
-        return "addSet.lastTrained".localized(with: formatter.string(from: lastTrained))
+        return "addSet.lastTrainedWithRelative".localized(
+            with: formatter.string(from: lastTrained),
+            daysAgoText(for: lastTrained)
+        )
+    }
+
+    private func daysAgoText(for date: Date) -> String {
+        let calendar = Calendar.current
+        let fromDay = calendar.startOfDay(for: date)
+        let toDay = calendar.startOfDay(for: Date())
+        let days = max(0, calendar.dateComponents([.day], from: fromDay, to: toDay).day ?? 0)
+
+        if days == 1 {
+            return "addSet.daysAgo.one".localized
+        }
+        return "addSet.daysAgo.other".localized(with: days)
     }
 
     private var neverTrainedCount: Int {
@@ -180,25 +195,31 @@ struct AddSetView: View {
                         dismiss()
                     }
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Menu {
-                        Button {
-                            saveSet(andContinue: true)
-                        } label: {
-                            Label("addSet.saveAndAddAnother".localized, systemImage: "plus.circle")
-                        }
-
-                        Button {
-                            saveSet(andContinue: false)
-                        } label: {
-                            Label("addSet.saveAndClose".localized, systemImage: "checkmark.circle")
-                        }
+            }
+            .safeAreaInset(edge: .bottom) {
+                HStack(spacing: 10) {
+                    Button {
+                        saveSet(andContinue: true)
                     } label: {
-                        Text("addSet.save".localized)
-                            .fontWeight(.semibold)
+                        Label("addSet.saveAndAddAnother".localized, systemImage: "plus.circle")
+                            .frame(maxWidth: .infinity)
                     }
+                    .buttonStyle(.bordered)
+                    .disabled(selectedExercise == nil)
+
+                    Button {
+                        saveSet(andContinue: false)
+                    } label: {
+                        Label("addSet.saveAndClose".localized, systemImage: "checkmark.circle")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
                     .disabled(selectedExercise == nil)
                 }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 12)
+                .background(.thinMaterial)
             }
             .onAppear {
                 setupInitialValues()
@@ -397,9 +418,6 @@ struct AddSetView: View {
                     .font(.title.bold())
                     .frame(width: 100)
                     .multilineTextAlignment(.center)
-
-                Text("common.seconds".localized)
-                    .foregroundStyle(.secondary)
 
                 Spacer()
 
