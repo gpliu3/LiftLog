@@ -122,8 +122,9 @@ struct AddSetView: View {
                     HStack(alignment: .top, spacing: 8) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(exercise.displayName)
+                                .font(AppTextStyle.sectionTitle)
                             Text(lastTrainedLabel(for: exercise))
-                                .font(.caption2)
+                                .font(AppTextStyle.caption2)
                                 .foregroundStyle(.secondary)
                         }
 
@@ -131,7 +132,7 @@ struct AddSetView: View {
 
                         if !exercise.muscleGroup.isEmpty {
                             Text(exercise.localizedMuscleGroup)
-                                .font(.caption)
+                                .font(AppTextStyle.caption)
                                 .foregroundStyle(.secondary)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 2)
@@ -191,6 +192,7 @@ struct AddSetView: View {
             }
             .navigationTitle("addSet.title".localized)
             .navigationBarTitleDisplayMode(.inline)
+            .font(AppTextStyle.body)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("addSet.cancel".localized) {
@@ -204,6 +206,9 @@ struct AddSetView: View {
                         saveSet(andContinue: true)
                     } label: {
                         Label("addSet.saveAndAddAnother".localized, systemImage: "plus.circle")
+                            .font(AppTextStyle.captionStrong)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.72)
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
@@ -213,14 +218,17 @@ struct AddSetView: View {
                         saveSet(andContinue: false)
                     } label: {
                         Label("addSet.saveAndClose".localized, systemImage: "checkmark.circle")
+                            .font(AppTextStyle.captionStrong)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.72)
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
                     .disabled(selectedExercise == nil)
                 }
                 .padding(.horizontal, 16)
-                .padding(.top, 8)
-                .padding(.bottom, 12)
+                .padding(.top, 6)
+                .padding(.bottom, 10)
                 .background(.thinMaterial)
             }
             .onAppear {
@@ -264,7 +272,7 @@ struct AddSetView: View {
             if let exercise = selectedExercise {
                 HStack {
                     Text(exercise.displayName)
-                        .font(.headline)
+                        .font(AppTextStyle.sectionTitle)
 
                     Button {
                         withAnimation {
@@ -272,7 +280,7 @@ struct AddSetView: View {
                         }
                     } label: {
                         Image(systemName: "info.circle")
-                            .font(.subheadline)
+                            .font(AppTextStyle.body)
                             .foregroundStyle(showExerciseNotes ? .orange : .blue)
                     }
                     .buttonStyle(.plain)
@@ -287,13 +295,13 @@ struct AddSetView: View {
                             selectedExercise = nil
                             showExerciseNotes = false
                         }
-                        .font(.subheadline)
+                        .font(AppTextStyle.body)
                     }
                 }
 
                 if !exercise.muscleGroup.isEmpty {
                     Text(exercise.localizedMuscleGroup)
-                        .font(.caption)
+                        .font(AppTextStyle.caption)
                         .foregroundStyle(.secondary)
                 }
 
@@ -304,7 +312,7 @@ struct AddSetView: View {
                             .padding(.top, 2)
 
                         Text(exercise.displayNotes)
-                            .font(.subheadline)
+                            .font(AppTextStyle.body)
                             .foregroundStyle(.secondary)
                     }
                     .padding(10)
@@ -349,7 +357,7 @@ struct AddSetView: View {
                     weight = max(0, weight - 2.5)
                 } label: {
                     Image(systemName: "minus.circle.fill")
-                        .font(.title)
+                        .font(.title2)
                         .foregroundStyle(.orange)
                 }
                 .buttonStyle(.plain)
@@ -357,10 +365,10 @@ struct AddSetView: View {
                 Spacer()
 
                 TextField("Weight", value: $weight, format: .number)
-                    .font(.title.bold())
+                    .font(AppTextStyle.metric)
                     .keyboardType(.decimalPad)
                     .multilineTextAlignment(.center)
-                    .frame(width: 100)
+                    .frame(width: 84)
 
                 Text("kg")
                     .foregroundStyle(.secondary)
@@ -371,12 +379,12 @@ struct AddSetView: View {
                     weight += 2.5
                 } label: {
                     Image(systemName: "plus.circle.fill")
-                        .font(.title)
+                        .font(.title2)
                         .foregroundStyle(.orange)
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.vertical, 8)
+            .padding(.vertical, 4)
         }
     }
 
@@ -387,7 +395,7 @@ struct AddSetView: View {
                     reps = max(1, reps - 1)
                 } label: {
                     Image(systemName: "minus.circle.fill")
-                        .font(.title)
+                        .font(.title2)
                         .foregroundStyle(.orange)
                 }
                 .buttonStyle(.plain)
@@ -395,10 +403,10 @@ struct AddSetView: View {
                 Spacer()
 
                 TextField("Reps", value: $reps, format: .number)
-                    .font(.title.bold())
+                    .font(AppTextStyle.metric)
                     .keyboardType(.numberPad)
                     .multilineTextAlignment(.center)
-                    .frame(width: 100)
+                    .frame(width: 84)
 
                 Text("common.reps".localized)
                     .foregroundStyle(.secondary)
@@ -409,12 +417,12 @@ struct AddSetView: View {
                     reps += 1
                 } label: {
                     Image(systemName: "plus.circle.fill")
-                        .font(.title)
+                        .font(.title2)
                         .foregroundStyle(.orange)
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.vertical, 8)
+            .padding(.vertical, 4)
         }
     }
 
@@ -425,7 +433,7 @@ struct AddSetView: View {
                     durationSeconds = max(5, durationSeconds - 5)
                 } label: {
                     Image(systemName: "minus.circle.fill")
-                        .font(.title)
+                        .font(.title2)
                         .foregroundStyle(.orange)
                 }
                 .buttonStyle(.plain)
@@ -433,8 +441,8 @@ struct AddSetView: View {
                 Spacer()
 
                 Text(WorkoutSet.formatDuration(durationSeconds))
-                    .font(.title.bold())
-                    .frame(width: 100)
+                    .font(AppTextStyle.metric)
+                    .frame(width: 84)
                     .multilineTextAlignment(.center)
 
                 Spacer()
@@ -443,12 +451,12 @@ struct AddSetView: View {
                     durationSeconds += 5
                 } label: {
                     Image(systemName: "plus.circle.fill")
-                        .font(.title)
+                        .font(.title2)
                         .foregroundStyle(.orange)
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.vertical, 8)
+            .padding(.vertical, 4)
         }
     }
 

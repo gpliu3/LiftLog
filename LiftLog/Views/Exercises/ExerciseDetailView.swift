@@ -61,7 +61,8 @@ struct ExerciseDetailView: View {
                     recentActivitySection
                 }
             }
-            .environment(\.defaultMinListRowHeight, 28)
+            .font(AppTextStyle.body)
+            .environment(\.defaultMinListRowHeight, 24)
             .navigationTitle(exercise.displayName)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -95,7 +96,7 @@ struct ExerciseDetailView: View {
             if !exercise.displayNotes.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("exerciseDetail.notes".localized)
-                        .font(.subheadline)
+                        .font(AppTextStyle.body)
                         .foregroundStyle(.secondary)
                     Text(exercise.displayNotes)
                 }
@@ -144,29 +145,31 @@ struct ExerciseDetailView: View {
             ForEach(recentSets) { set in
                 HStack(spacing: 8) {
                     Text(set.date, style: .date)
-                        .font(.caption)
+                        .font(AppTextStyle.caption)
                         .foregroundStyle(.secondary)
 
                     Spacer()
 
                     Text("common.set".localized(with: set.setNumber))
-                        .font(.caption)
+                        .font(AppTextStyle.caption)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.78)
                         .foregroundStyle(.secondary)
 
                     if exercise.isTimeOnly {
                         Text(set.formattedDuration)
-                            .fontWeight(.medium)
+                            .font(AppTextStyle.bodyStrong)
                     } else if exercise.isRepsOnly {
                         Text("\(set.reps) \("common.reps".localized)")
-                            .fontWeight(.medium)
+                            .font(AppTextStyle.bodyStrong)
                     } else {
                         Text("\(String(format: "%.1f", set.weightKg)) kg × \(set.reps)")
-                            .fontWeight(.medium)
+                            .font(AppTextStyle.bodyStrong)
                     }
 
                     if let rir = set.rir {
                         Text("RIR \(rir)")
-                            .font(.caption2.weight(.semibold))
+                            .font(AppTextStyle.caption2Strong)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(Color.blue.opacity(0.15))
@@ -177,9 +180,10 @@ struct ExerciseDetailView: View {
                     if set.isPersonalBest(in: exercise.workoutSets) {
                         Image(systemName: "sparkles")
                             .foregroundStyle(.orange)
-                            .font(.caption)
+                            .font(AppTextStyle.caption)
                     }
                 }
+                .padding(.vertical, -1)
             }
         }
     }

@@ -260,5 +260,5 @@
 "common.edit" = "编辑";
 "common.kg" = "公斤";
 "common.reps" = "次";
-"common.set" = "第 %d 组";
+"common.set" = "第%d组";
 "common.noneShort" = "-";

@@ -59,7 +59,7 @@ struct DayDetailView: View {
                             if !exercise.muscleGroup.isEmpty {
                                 Spacer()
                                 Text(exercise.localizedMuscleGroup)
-                                    .font(.caption2)
+                                    .font(AppTextStyle.caption2)
                                     .foregroundStyle(.orange)
                             }
                         }
@@ -68,7 +68,8 @@ struct DayDetailView: View {
             }
             .navigationTitle(formattedDate)
             .navigationBarTitleDisplayMode(.inline)
-            .environment(\.defaultMinListRowHeight, 28)
+            .font(AppTextStyle.body)
+            .environment(\.defaultMinListRowHeight, 24)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("dayDetail.done".localized) {
@@ -84,9 +85,9 @@ struct DayDetailView: View {
             HStack {
                 VStack {
                     Text("\(daySets.count)")
-                        .font(.title2.bold())
+                        .font(AppTextStyle.metric)
                     Text("dayDetail.sets".localized)
-                        .font(.caption)
+                        .font(AppTextStyle.caption)
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity)
@@ -95,9 +96,9 @@ struct DayDetailView: View {
 
                 VStack {
                     Text("\(uniqueExercises)")
-                        .font(.title2.bold())
+                        .font(AppTextStyle.metric)
                     Text("dayDetail.exercises".localized)
-                        .font(.caption)
+                        .font(AppTextStyle.caption)
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity)
@@ -106,9 +107,9 @@ struct DayDetailView: View {
 
                 VStack {
                     Text(String(format: "%.0f", totalVolume))
-                        .font(.title2.bold())
+                        .font(AppTextStyle.metric)
                     Text("dayDetail.volume".localized)
-                        .font(.caption)
+                        .font(AppTextStyle.caption)
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity)
@@ -126,17 +127,17 @@ struct DayDetailView: View {
             if exerciseType == "timeOnly" {
                 let totalSeconds = sets.reduce(0) { $0 + $1.durationSeconds }
                 Text("dayDetail.setsDuration".localized(with: sets.count, WorkoutSet.formatDuration(totalSeconds)))
-                    .font(.subheadline)
+                    .font(AppTextStyle.body)
                     .foregroundStyle(.orange)
             } else if exerciseType == "repsOnly" {
                 let totalReps = sets.reduce(0) { $0 + $1.reps }
                 Text("dayDetail.setsReps".localized(with: sets.count, totalReps))
-                    .font(.subheadline)
+                    .font(AppTextStyle.body)
                     .foregroundStyle(.orange)
             } else {
                 let volume = sets.reduce(0) { $0 + $1.volume }
                 Text("dayDetail.setsVolume".localized(with: sets.count, Int(volume)))
-                    .font(.subheadline)
+                    .font(AppTextStyle.body)
                     .foregroundStyle(.orange)
             }
         }
@@ -168,34 +169,38 @@ struct DaySetRowView: View {
         HStack(spacing: 8) {
             Text("common.set".localized(with: workoutSet.setNumber))
                 .foregroundStyle(.secondary)
-                .font(.caption)
-                .frame(width: 44, alignment: .leading)
+                .font(AppTextStyle.caption)
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
+                .fixedSize(horizontal: true, vertical: false)
+                .frame(width: 50, alignment: .leading)
 
             if exerciseType == "timeOnly" {
                 Text(workoutSet.formattedDuration)
-                    .fontWeight(.medium)
+                    .font(AppTextStyle.bodyStrong)
             } else if exerciseType == "repsOnly" {
                 Text("\(workoutSet.reps) \("common.reps".localized)")
-                    .fontWeight(.medium)
+                    .font(AppTextStyle.bodyStrong)
             } else {
                 Text("\(String(format: "%.1f", workoutSet.weightKg)) kg")
-                    .fontWeight(.medium)
+                    .font(AppTextStyle.bodyStrong)
 
                 Text("×")
                     .foregroundStyle(.secondary)
+                    .font(AppTextStyle.body)
 
                 Text("\(workoutSet.reps) \("common.reps".localized)")
-                    .fontWeight(.medium)
+                    .font(AppTextStyle.bodyStrong)
                 Text("\(Int(workoutSet.volume)) kg")
                     .foregroundStyle(.secondary)
-                    .font(.caption2)
+                    .font(AppTextStyle.caption2)
             }
 
             Spacer(minLength: 6)
 
             if let rir = workoutSet.rir {
                 Text("RIR \(rir)")
-                    .font(.caption2.weight(.semibold))
+                    .font(AppTextStyle.caption2Strong)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(Color.blue.opacity(0.15))
@@ -206,9 +211,10 @@ struct DaySetRowView: View {
             if isPersonalBest {
                 Image(systemName: "sparkles")
                     .foregroundStyle(.orange)
-                    .font(.caption)
+                    .font(AppTextStyle.caption)
             }
         }
+        .padding(.vertical, -1)
     }
 }
 

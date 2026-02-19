@@ -55,6 +55,7 @@ struct TodayView: View {
                 addSetButton
             }
             .navigationTitle(todayDateString)
+            .font(AppTextStyle.body)
             .sheet(isPresented: $showingAddSet) {
                 AddSetView()
             }
@@ -96,7 +97,7 @@ struct TodayView: View {
                     }
 
                     ForEach(sets) { set in
-                        VStack(spacing: 4) {
+                        VStack(spacing: 2) {
                             SetRowView(workoutSet: set, isPersonalBest: set.isPersonalBest(in: allSets), onTap: {
                                 withAnimation(.easeInOut(duration: 0.18)) {
                                     inlineEditingSetID = (inlineEditingSetID == set.id) ? nil : set.id
@@ -141,7 +142,7 @@ struct TodayView: View {
             }
         }
         .listStyle(.plain)
-        .environment(\.defaultMinListRowHeight, 28)
+        .environment(\.defaultMinListRowHeight, 24)
     }
 
     private func quickAddRow(for exercise: Exercise, sets: [WorkoutSet]) -> some View {
@@ -159,15 +160,15 @@ struct TodayView: View {
                 if let lastSet = lastSet {
                     if exercise.isTimeOnly {
                         Text(lastSet.formattedDuration)
-                            .font(.caption)
+                            .font(AppTextStyle.caption)
                             .foregroundStyle(.secondary)
                     } else if exercise.isRepsOnly {
                         Text("\(lastSet.reps) \("common.reps".localized)")
-                            .font(.caption)
+                            .font(AppTextStyle.caption)
                             .foregroundStyle(.secondary)
                     } else {
                         Text("\(String(format: "%.1f", lastSet.weightKg)) kg × \(lastSet.reps)")
-                            .font(.caption)
+                            .font(AppTextStyle.caption)
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -278,9 +279,9 @@ struct TodayView: View {
             showingAddSet = true
         } label: {
             Image(systemName: "plus")
-                .font(.title3.bold())
+                .font(AppTextStyle.sectionTitle)
                 .foregroundStyle(.white)
-                .frame(width: 46, height: 46)
+                .frame(width: 44, height: 44)
                 .background(Color.orange)
                 .clipShape(Circle())
                 .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
@@ -324,35 +325,39 @@ struct SetRowView: View {
         HStack(spacing: 8) {
             Text("common.set".localized(with: workoutSet.setNumber))
                 .foregroundStyle(.secondary)
-                .font(.caption)
-                .frame(width: 44, alignment: .leading)
+                .font(AppTextStyle.caption)
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
+                .fixedSize(horizontal: true, vertical: false)
+                .frame(width: 50, alignment: .leading)
 
             if exerciseType == "timeOnly" {
                 Text(workoutSet.formattedDuration)
-                    .fontWeight(.medium)
+                    .font(AppTextStyle.bodyStrong)
             } else if exerciseType == "repsOnly" {
                 Text("\(workoutSet.reps) \("common.reps".localized)")
-                    .fontWeight(.medium)
+                    .font(AppTextStyle.bodyStrong)
             } else {
                 Text("\(String(format: "%.1f", workoutSet.weightKg)) kg")
-                    .fontWeight(.medium)
+                    .font(AppTextStyle.bodyStrong)
 
                 Text("×")
                     .foregroundStyle(.secondary)
+                    .font(AppTextStyle.body)
 
                 Text("\(workoutSet.reps) \("common.reps".localized)")
-                    .fontWeight(.medium)
+                    .font(AppTextStyle.bodyStrong)
 
                 Text("\(Int(workoutSet.volume)) kg")
                     .foregroundStyle(.secondary)
-                    .font(.caption2)
+                    .font(AppTextStyle.caption2)
             }
 
             Spacer(minLength: 6)
 
             if let rir = workoutSet.rir {
                 Text("RIR \(rir)")
-                    .font(.caption2.weight(.semibold))
+                    .font(AppTextStyle.caption2Strong)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(Color.blue.opacity(0.15))
@@ -363,10 +368,10 @@ struct SetRowView: View {
             if isPersonalBest {
                 Image(systemName: "sparkles")
                     .foregroundStyle(.orange)
-                    .font(.caption)
+                    .font(AppTextStyle.caption)
             }
         }
-        .padding(.vertical, 0)
+        .padding(.vertical, -1)
         .contentShape(Rectangle())
         .onTapGesture {
             onTap?()
@@ -414,7 +419,7 @@ struct InlineSetEditorRow: View {
             if exerciseType == "weightReps" {
                 HStack(spacing: 8) {
                     Text("kg")
-                        .font(.caption)
+                        .font(AppTextStyle.caption)
                         .foregroundStyle(.secondary)
                     TextField("0", text: $weightText)
                         .keyboardType(.decimalPad)
@@ -425,18 +430,18 @@ struct InlineSetEditorRow: View {
 
                     Stepper(value: $reps, in: 1...200) {
                         Text("\(reps) \("common.reps".localized)")
-                            .font(.subheadline)
+                            .font(AppTextStyle.body)
                     }
                 }
             } else if exerciseType == "repsOnly" {
                 Stepper(value: $reps, in: 1...500) {
                     Text("\(reps) \("common.reps".localized)")
-                        .font(.subheadline)
+                        .font(AppTextStyle.body)
                 }
             } else {
                 Stepper(value: $durationSeconds, in: 5...3600, step: 5) {
                     Text(WorkoutSet.formatDuration(durationSeconds))
-                        .font(.subheadline)
+                        .font(AppTextStyle.body)
                 }
             }
 
@@ -452,7 +457,7 @@ struct InlineSetEditorRow: View {
                 Button("common.cancel".localized) {
                     onDone?()
                 }
-                .font(.caption)
+                .font(AppTextStyle.caption)
 
                 Spacer()
 
@@ -460,12 +465,12 @@ struct InlineSetEditorRow: View {
                     saveChanges()
                     onDone?()
                 }
-                .font(.caption.weight(.semibold))
+                .font(AppTextStyle.captionStrong)
                 .buttonStyle(.borderedProminent)
                 .tint(.orange)
             }
         }
-        .padding(8)
+        .padding(6)
         .background(Color.orange.opacity(0.08))
         .cornerRadius(10)
     }
@@ -524,14 +529,14 @@ struct ExerciseHeaderView: View {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
                     Text(exercise.displayName)
-                        .font(.subheadline.weight(.semibold))
+                        .font(AppTextStyle.sectionTitle)
 
                     if hasNotes, let onInfoTap = onInfoTap {
                         Button {
                             onInfoTap()
                         } label: {
                             Image(systemName: "info.circle")
-                                .font(.body)
+                                .font(AppTextStyle.body)
                                 .foregroundStyle(.blue)
                                 .frame(width: 32, height: 32)
                                 .contentShape(Rectangle())
@@ -540,7 +545,7 @@ struct ExerciseHeaderView: View {
                     }
                 }
                 Text(subtitle)
-                    .font(.caption2)
+                    .font(AppTextStyle.caption2)
                     .foregroundStyle(.secondary)
             }
 
@@ -558,13 +563,13 @@ struct StatItemView: View {
         VStack(spacing: 1) {
             Image(systemName: icon)
                 .foregroundStyle(.orange)
-                .font(.caption)
+                .font(AppTextStyle.caption)
 
             Text(value)
-                .font(.subheadline.bold())
+                .font(AppTextStyle.bodyStrong)
 
             Text(label)
-                .font(.caption2)
+                .font(AppTextStyle.caption2)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
@@ -579,8 +584,8 @@ struct NotesEditorRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             TextEditor(text: $editableNotes)
-                .font(.subheadline)
-                .frame(minHeight: 50)
+                .font(AppTextStyle.body)
+                .frame(minHeight: 42)
                 .focused($isFocused)
                 .onChange(of: editableNotes) {
                     exercise.notes = editableNotes

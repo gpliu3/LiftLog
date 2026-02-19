@@ -20,6 +20,7 @@ A clean, modern iOS strength training tracker built with SwiftUI and SwiftData.
 - **Backdated Logging** — Choose a date (default today) when adding a set to log past training days.
 - **Due-Aware Exercise Picker** — In Log Set, exercises show last-trained date plus "X days ago", ordered by longest due first.
 - **One-Tap Save Actions** — Log Set provides direct **Save & Add Another** and **Save & Close** buttons (no extra menu step).
+- **Compact UI System** — Unified rounded typography and tighter row/control spacing across Today, History, Exercises, and edit forms so more records fit on screen (including larger display zoom).
 - **Bilingual** — Full English and Chinese (简体中文) support with in-app language switching.
 
 ## How It Works

@@ -40,6 +40,7 @@ struct ExerciseListView: View {
                 }
             }
             .navigationTitle("exercises.title".localized)
+            .font(AppTextStyle.body)
             .searchable(text: $searchText, prompt: "exercises.search".localized)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
@@ -80,18 +81,18 @@ struct ExerciseListView: View {
                             exercise: exercise,
                             onQuickAdd: { quickAddExercise = exercise }
                         )
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                selectedExercise = exercise
-                            }
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            selectedExercise = exercise
+                        }
                     }
                     .onDelete { indexSet in
                         deleteExercises(at: indexSet, from: exercises)
+                    }
+                }
             }
         }
-        .environment(\.defaultMinListRowHeight, 28)
-    }
-}
+        .environment(\.defaultMinListRowHeight, 24)
     }
 
     private func deleteExercises(at offsets: IndexSet, from exercises: [Exercise]) {
@@ -140,15 +141,15 @@ struct ExerciseRowView: View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text(exercise.displayName)
-                    .font(.headline)
+                    .font(AppTextStyle.sectionTitle)
 
                 Text(lastTrainedLabel)
-                    .font(.caption2)
+                    .font(AppTextStyle.caption2)
                     .foregroundStyle(.secondary)
 
                 if !exercise.displayNotes.isEmpty {
                     Text(exercise.displayNotes)
-                        .font(.caption)
+                        .font(AppTextStyle.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
@@ -159,13 +160,13 @@ struct ExerciseRowView: View {
             VStack(alignment: .trailing, spacing: 4) {
                 if exercise.timesPerformed > 0 {
                     Text("exercises.sessions".localized(with: exercise.timesPerformed))
-                        .font(.caption)
+                        .font(AppTextStyle.caption)
                         .foregroundStyle(.secondary)
                 }
 
                 if !exercise.muscleGroup.isEmpty {
                     Text(exercise.localizedMuscleGroup)
-                        .font(.caption2)
+                        .font(AppTextStyle.caption2)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(Color.orange.opacity(0.2))
@@ -177,12 +178,12 @@ struct ExerciseRowView: View {
                     onQuickAdd()
                 } label: {
                     Label("exercises.quickAdd".localized, systemImage: "plus.circle.fill")
-                        .font(.caption2)
+                        .font(AppTextStyle.caption2)
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 0)
     }
 }
 

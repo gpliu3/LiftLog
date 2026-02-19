@@ -46,6 +46,7 @@ struct EditSetView: View {
             }
             .navigationTitle("editSet.title".localized)
             .navigationBarTitleDisplayMode(.inline)
+            .font(AppTextStyle.body)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("common.cancel".localized) {
@@ -67,7 +68,7 @@ struct EditSetView: View {
             if let exercise = workoutSet.exercise {
                 HStack {
                     Text(exercise.displayName)
-                        .font(.headline)
+                        .font(AppTextStyle.sectionTitle)
 
                     Button {
                         withAnimation {
@@ -75,7 +76,7 @@ struct EditSetView: View {
                         }
                     } label: {
                         Image(systemName: "info.circle")
-                            .font(.subheadline)
+                            .font(AppTextStyle.body)
                             .foregroundStyle(showExerciseNotes ? .orange : .blue)
                     }
                     .buttonStyle(.plain)
@@ -90,7 +91,7 @@ struct EditSetView: View {
 
                 if !exercise.muscleGroup.isEmpty {
                     Text(exercise.localizedMuscleGroup)
-                        .font(.caption)
+                        .font(AppTextStyle.caption)
                         .foregroundStyle(.secondary)
                 }
 
@@ -101,7 +102,7 @@ struct EditSetView: View {
                             .padding(.top, 2)
 
                         Text(exercise.displayNotes)
-                            .font(.subheadline)
+                            .font(AppTextStyle.body)
                             .foregroundStyle(.secondary)
                     }
                     .padding(10)
@@ -138,7 +139,7 @@ struct EditSetView: View {
                     weight = max(0, weight - 2.5)
                 } label: {
                     Image(systemName: "minus.circle.fill")
-                        .font(.title)
+                        .font(.title2)
                         .foregroundStyle(.orange)
                 }
                 .buttonStyle(.plain)
@@ -146,10 +147,10 @@ struct EditSetView: View {
                 Spacer()
 
                 TextField("Weight", value: $weight, format: .number)
-                    .font(.title.bold())
+                    .font(AppTextStyle.metric)
                     .keyboardType(.decimalPad)
                     .multilineTextAlignment(.center)
-                    .frame(width: 100)
+                    .frame(width: 84)
 
                 Text("kg")
                     .foregroundStyle(.secondary)
@@ -160,12 +161,12 @@ struct EditSetView: View {
                     weight += 2.5
                 } label: {
                     Image(systemName: "plus.circle.fill")
-                        .font(.title)
+                        .font(.title2)
                         .foregroundStyle(.orange)
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.vertical, 8)
+            .padding(.vertical, 4)
         }
     }
 
@@ -176,7 +177,7 @@ struct EditSetView: View {
                     reps = max(1, reps - 1)
                 } label: {
                     Image(systemName: "minus.circle.fill")
-                        .font(.title)
+                        .font(.title2)
                         .foregroundStyle(.orange)
                 }
                 .buttonStyle(.plain)
@@ -184,10 +185,10 @@ struct EditSetView: View {
                 Spacer()
 
                 TextField("Reps", value: $reps, format: .number)
-                    .font(.title.bold())
+                    .font(AppTextStyle.metric)
                     .keyboardType(.numberPad)
                     .multilineTextAlignment(.center)
-                    .frame(width: 100)
+                    .frame(width: 84)
 
                 Text("common.reps".localized)
                     .foregroundStyle(.secondary)
@@ -198,12 +199,12 @@ struct EditSetView: View {
                     reps += 1
                 } label: {
                     Image(systemName: "plus.circle.fill")
-                        .font(.title)
+                        .font(.title2)
                         .foregroundStyle(.orange)
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.vertical, 8)
+            .padding(.vertical, 4)
         }
     }
 
@@ -214,7 +215,7 @@ struct EditSetView: View {
                     durationSeconds = max(5, durationSeconds - 5)
                 } label: {
                     Image(systemName: "minus.circle.fill")
-                        .font(.title)
+                        .font(.title2)
                         .foregroundStyle(.orange)
                 }
                 .buttonStyle(.plain)
@@ -222,8 +223,8 @@ struct EditSetView: View {
                 Spacer()
 
                 Text(WorkoutSet.formatDuration(durationSeconds))
-                    .font(.title.bold())
-                    .frame(width: 100)
+                    .font(AppTextStyle.metric)
+                    .frame(width: 84)
                     .multilineTextAlignment(.center)
 
                 Spacer()
@@ -232,12 +233,12 @@ struct EditSetView: View {
                     durationSeconds += 5
                 } label: {
                     Image(systemName: "plus.circle.fill")
-                        .font(.title)
+                        .font(.title2)
                         .foregroundStyle(.orange)
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.vertical, 8)
+            .padding(.vertical, 4)
         }
     }
 

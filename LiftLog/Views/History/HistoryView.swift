@@ -66,6 +66,7 @@ struct HistoryView: View {
                 }
             }
             .navigationTitle("history.title".localized)
+            .font(AppTextStyle.body)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
@@ -115,17 +116,17 @@ struct HistoryView: View {
             HStack(spacing: 20) {
                 VStack {
                     Text("\(trainingDaysCount)")
-                        .font(.title.bold())
+                        .font(AppTextStyle.metric)
                     Text("history.trainingDays".localized)
-                        .font(.caption)
+                        .font(AppTextStyle.caption)
                         .foregroundStyle(.secondary)
                 }
 
                 VStack {
                     Text(String(format: "%.0f", totalVolume))
-                        .font(.title.bold())
+                        .font(AppTextStyle.metric)
                     Text("history.totalVolume".localized)
-                        .font(.caption)
+                        .font(AppTextStyle.caption)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -153,7 +154,7 @@ struct HistoryView: View {
                     }
             }
         }
-        .environment(\.defaultMinListRowHeight, 28)
+        .environment(\.defaultMinListRowHeight, 24)
     }
 }
 
@@ -467,11 +468,11 @@ struct DayRowView: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Text(date, style: .date)
-                        .font(.headline)
+                        .font(AppTextStyle.sectionTitle)
 
                     if isToday {
                         Text("history.today".localized)
-                            .font(.caption)
+                            .font(AppTextStyle.caption)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(Color.orange)
@@ -481,7 +482,7 @@ struct DayRowView: View {
                 }
 
                 Text(exerciseNames.joined(separator: ", "))
-                    .font(.caption)
+                    .font(AppTextStyle.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
@@ -490,18 +491,18 @@ struct DayRowView: View {
 
             VStack(alignment: .trailing, spacing: 4) {
                 Text("history.sets".localized(with: sets.count))
-                    .font(.subheadline)
+                    .font(AppTextStyle.body)
 
                 Text("\(Int(totalVolume)) kg")
-                    .font(.caption)
+                    .font(AppTextStyle.caption)
                     .foregroundStyle(.secondary)
             }
 
             Image(systemName: "chevron.right")
-                .font(.caption)
+                .font(AppTextStyle.caption)
                 .foregroundStyle(.tertiary)
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 0)
     }
 }
 

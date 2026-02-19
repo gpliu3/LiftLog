@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 enum VolumeCalculator {
     /// Calculate volume for a single set: weight × reps
@@ -27,4 +28,16 @@ enum VolumeCalculator {
     static func tonnage(sets: [(weightKg: Double, reps: Int)]) -> Double {
         totalVolume(sets: sets) / 1000 // Convert to tonnes
     }
+}
+
+enum AppTextStyle {
+    static let screenTitle = Font.system(.title3, design: .rounded).weight(.semibold)
+    static let sectionTitle = Font.system(.headline, design: .rounded).weight(.semibold)
+    static let body = Font.system(.body, design: .rounded)
+    static let bodyStrong = Font.system(.body, design: .rounded).weight(.semibold)
+    static let caption = Font.system(.caption, design: .rounded)
+    static let captionStrong = Font.system(.caption, design: .rounded).weight(.semibold)
+    static let caption2 = Font.system(.caption2, design: .rounded)
+    static let caption2Strong = Font.system(.caption2, design: .rounded).weight(.semibold)
+    static let metric = Font.system(.title3, design: .rounded).weight(.bold)
 }
