@@ -262,3 +262,8 @@
 "common.reps" = "次";
 "common.set" = "第%d组";
 "common.noneShort" = "-";
+
+/* Today View - Previous Day Reference */
+"today.previousDay.title" = "前一次训练组";
+"today.previousDay.date" = "来自 %@";
+"today.previousDay.none" = "暂无前一次训练记录";

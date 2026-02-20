@@ -12,6 +12,7 @@ struct TodayView: View {
     @State private var editingSet: WorkoutSet?
     @State private var editingExercise: Exercise?
     @State private var expandedNotes: Set<UUID> = []
+    @State private var expandedPreviousDay: Set<UUID> = []
     @State private var inlineEditingSetID: UUID?
     @State private var todayAnchor = Calendar.current.startOfDay(for: Date())
 
@@ -45,14 +46,16 @@ struct TodayView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack(alignment: .bottomTrailing) {
-                if todaySets.isEmpty {
-                    emptyState
-                } else {
-                    workoutList
-                }
+            ScrollViewReader { proxy in
+                ZStack(alignment: .bottomTrailing) {
+                    if todaySets.isEmpty {
+                        emptyState
+                    } else {
+                        workoutList(proxy: proxy)
+                    }
 
-                addSetButton
+                    addSetButton
+                }
             }
             .navigationTitle(todayDateString)
             .font(AppTextStyle.body)
@@ -85,7 +88,7 @@ struct TodayView: View {
         )
     }
 
-    private var workoutList: some View {
+    private func workoutList(proxy: ScrollViewProxy) -> some View {
         List {
             statsCard
 
@@ -96,20 +99,34 @@ struct TodayView: View {
                             .listRowBackground(Color.blue.opacity(0.05))
                     }
 
+                    if expandedPreviousDay.contains(exercise.id) {
+                        PreviousDaySetsRow(
+                            exercise: exercise,
+                            sets: previousDaySets(for: exercise)
+                        )
+                        .listRowBackground(Color.teal.opacity(0.07))
+                    }
+
                     ForEach(sets) { set in
                         VStack(spacing: 2) {
                             SetRowView(workoutSet: set, isPersonalBest: set.isPersonalBest(in: allSets), onTap: {
                                 withAnimation(.easeInOut(duration: 0.18)) {
                                     inlineEditingSetID = (inlineEditingSetID == set.id) ? nil : set.id
                                 }
+                                if inlineEditingSetID == set.id {
+                                    scrollToSet(set.id, with: proxy)
+                                }
                             }, onDuplicate: {
                                 quickAddSet(for: exercise, basedOn: set)
                             }, onEdit: {
                                 editingSet = set
                             })
+                            .id(set.id)
 
                             if inlineEditingSetID == set.id {
-                                InlineSetEditorRow(workoutSet: set, onDone: {
+                                InlineSetEditorRow(workoutSet: set, onStartEditingWeight: {
+                                    scrollToSet(set.id, with: proxy)
+                                }, onDone: {
                                     withAnimation(.easeInOut(duration: 0.18)) {
                                         inlineEditingSetID = nil
                                     }
@@ -128,12 +145,22 @@ struct TodayView: View {
                         exercise: exercise,
                         sets: sets,
                         hasNotes: !exercise.displayNotes.isEmpty,
+                        hasPreviousDaySets: !previousDaySets(for: exercise).isEmpty,
                         onInfoTap: {
                             withAnimation {
                                 if expandedNotes.contains(exercise.id) {
                                     expandedNotes.remove(exercise.id)
                                 } else {
                                     expandedNotes.insert(exercise.id)
+                                }
+                            }
+                        },
+                        onPreviousDayTap: {
+                            withAnimation {
+                                if expandedPreviousDay.contains(exercise.id) {
+                                    expandedPreviousDay.remove(exercise.id)
+                                } else {
+                                    expandedPreviousDay.insert(exercise.id)
                                 }
                             }
                         }
@@ -143,6 +170,14 @@ struct TodayView: View {
         }
         .listStyle(.plain)
         .environment(\.defaultMinListRowHeight, 24)
+    }
+
+    private func scrollToSet(_ id: UUID, with proxy: ScrollViewProxy) {
+        DispatchQueue.main.async {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                proxy.scrollTo(id, anchor: .center)
+            }
+        }
     }
 
     private func quickAddRow(for exercise: Exercise, sets: [WorkoutSet]) -> some View {
@@ -243,6 +278,22 @@ struct TodayView: View {
 
         guard !setsOnThatDay.isEmpty else { return nil }
         return setsOnThatDay.first
+    }
+
+    private func previousDaySets(for exercise: Exercise) -> [WorkoutSet] {
+        let calendar = Calendar.current
+        let today = todayAnchor
+        let previousSets = exercise.workoutSets
+            .filter { calendar.startOfDay(for: $0.date) < today }
+            .sorted(by: WorkoutSet.trainingOrder(lhs:rhs:))
+
+        guard let latestDayDate = previousSets.map({ calendar.startOfDay(for: $0.date) }).max() else {
+            return []
+        }
+
+        return previousSets
+            .filter { calendar.startOfDay(for: $0.date) == latestDayDate }
+            .sorted(by: WorkoutSet.trainingOrder(lhs:rhs:))
     }
 
     private var statsCard: some View {
@@ -394,19 +445,27 @@ struct SetRowView: View {
 
 struct InlineSetEditorRow: View {
     let workoutSet: WorkoutSet
+    var onStartEditingWeight: (() -> Void)?
     var onDone: (() -> Void)?
 
     @State private var weightText: String
     @State private var reps: Int
     @State private var durationSeconds: Int
     @State private var rirSelection: Int
+    @State private var hasPendingChanges = false
+    @FocusState private var focusedField: Field?
+
+    private enum Field: Hashable {
+        case weight
+    }
 
     private var exerciseType: String {
         workoutSet.exercise?.exerciseType ?? "weightReps"
     }
 
-    init(workoutSet: WorkoutSet, onDone: (() -> Void)? = nil) {
+    init(workoutSet: WorkoutSet, onStartEditingWeight: (() -> Void)? = nil, onDone: (() -> Void)? = nil) {
         self.workoutSet = workoutSet
+        self.onStartEditingWeight = onStartEditingWeight
         self.onDone = onDone
         _weightText = State(initialValue: String(format: "%.1f", workoutSet.weightKg))
         _reps = State(initialValue: max(1, workoutSet.reps))
@@ -423,8 +482,12 @@ struct InlineSetEditorRow: View {
                         .foregroundStyle(.secondary)
                     TextField("0", text: $weightText)
                         .keyboardType(.decimalPad)
+                        .focused($focusedField, equals: .weight)
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 90)
+                        .onTapGesture {
+                            onStartEditingWeight?()
+                        }
 
                     Spacer()
 
@@ -462,7 +525,7 @@ struct InlineSetEditorRow: View {
                 Spacer()
 
                 Button("common.save".localized) {
-                    saveChanges()
+                    saveChangesIfNeeded()
                     onDone?()
                 }
                 .font(AppTextStyle.captionStrong)
@@ -473,9 +536,44 @@ struct InlineSetEditorRow: View {
         .padding(6)
         .background(Color.orange.opacity(0.08))
         .cornerRadius(10)
+        .onChange(of: weightText) { _, _ in
+            hasPendingChanges = true
+        }
+        .onChange(of: reps) { _, _ in
+            hasPendingChanges = true
+        }
+        .onChange(of: durationSeconds) { _, _ in
+            hasPendingChanges = true
+        }
+        .onChange(of: rirSelection) { _, _ in
+            hasPendingChanges = true
+        }
+        .onChange(of: focusedField) { oldValue, newValue in
+            if oldValue == .weight && newValue != .weight {
+                saveChangesIfNeeded()
+            }
+        }
+        .onTapGesture {
+            if focusedField == .weight {
+                focusedField = nil
+            }
+        }
+        .onDisappear {
+            saveChangesIfNeeded()
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("common.save".localized) {
+                    saveChangesIfNeeded()
+                    onDone?()
+                }
+            }
+        }
     }
 
-    private func saveChanges() {
+    private func saveChangesIfNeeded() {
+        guard hasPendingChanges else { return }
         if exerciseType == "weightReps" {
             workoutSet.weightKg = parsedWeight()
             workoutSet.reps = max(1, reps)
@@ -490,6 +588,7 @@ struct InlineSetEditorRow: View {
             workoutSet.durationSeconds = max(5, durationSeconds)
         }
         workoutSet.rir = rirSelection < 0 ? nil : rirSelection
+        hasPendingChanges = false
 
         let generator = UIImpactFeedbackGenerator(style: .light)
         generator.impactOccurred()
@@ -506,7 +605,9 @@ struct ExerciseHeaderView: View {
     let exercise: Exercise
     let sets: [WorkoutSet]
     var hasNotes: Bool = false
+    var hasPreviousDaySets: Bool = false
     var onInfoTap: (() -> Void)?
+    var onPreviousDayTap: (() -> Void)?
 
     private var totalVolume: Double {
         sets.reduce(0) { $0 + $1.volume }
@@ -529,7 +630,8 @@ struct ExerciseHeaderView: View {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
                     Text(exercise.displayName)
-                        .font(AppTextStyle.sectionTitle)
+                        .font(.headline.bold())
+                        .foregroundStyle(Color.primary)
 
                     if hasNotes, let onInfoTap = onInfoTap {
                         Button {
@@ -543,6 +645,19 @@ struct ExerciseHeaderView: View {
                         }
                         .buttonStyle(.plain)
                     }
+
+                    if hasPreviousDaySets, let onPreviousDayTap = onPreviousDayTap {
+                        Button {
+                            onPreviousDayTap()
+                        } label: {
+                            Image(systemName: "clock.arrow.circlepath")
+                                .font(AppTextStyle.body)
+                                .foregroundStyle(.teal)
+                                .frame(width: 32, height: 32)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
                 Text(subtitle)
                     .font(AppTextStyle.caption2)
@@ -551,6 +666,83 @@ struct ExerciseHeaderView: View {
 
             Spacer()
         }
+    }
+}
+
+struct PreviousDaySetsRow: View {
+    let exercise: Exercise
+    let sets: [WorkoutSet]
+
+    private var previousDayDate: Date? {
+        sets.map(\.date).max()
+    }
+
+    private var orderedSets: [WorkoutSet] {
+        sets.sorted(by: WorkoutSet.trainingOrder(lhs:rhs:))
+    }
+
+    private var subtitle: String {
+        guard let date = previousDayDate else {
+            return "today.previousDay.none".localized
+        }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.locale = LanguageManager.shared.currentLanguage.locale ?? Locale.current
+        return "today.previousDay.date".localized(with: formatter.string(from: date))
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("today.previousDay.title".localized)
+                .font(AppTextStyle.captionStrong)
+                .foregroundStyle(.teal)
+            Text(subtitle)
+                .font(AppTextStyle.caption2)
+                .foregroundStyle(.secondary)
+
+            if orderedSets.isEmpty {
+                Text("today.previousDay.none".localized)
+                    .font(AppTextStyle.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(orderedSets) { set in
+                    HStack(spacing: 8) {
+                        Text("common.set".localized(with: set.setNumber))
+                            .font(AppTextStyle.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.78)
+                            .frame(width: 50, alignment: .leading)
+
+                        if exercise.isTimeOnly {
+                            Text(set.formattedDuration)
+                                .font(AppTextStyle.captionStrong)
+                        } else if exercise.isRepsOnly {
+                            Text("\(set.reps) \("common.reps".localized)")
+                                .font(AppTextStyle.captionStrong)
+                        } else {
+                            Text("\(String(format: "%.1f", set.weightKg)) kg × \(set.reps)")
+                                .font(AppTextStyle.captionStrong)
+                            Text("\(Int(set.volume)) kg")
+                                .font(AppTextStyle.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        if let rir = set.rir {
+                            Spacer(minLength: 4)
+                            Text("RIR \(rir)")
+                                .font(AppTextStyle.caption2Strong)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.blue.opacity(0.15))
+                                .foregroundStyle(.blue)
+                                .clipShape(Capsule())
+                        }
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 2)
     }
 }
 

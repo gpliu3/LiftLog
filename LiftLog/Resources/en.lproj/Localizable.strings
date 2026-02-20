@@ -262,3 +262,8 @@
 "common.reps" = "reps";
 "common.set" = "Set %d";
 "common.noneShort" = "-";
+
+/* Today View - Previous Day Reference */
+"today.previousDay.title" = "Previous Day Sets";
+"today.previousDay.date" = "From %@";
+"today.previousDay.none" = "No previous day records";

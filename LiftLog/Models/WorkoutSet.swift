@@ -62,27 +62,27 @@ final class WorkoutSet {
 }
 
 extension WorkoutSet {
-    /// Whether this set is a personal best up to this set's training order in time.
+    /// Whether this set is a personal best reached for the first time.
+    /// Repeated ties do not count as PB again.
     func isPersonalBest(in exerciseSets: [WorkoutSet]) -> Bool {
         guard exercise != nil else { return false }
         let comparable = exerciseSets.filter { $0.exercise?.id == exercise?.id }
         let ordered = comparable.sorted(by: WorkoutSet.trainingOrder(lhs:rhs:))
 
         guard let currentIndex = ordered.firstIndex(where: { $0.id == id }) else { return false }
-        let upToNow = Array(ordered.prefix(currentIndex + 1))
-
-        let maxWeight = upToNow.map(\.weightKg).max() ?? 0
-        let maxVolume = upToNow.map(\.volume).max() ?? 0
-        let maxDuration = upToNow.map(\.durationSeconds).max() ?? 0
-        let maxReps = upToNow.map(\.reps).max() ?? 0
+        let prior = Array(ordered.prefix(currentIndex))
+        let previousMaxWeight = prior.map(\.weightKg).max() ?? 0
+        let previousMaxVolume = prior.map(\.volume).max() ?? 0
+        let previousMaxDuration = prior.map(\.durationSeconds).max() ?? 0
+        let previousMaxReps = prior.map(\.reps).max() ?? 0
 
         if exercise?.isTimeOnly == true {
-            return durationSeconds > 0 && durationSeconds >= maxDuration
+            return durationSeconds > 0 && durationSeconds > previousMaxDuration
         }
         if exercise?.isRepsOnly == true {
-            return reps > 0 && reps >= maxReps
+            return reps > 0 && reps > previousMaxReps
         }
-        return (weightKg > 0 && weightKg >= maxWeight) || (volume > 0 && volume >= maxVolume)
+        return (weightKg > 0 && weightKg > previousMaxWeight) || (volume > 0 && volume > previousMaxVolume)
     }
 
     static func trainingOrder(lhs: WorkoutSet, rhs: WorkoutSet) -> Bool {

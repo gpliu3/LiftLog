@@ -11,7 +11,9 @@ A clean, modern iOS strength training tracker built with SwiftUI and SwiftData.
 - **Quick Logging** — Tap to instantly add sets with one tap. Tap a set to edit inline, or long press for full edit view.
 - **Smart Defaults** — New training days auto-fill from the first (starting) set of your previous training day for that exercise.
 - **PR Highlights** — Sets that hit personal bests (weight/volume/duration/reps up to that day) get a celebration marker.
+- **One-Time PB Markers** — PB sparkles appear only on the first set that breaks a previous best (no repeated sparkle for ties later).
 - **RIR Tracking** — Optional RIR input (0/1/2) per set, editable later and shown only when set.
+- **Previous-Day Reference** — In Today, each exercise header has a clock button to show only the immediately previous training day's sets for planning.
 - **Progress Charts** — Track volume, max weight, and estimated 1RM over time with Swift Charts.
 - **Exercise Library** — Create and manage exercises with muscle group tags and form notes.
 - **Exercise Quick Add** — In Exercises, each row shows last-trained date plus "X days ago" and a direct Quick Add button.
@@ -33,8 +35,10 @@ A clean, modern iOS strength training tracker built with SwiftUI and SwiftData.
 | Add another set | Tap "Add another set" at the bottom of an exercise group |
 | Duplicate a set | Swipe right on any set |
 | Edit a set quickly | Tap any set row (inline editor) |
+| Inline edit safety | Keyboard includes Save; tapping outside weight auto-saves to avoid losing edits |
 | Edit a set (full view) | Long press any set |
 | Delete a set | Swipe left on any set |
+| See previous day sets | In Today exercise header, tap the clock icon |
 | Quick add from Exercises | Exercises tab → tap **Quick Add** on any exercise |
 | Set optional RIR | In Log Set / Edit Set choose **RIR**: `-`, `0`, `1`, `2` |
 | Spot PR sets | Look for the sparkle marker on set rows |
