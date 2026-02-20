@@ -693,12 +693,17 @@ struct PreviousDaySetsRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("today.previousDay.title".localized)
-                .font(AppTextStyle.captionStrong)
-                .foregroundStyle(.teal)
-            Text(subtitle)
-                .font(AppTextStyle.caption2)
-                .foregroundStyle(.secondary)
+            HStack(spacing: 8) {
+                Text("today.previousDay.title".localized)
+                    .font(AppTextStyle.captionStrong)
+                    .foregroundStyle(.teal)
+                Spacer(minLength: 8)
+                Text(subtitle)
+                    .font(AppTextStyle.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
 
             if orderedSets.isEmpty {
                 Text("today.previousDay.none".localized)
