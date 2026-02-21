@@ -1,4 +1,4 @@
-# GymLog
+# LiftLog
 
 A clean, modern iOS strength training tracker built with SwiftUI and SwiftData.
 
@@ -93,3 +93,9 @@ LiftLog/
 - Xcode 15+
 - iOS 17+
 - No external dependencies
+
+## Release
+
+- Current version: `1.0` (`CURRENT_PROJECT_VERSION` `20`)
+- Bundle ID: `com.gengpuliu.LiftLog`
+- App Store Connect metadata draft: `AppStore/metadata.md`
