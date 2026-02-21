@@ -35,10 +35,6 @@ struct DayDetailView: View {
         Set(daySets.compactMap { $0.exercise?.id }).count
     }
 
-    private var dayBodyMetrics: (bodyWeightKg: Double?, waistCm: Double?) {
-        WorkoutSet.latestBodyMetrics(from: daySets)
-    }
-
     var body: some View {
         NavigationStack {
             List {
@@ -119,26 +115,6 @@ struct DayDetailView: View {
                 .frame(maxWidth: .infinity)
             }
             .padding(.vertical, 2)
-
-            if let bodyWeight = dayBodyMetrics.bodyWeightKg {
-                HStack {
-                    Text("dayDetail.bodyWeight".localized)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Text(String(format: "%.1f kg", bodyWeight))
-                        .fontWeight(.medium)
-                }
-            }
-
-            if let waist = dayBodyMetrics.waistCm {
-                HStack {
-                    Text("dayDetail.waist".localized)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Text(String(format: "%.1f cm", waist))
-                        .fontWeight(.medium)
-                }
-            }
         }
     }
 

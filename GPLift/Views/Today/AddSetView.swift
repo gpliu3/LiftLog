@@ -6,7 +6,6 @@ struct AddSetView: View {
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \Exercise.name) private var exercises: [Exercise]
     @Query private var allSets: [WorkoutSet]
-    @State private var settingsManager = SettingsManager.shared
 
     // Pre-selected exercise (for quick add)
     var preselectedExercise: Exercise?
@@ -177,21 +176,19 @@ struct AddSetView: View {
                 }
 
                 exerciseSection
-                dateSection
-                if selectedExercise != nil {
-                    if exerciseType == "weightReps" {
-                        weightSection
-                    }
-                    if exerciseType == "weightReps" || exerciseType == "repsOnly" {
-                        repsSection
-                    }
-                    if exerciseType == "timeOnly" {
-                        durationSection
-                    }
-                    rirSection
-                    notesSection
-                    summarySection
+                if exerciseType == "weightReps" {
+                    weightSection
                 }
+                if exerciseType == "weightReps" || exerciseType == "repsOnly" {
+                    repsSection
+                }
+                if exerciseType == "timeOnly" {
+                    durationSection
+                }
+                rirSection
+                dateSection
+                notesSection
+                summarySection
             }
             .navigationTitle("addSet.title".localized)
             .navigationBarTitleDisplayMode(.inline)
@@ -563,7 +560,6 @@ struct AddSetView: View {
         let saveReps: Int = exercise.isTimeOnly ? 0 : reps
         let saveDuration: Int = exercise.isTimeOnly ? durationSeconds : 0
         let saveDate = combinedDateWithCurrentTime(selectedDate)
-        let metrics = bodyMetrics(for: saveDate)
 
         let workoutSet = WorkoutSet(
             exercise: exercise,
@@ -573,9 +569,7 @@ struct AddSetView: View {
             durationSeconds: saveDuration,
             setNumber: setNumber,
             rir: rirSelection < 0 ? nil : rirSelection,
-            notes: setNotes.trimmingCharacters(in: .whitespacesAndNewlines),
-            bodyWeightKg: metrics.bodyWeightKg,
-            waistCm: metrics.waistCm
+            notes: setNotes.trimmingCharacters(in: .whitespacesAndNewlines)
         )
 
         modelContext.insert(workoutSet)
@@ -609,20 +603,6 @@ struct AddSetView: View {
         dayComponents.minute = timeComponents.minute
         dayComponents.second = timeComponents.second
         return calendar.date(from: dayComponents) ?? day
-    }
-
-    private func bodyMetrics(for date: Date) -> (bodyWeightKg: Double?, waistCm: Double?) {
-        let calendar = Calendar.current
-        let dayStart = calendar.startOfDay(for: date)
-        let daySets = allSets.filter { calendar.startOfDay(for: $0.date) == dayStart }
-        let metricsFromSets = WorkoutSet.latestBodyMetrics(from: daySets)
-        if metricsFromSets.bodyWeightKg != nil || metricsFromSets.waistCm != nil {
-            return metricsFromSets
-        }
-        if calendar.isDateInToday(date) {
-            return settingsManager.todayBodyMetrics(for: date)
-        }
-        return (nil, nil)
     }
 }
 
