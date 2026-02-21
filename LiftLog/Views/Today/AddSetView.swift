@@ -6,6 +6,7 @@ struct AddSetView: View {
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \Exercise.name) private var exercises: [Exercise]
     @Query private var allSets: [WorkoutSet]
+    @State private var settingsManager = SettingsManager.shared
 
     // Pre-selected exercise (for quick add)
     var preselectedExercise: Exercise?
@@ -23,8 +24,6 @@ struct AddSetView: View {
     @State private var searchText: String = ""
     @State private var justSaved: Bool = false
     @State private var savedSetNumber: Int = 0
-    @State private var bodyWeightKgInput: String = ""
-    @State private var waistCmInput: String = ""
 
     private var exerciseType: String {
         selectedExercise?.exerciseType ?? "weightReps"
@@ -178,22 +177,21 @@ struct AddSetView: View {
                 }
 
                 exerciseSection
-                if exerciseType == "weightReps" {
-                    weightSection
-                }
-                if exerciseType == "weightReps" || exerciseType == "repsOnly" {
-                    repsSection
-                }
-                if exerciseType == "timeOnly" {
-                    durationSection
-                }
-                rirSection
                 dateSection
-                if isLoggingToday {
-                    bodyMetricsSection
+                if selectedExercise != nil {
+                    if exerciseType == "weightReps" {
+                        weightSection
+                    }
+                    if exerciseType == "weightReps" || exerciseType == "repsOnly" {
+                        repsSection
+                    }
+                    if exerciseType == "timeOnly" {
+                        durationSection
+                    }
+                    rirSection
+                    notesSection
+                    summarySection
                 }
-                notesSection
-                summarySection
             }
             .navigationTitle("addSet.title".localized)
             .navigationBarTitleDisplayMode(.inline)
@@ -238,19 +236,13 @@ struct AddSetView: View {
             }
             .onAppear {
                 setupInitialValues()
-                syncBodyMetricsForSelectedDate()
             }
             .onChange(of: selectedDate) { _, _ in
                 if let exercise = selectedExercise {
                     applySuggestedDefaults(for: exercise)
                 }
-                syncBodyMetricsForSelectedDate()
             }
         }
-    }
-
-    private var isLoggingToday: Bool {
-        Calendar.current.isDateInToday(selectedDate)
     }
 
     private var dateSection: some View {
@@ -346,36 +338,6 @@ struct AddSetView: View {
         Section("addSet.notes".localized) {
             TextField("addSet.addNote".localized, text: $setNotes, axis: .vertical)
                 .lineLimit(2...5)
-        }
-    }
-
-    private var bodyMetricsSection: some View {
-        Section {
-            HStack {
-                Text("addSet.bodyWeight".localized)
-                Spacer()
-                TextField("addSet.optionalValue".localized, text: $bodyWeightKgInput)
-                    .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.trailing)
-                    .frame(width: 110)
-                Text("kg")
-                    .foregroundStyle(.secondary)
-            }
-
-            HStack {
-                Text("addSet.waist".localized)
-                Spacer()
-                TextField("addSet.optionalValue".localized, text: $waistCmInput)
-                    .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.trailing)
-                    .frame(width: 110)
-                Text("cm")
-                    .foregroundStyle(.secondary)
-            }
-        } header: {
-            Text("addSet.bodyMetrics".localized)
-        } footer: {
-            Text("addSet.bodyMetricsFooter".localized)
         }
     }
 
@@ -601,8 +563,7 @@ struct AddSetView: View {
         let saveReps: Int = exercise.isTimeOnly ? 0 : reps
         let saveDuration: Int = exercise.isTimeOnly ? durationSeconds : 0
         let saveDate = combinedDateWithCurrentTime(selectedDate)
-        let bodyWeight = parsedOptionalDecimal(bodyWeightKgInput)
-        let waist = parsedOptionalDecimal(waistCmInput)
+        let metrics = bodyMetrics(for: saveDate)
 
         let workoutSet = WorkoutSet(
             exercise: exercise,
@@ -613,8 +574,8 @@ struct AddSetView: View {
             setNumber: setNumber,
             rir: rirSelection < 0 ? nil : rirSelection,
             notes: setNotes.trimmingCharacters(in: .whitespacesAndNewlines),
-            bodyWeightKg: isLoggingToday ? bodyWeight : nil,
-            waistCm: isLoggingToday ? waist : nil
+            bodyWeightKg: metrics.bodyWeightKg,
+            waistCm: metrics.waistCm
         )
 
         modelContext.insert(workoutSet)
@@ -650,33 +611,18 @@ struct AddSetView: View {
         return calendar.date(from: dayComponents) ?? day
     }
 
-    private func syncBodyMetricsForSelectedDate() {
-        guard isLoggingToday else {
-            bodyWeightKgInput = ""
-            waistCmInput = ""
-            return
-        }
-
+    private func bodyMetrics(for date: Date) -> (bodyWeightKg: Double?, waistCm: Double?) {
         let calendar = Calendar.current
-        let dayStart = calendar.startOfDay(for: selectedDate)
-        let todaysSets = allSets.filter { calendar.startOfDay(for: $0.date) == dayStart }
-        let metrics = WorkoutSet.latestBodyMetrics(from: todaysSets)
-        bodyWeightKgInput = formatOptionalDecimal(metrics.bodyWeightKg)
-        waistCmInput = formatOptionalDecimal(metrics.waistCm)
-    }
-
-    private func parsedOptionalDecimal(_ raw: String) -> Double? {
-        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
-        return Double(trimmed.replacingOccurrences(of: ",", with: "."))
-    }
-
-    private func formatOptionalDecimal(_ value: Double?) -> String {
-        guard let value else { return "" }
-        if value.rounded() == value {
-            return String(Int(value))
+        let dayStart = calendar.startOfDay(for: date)
+        let daySets = allSets.filter { calendar.startOfDay(for: $0.date) == dayStart }
+        let metricsFromSets = WorkoutSet.latestBodyMetrics(from: daySets)
+        if metricsFromSets.bodyWeightKg != nil || metricsFromSets.waistCm != nil {
+            return metricsFromSets
         }
-        return String(format: "%.1f", value)
+        if calendar.isDateInToday(date) {
+            return settingsManager.todayBodyMetrics(for: date)
+        }
+        return (nil, nil)
     }
 }
 

@@ -7,6 +7,7 @@ struct TodayView: View {
     @Query private var allSets: [WorkoutSet]
     @Query private var exercises: [Exercise]
     @State private var languageManager = LanguageManager.shared
+    @State private var settingsManager = SettingsManager.shared
 
     @State private var showingAddSet = false
     @State private var editingSet: WorkoutSet?
@@ -15,6 +16,8 @@ struct TodayView: View {
     @State private var expandedPreviousDay: Set<UUID> = []
     @State private var inlineEditingSetID: UUID?
     @State private var todayAnchor = Calendar.current.startOfDay(for: Date())
+    @State private var bodyWeightKgInput: String = ""
+    @State private var waistCmInput: String = ""
 
     private var todaySets: [WorkoutSet] {
         let calendar = Calendar.current
@@ -48,11 +51,7 @@ struct TodayView: View {
         NavigationStack {
             ScrollViewReader { proxy in
                 ZStack(alignment: .bottomTrailing) {
-                    if todaySets.isEmpty {
-                        emptyState
-                    } else {
-                        workoutList(proxy: proxy)
-                    }
+                    workoutList(proxy: proxy)
 
                     addSetButton
                 }
@@ -68,6 +67,9 @@ struct TodayView: View {
             .sheet(item: $editingExercise) { exercise in
                 ExerciseEditView(exercise: exercise)
             }
+            .onAppear {
+                syncBodyMetricsInputsFromToday()
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
             refreshTodayAnchor()
@@ -80,91 +82,102 @@ struct TodayView: View {
         .id(languageManager.currentLanguage)
     }
 
-    private var emptyState: some View {
-        ContentUnavailableView(
-            "today.noWorkout".localized,
-            systemImage: "figure.strengthtraining.traditional",
-            description: Text("today.noWorkoutDescription".localized)
-        )
-    }
-
     private func workoutList(proxy: ScrollViewProxy) -> some View {
         List {
+            bodyMetricsSection
             statsCard
 
-            ForEach(groupedSets, id: \.0.id) { exercise, sets in
+            if groupedSets.isEmpty {
                 Section {
-                    if expandedNotes.contains(exercise.id) {
-                        NotesEditorRow(exercise: exercise)
-                            .listRowBackground(Color.blue.opacity(0.05))
+                    VStack(spacing: 8) {
+                        Image(systemName: "figure.strengthtraining.traditional")
+                            .font(.title2)
+                            .foregroundStyle(.secondary)
+                        Text("today.noWorkout".localized)
+                            .font(AppTextStyle.bodyStrong)
+                        Text("today.noWorkoutDescription".localized)
+                            .font(AppTextStyle.caption)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
                     }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                }
+            } else {
+                ForEach(groupedSets, id: \.0.id) { exercise, sets in
+                    Section {
+                        if expandedNotes.contains(exercise.id) {
+                            NotesEditorRow(exercise: exercise)
+                                .listRowBackground(Color.blue.opacity(0.05))
+                        }
 
-                    if expandedPreviousDay.contains(exercise.id) {
-                        PreviousDaySetsRow(
-                            exercise: exercise,
-                            sets: previousDaySets(for: exercise)
-                        )
-                        .listRowBackground(Color.teal.opacity(0.07))
-                    }
+                        if expandedPreviousDay.contains(exercise.id) {
+                            PreviousDaySetsRow(
+                                exercise: exercise,
+                                sets: previousDaySets(for: exercise)
+                            )
+                            .listRowBackground(Color.teal.opacity(0.07))
+                        }
 
-                    ForEach(sets) { set in
-                        VStack(spacing: 2) {
-                            SetRowView(workoutSet: set, isPersonalBest: set.isPersonalBest(in: allSets), onTap: {
-                                withAnimation(.easeInOut(duration: 0.18)) {
-                                    inlineEditingSetID = (inlineEditingSetID == set.id) ? nil : set.id
-                                }
-                                if inlineEditingSetID == set.id {
-                                    scrollToSet(set.id, with: proxy)
-                                }
-                            }, onDuplicate: {
-                                quickAddSet(for: exercise, basedOn: set)
-                            }, onEdit: {
-                                editingSet = set
-                            })
-                            .id(set.id)
-
-                            if inlineEditingSetID == set.id {
-                                InlineSetEditorRow(workoutSet: set, onStartEditingWeight: {
-                                    scrollToSet(set.id, with: proxy)
-                                }, onDone: {
+                        ForEach(sets) { set in
+                            VStack(spacing: 2) {
+                                SetRowView(workoutSet: set, isPersonalBest: set.isPersonalBest(in: allSets), onTap: {
                                     withAnimation(.easeInOut(duration: 0.18)) {
-                                        inlineEditingSetID = nil
+                                        inlineEditingSetID = (inlineEditingSetID == set.id) ? nil : set.id
                                     }
+                                    if inlineEditingSetID == set.id {
+                                        scrollToSet(set.id, with: proxy)
+                                    }
+                                }, onDuplicate: {
+                                    quickAddSet(for: exercise, basedOn: set)
+                                }, onEdit: {
+                                    editingSet = set
                                 })
-                            }
-                        }
-                    }
-                    .onDelete { indexSet in
-                        deleteSet(at: indexSet, from: sets)
-                    }
+                                .id(set.id)
 
-                    // Quick add row at bottom of each exercise
-                    quickAddRow(for: exercise, sets: sets)
-                } header: {
-                    ExerciseHeaderView(
-                        exercise: exercise,
-                        sets: sets,
-                        hasNotes: !exercise.displayNotes.isEmpty,
-                        hasPreviousDaySets: !previousDaySets(for: exercise).isEmpty,
-                        onInfoTap: {
-                            withAnimation {
-                                if expandedNotes.contains(exercise.id) {
-                                    expandedNotes.remove(exercise.id)
-                                } else {
-                                    expandedNotes.insert(exercise.id)
-                                }
-                            }
-                        },
-                        onPreviousDayTap: {
-                            withAnimation {
-                                if expandedPreviousDay.contains(exercise.id) {
-                                    expandedPreviousDay.remove(exercise.id)
-                                } else {
-                                    expandedPreviousDay.insert(exercise.id)
+                                if inlineEditingSetID == set.id {
+                                    InlineSetEditorRow(workoutSet: set, onStartEditingWeight: {
+                                        scrollToSet(set.id, with: proxy)
+                                    }, onDone: {
+                                        withAnimation(.easeInOut(duration: 0.18)) {
+                                            inlineEditingSetID = nil
+                                        }
+                                    })
                                 }
                             }
                         }
-                    )
+                        .onDelete { indexSet in
+                            deleteSet(at: indexSet, from: sets)
+                        }
+
+                        // Quick add row at bottom of each exercise
+                        quickAddRow(for: exercise, sets: sets)
+                    } header: {
+                        ExerciseHeaderView(
+                            exercise: exercise,
+                            sets: sets,
+                            hasNotes: !exercise.displayNotes.isEmpty,
+                            hasPreviousDaySets: !previousDaySets(for: exercise).isEmpty,
+                            onInfoTap: {
+                                withAnimation {
+                                    if expandedNotes.contains(exercise.id) {
+                                        expandedNotes.remove(exercise.id)
+                                    } else {
+                                        expandedNotes.insert(exercise.id)
+                                    }
+                                }
+                            },
+                            onPreviousDayTap: {
+                                withAnimation {
+                                    if expandedPreviousDay.contains(exercise.id) {
+                                        expandedPreviousDay.remove(exercise.id)
+                                    } else {
+                                        expandedPreviousDay.insert(exercise.id)
+                                    }
+                                }
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -220,7 +233,7 @@ struct TodayView: View {
             calendar.startOfDay(for: $0.date) == todayAnchor
         }
         let nextSetNumber = (todayExerciseSets.map { $0.setNumber }.max() ?? 0) + 1
-        let todayMetrics = WorkoutSet.latestBodyMetrics(from: todaySets)
+        let todayMetrics = resolvedTodayBodyMetrics()
 
         // Determine values from reference set or previous day
         var weight: Double = exercise.isWeightReps ? 20.0 : 0
@@ -328,6 +341,41 @@ struct TodayView: View {
         }
     }
 
+    private var bodyMetricsSection: some View {
+        Section {
+            HStack {
+                Text("addSet.bodyWeight".localized)
+                Spacer()
+                TextField("addSet.optionalValue".localized, text: $bodyWeightKgInput)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 100)
+                Text("kg")
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack {
+                Text("addSet.waist".localized)
+                Spacer()
+                TextField("addSet.optionalValue".localized, text: $waistCmInput)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 100)
+                Text("cm")
+                    .foregroundStyle(.secondary)
+            }
+
+            Button("common.save".localized) {
+                saveTodayBodyMetrics()
+            }
+            .frame(maxWidth: .infinity)
+        } header: {
+            Text("addSet.bodyMetrics".localized)
+        } footer: {
+            Text("addSet.bodyMetricsFooter".localized)
+        }
+    }
+
     private var addSetButton: some View {
         Button {
             showingAddSet = true
@@ -352,6 +400,7 @@ struct TodayView: View {
 
     private func refreshTodayAnchor() {
         todayAnchor = Calendar.current.startOfDay(for: Date())
+        syncBodyMetricsInputsFromToday()
     }
 
     private func deleteSet(at offsets: IndexSet, from sets: [WorkoutSet]) {
@@ -361,6 +410,52 @@ struct TodayView: View {
             }
             modelContext.delete(sets[index])
         }
+    }
+
+    private func saveTodayBodyMetrics() {
+        let bodyWeight = parsedOptionalDecimal(bodyWeightKgInput)
+        let waist = parsedOptionalDecimal(waistCmInput)
+        settingsManager.saveTodayBodyMetrics(bodyWeightKg: bodyWeight, waistCm: waist, for: todayAnchor)
+
+        for set in todaySets {
+            set.bodyWeightKg = bodyWeight
+            set.waistCm = waist
+        }
+
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.success)
+    }
+
+    private func syncBodyMetricsInputsFromToday() {
+        let metricsFromSets = WorkoutSet.latestBodyMetrics(from: todaySets)
+        let metrics = (metricsFromSets.bodyWeightKg != nil || metricsFromSets.waistCm != nil)
+            ? metricsFromSets
+            : settingsManager.todayBodyMetrics(for: todayAnchor)
+
+        bodyWeightKgInput = formatOptionalDecimal(metrics.bodyWeightKg)
+        waistCmInput = formatOptionalDecimal(metrics.waistCm)
+    }
+
+    private func resolvedTodayBodyMetrics() -> (bodyWeightKg: Double?, waistCm: Double?) {
+        let metricsFromSets = WorkoutSet.latestBodyMetrics(from: todaySets)
+        if metricsFromSets.bodyWeightKg != nil || metricsFromSets.waistCm != nil {
+            return metricsFromSets
+        }
+        return settingsManager.todayBodyMetrics(for: todayAnchor)
+    }
+
+    private func parsedOptionalDecimal(_ raw: String) -> Double? {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        return Double(trimmed.replacingOccurrences(of: ",", with: "."))
+    }
+
+    private func formatOptionalDecimal(_ value: Double?) -> String {
+        guard let value else { return "" }
+        if value.rounded() == value {
+            return String(Int(value))
+        }
+        return String(format: "%.1f", value)
     }
 }
 
