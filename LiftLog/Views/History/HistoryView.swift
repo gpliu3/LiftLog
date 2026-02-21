@@ -384,7 +384,9 @@ private enum CSVExporter {
         "duration_seconds",
         "rir",
         "notes",
-        "volume_kg"
+        "volume_kg",
+        "body_weight_kg",
+        "waist_cm"
     ].joined(separator: ",")
 
     static func makeCSV(from sets: [WorkoutSet]) -> String {
@@ -412,7 +414,9 @@ private enum CSVExporter {
                 "\(set.durationSeconds)",
                 set.rir.map(String.init) ?? "",
                 csvEscape(set.notes),
-                String(format: "%.2f", set.volume)
+                String(format: "%.2f", set.volume),
+                set.bodyWeightKg.map { String(format: "%.2f", $0) } ?? "",
+                set.waistCm.map { String(format: "%.2f", $0) } ?? ""
             ]
             lines.append(row.joined(separator: ","))
         }
@@ -459,6 +463,25 @@ struct DayRowView: View {
         sets.reduce(0) { $0 + $1.volume }
     }
 
+    private var dayBodyMetrics: (bodyWeightKg: Double?, waistCm: Double?) {
+        WorkoutSet.latestBodyMetrics(from: sets)
+    }
+
+    private var bodyMetricsText: String? {
+        let weightText = dayBodyMetrics.bodyWeightKg.map { String(format: "%.1f kg", $0) }
+        let waistText = dayBodyMetrics.waistCm.map { String(format: "%.1f cm", $0) }
+        switch (weightText, waistText) {
+        case let (w?, c?):
+            return "\(w) • \(c)"
+        case let (w?, nil):
+            return w
+        case let (nil, c?):
+            return c
+        case (nil, nil):
+            return nil
+        }
+    }
+
     private var isToday: Bool {
         Calendar.current.isDateInToday(date)
     }
@@ -496,6 +519,12 @@ struct DayRowView: View {
                 Text("\(Int(totalVolume)) kg")
                     .font(AppTextStyle.caption)
                     .foregroundStyle(.secondary)
+
+                if let bodyMetricsText {
+                    Text(bodyMetricsText)
+                        .font(AppTextStyle.caption2)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Image(systemName: "chevron.right")

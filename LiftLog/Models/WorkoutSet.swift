@@ -12,6 +12,8 @@ final class WorkoutSet {
     var setNumber: Int
     var rir: Int?
     var notes: String
+    var bodyWeightKg: Double?
+    var waistCm: Double?
     var createdAt: Date
 
     init(
@@ -24,6 +26,8 @@ final class WorkoutSet {
         setNumber: Int = 1,
         rir: Int? = nil,
         notes: String = "",
+        bodyWeightKg: Double? = nil,
+        waistCm: Double? = nil,
         createdAt: Date = Date()
     ) {
         self.id = id
@@ -35,6 +39,8 @@ final class WorkoutSet {
         self.setNumber = setNumber
         self.rir = rir
         self.notes = notes
+        self.bodyWeightKg = bodyWeightKg
+        self.waistCm = waistCm
         self.createdAt = createdAt
     }
 
@@ -94,5 +100,16 @@ extension WorkoutSet {
         if lhs.date != rhs.date { return lhs.date < rhs.date }
         if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
         return lhs.id.uuidString < rhs.id.uuidString
+    }
+
+    static func latestBodyMetrics(from sets: [WorkoutSet]) -> (bodyWeightKg: Double?, waistCm: Double?) {
+        let ordered = sets.sorted { lhs, rhs in
+            if lhs.createdAt != rhs.createdAt { return lhs.createdAt > rhs.createdAt }
+            if lhs.date != rhs.date { return lhs.date > rhs.date }
+            return lhs.id.uuidString > rhs.id.uuidString
+        }
+        let bodyWeight = ordered.compactMap(\.bodyWeightKg).first
+        let waist = ordered.compactMap(\.waistCm).first
+        return (bodyWeight, waist)
     }
 }

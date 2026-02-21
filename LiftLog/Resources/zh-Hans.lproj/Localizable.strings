@@ -34,6 +34,11 @@
 "addSet.saveAndAddAnother" = "保存并继续添加";
 "addSet.saveAndClose" = "保存并关闭";
 "addSet.savedSet" = "第 %d 组已保存!";
+"addSet.bodyMetrics" = "今日身体指标";
+"addSet.bodyWeight" = "体重";
+"addSet.waist" = "腰围";
+"addSet.optionalValue" = "可选";
+"addSet.bodyMetricsFooter" = "将与今日训练记录一起保存，并在今天后续记录时自动沿用。";
 "addSet.lastTrained" = "上次训练：%@";
 "addSet.lastTrainedToday" = "上次训练：今天";
 "addSet.lastTrainedWithRelative" = "上次训练：%@（%@）";
@@ -123,6 +128,8 @@
 "dayDetail.volume" = "容量 (kg)";
 "dayDetail.subtotal" = "小计";
 "dayDetail.setsVolume" = "%d 组 • %d kg";
+"dayDetail.bodyWeight" = "体重";
+"dayDetail.waist" = "腰围";
 
 /* Progress View */
 "progress.title" = "进度";

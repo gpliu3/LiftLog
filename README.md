@@ -19,6 +19,7 @@ A clean, modern iOS strength training tracker built with SwiftUI and SwiftData.
 - **Exercise Quick Add** — In Exercises, each row shows last-trained date plus "X days ago" and a direct Quick Add button.
 - **Training History** — Browse past workouts by week or month with per-day breakdowns.
 - **CSV Export** — Export selected date-range training records to CSV for Excel analysis, share, or copy/paste.
+- **Daily Body Metrics** — In Log Set, optionally record today's body weight (kg) and waist (cm); values are saved with today's sets and reused for later sets the same day.
 - **Backdated Logging** — Choose a date (default today) when adding a set to log past training days.
 - **Due-Aware Exercise Picker** — In Log Set, exercises show last-trained date plus "X days ago", ordered by longest due first.
 - **One-Tap Save Actions** — Log Set provides direct **Save & Add Another** and **Save & Close** buttons (no extra menu step).
@@ -41,8 +42,9 @@ A clean, modern iOS strength training tracker built with SwiftUI and SwiftData.
 | See previous day sets | In Today exercise header, tap the clock icon |
 | Quick add from Exercises | Exercises tab → tap **Quick Add** on any exercise |
 | Set optional RIR | In Log Set / Edit Set choose **RIR**: `-`, `0`, `1`, `2` |
+| Log body metrics | In Log Set, enter optional **Body Weight (kg)** and **Waist (cm)** for today |
 | Spot PR sets | Look for the sparkle marker on set rows |
-| Export records | History tab → Export button → Generate/Share/Copy CSV |
+| Export records | History tab → Export button → Generate/Share/Copy CSV (includes `body_weight_kg` and `waist_cm`) |
 
 ## Tech Stack
 

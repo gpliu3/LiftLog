@@ -23,6 +23,8 @@ struct AddSetView: View {
     @State private var searchText: String = ""
     @State private var justSaved: Bool = false
     @State private var savedSetNumber: Int = 0
+    @State private var bodyWeightKgInput: String = ""
+    @State private var waistCmInput: String = ""
 
     private var exerciseType: String {
         selectedExercise?.exerciseType ?? "weightReps"
@@ -187,6 +189,9 @@ struct AddSetView: View {
                 }
                 rirSection
                 dateSection
+                if isLoggingToday {
+                    bodyMetricsSection
+                }
                 notesSection
                 summarySection
             }
@@ -233,13 +238,19 @@ struct AddSetView: View {
             }
             .onAppear {
                 setupInitialValues()
+                syncBodyMetricsForSelectedDate()
             }
             .onChange(of: selectedDate) { _, _ in
                 if let exercise = selectedExercise {
                     applySuggestedDefaults(for: exercise)
                 }
+                syncBodyMetricsForSelectedDate()
             }
         }
+    }
+
+    private var isLoggingToday: Bool {
+        Calendar.current.isDateInToday(selectedDate)
     }
 
     private var dateSection: some View {
@@ -335,6 +346,36 @@ struct AddSetView: View {
         Section("addSet.notes".localized) {
             TextField("addSet.addNote".localized, text: $setNotes, axis: .vertical)
                 .lineLimit(2...5)
+        }
+    }
+
+    private var bodyMetricsSection: some View {
+        Section {
+            HStack {
+                Text("addSet.bodyWeight".localized)
+                Spacer()
+                TextField("addSet.optionalValue".localized, text: $bodyWeightKgInput)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 110)
+                Text("kg")
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack {
+                Text("addSet.waist".localized)
+                Spacer()
+                TextField("addSet.optionalValue".localized, text: $waistCmInput)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 110)
+                Text("cm")
+                    .foregroundStyle(.secondary)
+            }
+        } header: {
+            Text("addSet.bodyMetrics".localized)
+        } footer: {
+            Text("addSet.bodyMetricsFooter".localized)
         }
     }
 
@@ -560,6 +601,8 @@ struct AddSetView: View {
         let saveReps: Int = exercise.isTimeOnly ? 0 : reps
         let saveDuration: Int = exercise.isTimeOnly ? durationSeconds : 0
         let saveDate = combinedDateWithCurrentTime(selectedDate)
+        let bodyWeight = parsedOptionalDecimal(bodyWeightKgInput)
+        let waist = parsedOptionalDecimal(waistCmInput)
 
         let workoutSet = WorkoutSet(
             exercise: exercise,
@@ -569,7 +612,9 @@ struct AddSetView: View {
             durationSeconds: saveDuration,
             setNumber: setNumber,
             rir: rirSelection < 0 ? nil : rirSelection,
-            notes: setNotes.trimmingCharacters(in: .whitespacesAndNewlines)
+            notes: setNotes.trimmingCharacters(in: .whitespacesAndNewlines),
+            bodyWeightKg: isLoggingToday ? bodyWeight : nil,
+            waistCm: isLoggingToday ? waist : nil
         )
 
         modelContext.insert(workoutSet)
@@ -603,6 +648,35 @@ struct AddSetView: View {
         dayComponents.minute = timeComponents.minute
         dayComponents.second = timeComponents.second
         return calendar.date(from: dayComponents) ?? day
+    }
+
+    private func syncBodyMetricsForSelectedDate() {
+        guard isLoggingToday else {
+            bodyWeightKgInput = ""
+            waistCmInput = ""
+            return
+        }
+
+        let calendar = Calendar.current
+        let dayStart = calendar.startOfDay(for: selectedDate)
+        let todaysSets = allSets.filter { calendar.startOfDay(for: $0.date) == dayStart }
+        let metrics = WorkoutSet.latestBodyMetrics(from: todaysSets)
+        bodyWeightKgInput = formatOptionalDecimal(metrics.bodyWeightKg)
+        waistCmInput = formatOptionalDecimal(metrics.waistCm)
+    }
+
+    private func parsedOptionalDecimal(_ raw: String) -> Double? {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        return Double(trimmed.replacingOccurrences(of: ",", with: "."))
+    }
+
+    private func formatOptionalDecimal(_ value: Double?) -> String {
+        guard let value else { return "" }
+        if value.rounded() == value {
+            return String(Int(value))
+        }
+        return String(format: "%.1f", value)
     }
 }
 

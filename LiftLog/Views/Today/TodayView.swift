@@ -220,6 +220,7 @@ struct TodayView: View {
             calendar.startOfDay(for: $0.date) == todayAnchor
         }
         let nextSetNumber = (todayExerciseSets.map { $0.setNumber }.max() ?? 0) + 1
+        let todayMetrics = WorkoutSet.latestBodyMetrics(from: todaySets)
 
         // Determine values from reference set or previous day
         var weight: Double = exercise.isWeightReps ? 20.0 : 0
@@ -250,7 +251,9 @@ struct TodayView: View {
             reps: reps,
             durationSeconds: duration,
             setNumber: nextSetNumber,
-            rir: rir
+            rir: rir,
+            bodyWeightKg: todayMetrics.bodyWeightKg,
+            waistCm: todayMetrics.waistCm
         )
 
         modelContext.insert(workoutSet)

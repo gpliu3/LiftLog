@@ -34,6 +34,11 @@
 "addSet.saveAndAddAnother" = "Save & Add Another";
 "addSet.saveAndClose" = "Save & Close";
 "addSet.savedSet" = "Set %d saved!";
+"addSet.bodyMetrics" = "Today's Body Metrics";
+"addSet.bodyWeight" = "Body Weight";
+"addSet.waist" = "Waist";
+"addSet.optionalValue" = "Optional";
+"addSet.bodyMetricsFooter" = "Saved together with today's training records and reused for later sets today.";
 "addSet.lastTrained" = "Last: %@";
 "addSet.lastTrainedToday" = "Last: Today";
 "addSet.lastTrainedWithRelative" = "Last: %@ (%@)";
@@ -123,6 +128,8 @@
 "dayDetail.volume" = "Volume (kg)";
 "dayDetail.subtotal" = "Subtotal";
 "dayDetail.setsVolume" = "%d sets • %d kg";
+"dayDetail.bodyWeight" = "Body Weight";
+"dayDetail.waist" = "Waist";
 
 /* Progress View */
 "progress.title" = "Progress";
