@@ -165,6 +165,10 @@ struct DaySetRowView: View {
         workoutSet.exercise?.exerciseType ?? "weightReps"
     }
 
+    private var weightRepsMetric: String {
+        "\(String(format: "%.1f", workoutSet.weightKg)) kg × \(workoutSet.reps) \("common.reps".localized)"
+    }
+
     var body: some View {
         HStack(spacing: 8) {
             Text("common.set".localized(with: workoutSet.setNumber))
@@ -178,22 +182,34 @@ struct DaySetRowView: View {
             if exerciseType == "timeOnly" {
                 Text(workoutSet.formattedDuration)
                     .font(AppTextStyle.bodyStrong)
+                    .lineLimit(1)
             } else if exerciseType == "repsOnly" {
                 Text("\(workoutSet.reps) \("common.reps".localized)")
                     .font(AppTextStyle.bodyStrong)
+                    .lineLimit(1)
             } else {
-                Text("\(String(format: "%.1f", workoutSet.weightKg)) kg")
-                    .font(AppTextStyle.bodyStrong)
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 6) {
+                        Text(weightRepsMetric)
+                            .font(AppTextStyle.bodyStrong)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.72)
+                            .allowsTightening(true)
+                            .layoutPriority(1)
 
-                Text("×")
-                    .foregroundStyle(.secondary)
-                    .font(AppTextStyle.body)
+                        Text("\(Int(workoutSet.volume)) kg")
+                            .foregroundStyle(.secondary)
+                            .font(AppTextStyle.caption2)
+                            .lineLimit(1)
+                    }
 
-                Text("\(workoutSet.reps) \("common.reps".localized)")
-                    .font(AppTextStyle.bodyStrong)
-                Text("\(Int(workoutSet.volume)) kg")
-                    .foregroundStyle(.secondary)
-                    .font(AppTextStyle.caption2)
+                    Text(weightRepsMetric)
+                        .font(AppTextStyle.bodyStrong)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.68)
+                        .allowsTightening(true)
+                        .layoutPriority(1)
+                }
             }
 
             Spacer(minLength: 6)

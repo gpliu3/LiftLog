@@ -372,6 +372,10 @@ struct SetRowView: View {
         workoutSet.exercise?.exerciseType ?? "weightReps"
     }
 
+    private var weightRepsMetric: String {
+        "\(String(format: "%.1f", workoutSet.weightKg)) kg × \(workoutSet.reps) \("common.reps".localized)"
+    }
+
     var body: some View {
         HStack(spacing: 8) {
             Text("common.set".localized(with: workoutSet.setNumber))
@@ -385,23 +389,34 @@ struct SetRowView: View {
             if exerciseType == "timeOnly" {
                 Text(workoutSet.formattedDuration)
                     .font(AppTextStyle.bodyStrong)
+                    .lineLimit(1)
             } else if exerciseType == "repsOnly" {
                 Text("\(workoutSet.reps) \("common.reps".localized)")
                     .font(AppTextStyle.bodyStrong)
+                    .lineLimit(1)
             } else {
-                Text("\(String(format: "%.1f", workoutSet.weightKg)) kg")
-                    .font(AppTextStyle.bodyStrong)
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 6) {
+                        Text(weightRepsMetric)
+                            .font(AppTextStyle.bodyStrong)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.72)
+                            .allowsTightening(true)
+                            .layoutPriority(1)
 
-                Text("×")
-                    .foregroundStyle(.secondary)
-                    .font(AppTextStyle.body)
+                        Text("\(Int(workoutSet.volume)) kg")
+                            .foregroundStyle(.secondary)
+                            .font(AppTextStyle.caption2)
+                            .lineLimit(1)
+                    }
 
-                Text("\(workoutSet.reps) \("common.reps".localized)")
-                    .font(AppTextStyle.bodyStrong)
-
-                Text("\(Int(workoutSet.volume)) kg")
-                    .foregroundStyle(.secondary)
-                    .font(AppTextStyle.caption2)
+                    Text(weightRepsMetric)
+                        .font(AppTextStyle.bodyStrong)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.68)
+                        .allowsTightening(true)
+                        .layoutPriority(1)
+                }
             }
 
             Spacer(minLength: 6)
@@ -681,6 +696,10 @@ struct PreviousDaySetsRow: View {
         sets.sorted(by: WorkoutSet.trainingOrder(lhs:rhs:))
     }
 
+    private func weightRepsMetric(for set: WorkoutSet) -> String {
+        "\(String(format: "%.1f", set.weightKg)) kg × \(set.reps) \("common.reps".localized)"
+    }
+
     private var subtitle: String {
         guard let date = previousDayDate else {
             return "today.previousDay.none".localized
@@ -722,15 +741,34 @@ struct PreviousDaySetsRow: View {
                         if exercise.isTimeOnly {
                             Text(set.formattedDuration)
                                 .font(AppTextStyle.captionStrong)
+                                .lineLimit(1)
                         } else if exercise.isRepsOnly {
                             Text("\(set.reps) \("common.reps".localized)")
                                 .font(AppTextStyle.captionStrong)
+                                .lineLimit(1)
                         } else {
-                            Text("\(String(format: "%.1f", set.weightKg)) kg × \(set.reps)")
-                                .font(AppTextStyle.captionStrong)
-                            Text("\(Int(set.volume)) kg")
-                                .font(AppTextStyle.caption2)
-                                .foregroundStyle(.secondary)
+                            ViewThatFits(in: .horizontal) {
+                                HStack(spacing: 6) {
+                                    Text(weightRepsMetric(for: set))
+                                        .font(AppTextStyle.captionStrong)
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.74)
+                                        .allowsTightening(true)
+                                        .layoutPriority(1)
+
+                                    Text("\(Int(set.volume)) kg")
+                                        .font(AppTextStyle.caption2)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                }
+
+                                Text(weightRepsMetric(for: set))
+                                    .font(AppTextStyle.captionStrong)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.7)
+                                    .allowsTightening(true)
+                                    .layoutPriority(1)
+                            }
                         }
 
                         if let rir = set.rir {
