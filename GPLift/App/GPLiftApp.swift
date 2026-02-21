@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 @main
-struct LiftLogApp: App {
+struct GPLiftApp: App {
     private let initialSeedCompletedKey = "hasCompletedInitialExerciseSeed"
 
     var sharedModelContainer: ModelContainer = {

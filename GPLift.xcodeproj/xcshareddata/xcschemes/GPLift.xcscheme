@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "E5100FFF2B5A00000000"
-               BuildableName = "LiftLog.app"
-               BlueprintName = "LiftLog"
-               ReferencedContainer = "container:LiftLog.xcodeproj">
+               BuildableName = "GPLift.app"
+               BlueprintName = "GPLift"
+               ReferencedContainer = "container:GPLift.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -44,9 +44,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "E5100FFF2B5A00000000"
-            BuildableName = "LiftLog.app"
-            BlueprintName = "LiftLog"
-            ReferencedContainer = "container:LiftLog.xcodeproj">
+            BuildableName = "GPLift.app"
+            BlueprintName = "GPLift"
+            ReferencedContainer = "container:GPLift.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -61,9 +61,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "E5100FFF2B5A00000000"
-            BuildableName = "LiftLog.app"
-            BlueprintName = "LiftLog"
-            ReferencedContainer = "container:LiftLog.xcodeproj">
+            BuildableName = "GPLift.app"
+            BlueprintName = "GPLift"
+            ReferencedContainer = "container:GPLift.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
@@ -83,9 +83,9 @@
                   <BuildableReference
                      BuildableIdentifier = "primary"
                      BlueprintIdentifier = "E5100FFF2B5A00000000"
-                     BuildableName = "LiftLog.app"
-                     BlueprintName = "LiftLog"
-                     ReferencedContainer = "container:LiftLog.xcodeproj">
+                     BuildableName = "GPLift.app"
+                     BlueprintName = "GPLift"
+                     ReferencedContainer = "container:GPLift.xcodeproj">
                   </BuildableReference>
                </EnvironmentBuildable>
             </ActionContent>

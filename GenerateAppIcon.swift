@@ -3,11 +3,11 @@
 import Cocoa
 import CoreGraphics
 
-// Icon generator for LiftLog
+// Icon generator for GPLift
 // Run with: swift GenerateAppIcon.swift
 
 let size: CGFloat = 1024
-let outputPath = "LiftLog/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
+let outputPath = "GPLift/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
 
 // Create the image
 let colorSpace = CGColorSpaceCreateDeviceRGB()

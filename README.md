@@ -1,4 +1,4 @@
-# LiftLog
+# GPLift
 
 A clean, modern iOS strength training tracker built with SwiftUI and SwiftData.
 
@@ -56,9 +56,9 @@ A clean, modern iOS strength training tracker built with SwiftUI and SwiftData.
 ## Project Structure
 
 ```
-LiftLog/
+GPLift/
 ├── App/
-│   └── LiftLogApp.swift
+│   └── GPLiftApp.swift
 ├── Models/
 │   ├── Exercise.swift
 │   └── WorkoutSet.swift

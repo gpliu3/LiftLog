@@ -1,10 +1,10 @@
 # App Store Metadata Draft (GymLog)
 
 App name
-- GymLog
+- GPLift
 
 Subtitle (max 30 chars)
-- Simple Strength Log
+- Strength Workout Log
 
 Promotional text (optional, max 170 chars)
 - Log workouts fast, track progress, and keep your training history on-device. No accounts, no ads, no tracking.

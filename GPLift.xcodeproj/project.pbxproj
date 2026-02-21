@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		E51000012B5A00000001 /* LiftLogApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51000002B5A00000001 /* LiftLogApp.swift */; };
+		E51000012B5A00000001 /* GPLiftApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51000002B5A00000001 /* GPLiftApp.swift */; };
 		E51000012B5A00000002 /* Exercise.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51000002B5A00000002 /* Exercise.swift */; };
 		E51000012B5A00000003 /* WorkoutSet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51000002B5A00000003 /* WorkoutSet.swift */; };
 		E51000012B5A00000004 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51000002B5A00000004 /* MainTabView.swift */; };
@@ -30,8 +30,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		E51000002B5A00000000 /* LiftLog.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LiftLog.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		E51000002B5A00000001 /* LiftLogApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiftLogApp.swift; sourceTree = "<group>"; };
+		E51000002B5A00000000 /* GPLift.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GPLift.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E51000002B5A00000001 /* GPLiftApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPLiftApp.swift; sourceTree = "<group>"; };
 		E51000002B5A00000002 /* Exercise.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Exercise.swift; sourceTree = "<group>"; };
 		E51000002B5A00000003 /* WorkoutSet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSet.swift; sourceTree = "<group>"; };
 		E51000002B5A00000004 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
@@ -68,12 +68,12 @@
 		E51000012B5A00000000 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				E51000002B5A00000000 /* LiftLog.app */,
+				E51000002B5A00000000 /* GPLift.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		E51000022B5A00000000 /* LiftLog */ = {
+		E51000022B5A00000000 /* GPLift */ = {
 			isa = PBXGroup;
 			children = (
 				E51000032B5A00000000 /* App */,
@@ -82,13 +82,13 @@
 				E510000B2B5A00000000 /* Utilities */,
 				E510000C2B5A00000000 /* Resources */,
 			);
-			path = LiftLog;
+			path = GPLift;
 			sourceTree = "<group>";
 		};
 		E51000032B5A00000000 /* App */ = {
 			isa = PBXGroup;
 			children = (
-				E51000002B5A00000001 /* LiftLogApp.swift */,
+				E51000002B5A00000001 /* GPLiftApp.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -183,7 +183,7 @@
 		E5100FF72B5A00000000 = {
 			isa = PBXGroup;
 			children = (
-				E51000022B5A00000000 /* LiftLog */,
+				E51000022B5A00000000 /* GPLift */,
 				E51000012B5A00000000 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -191,9 +191,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		E5100FFF2B5A00000000 /* LiftLog */ = {
+		E5100FFF2B5A00000000 /* GPLift */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = E51000102B5A00000000 /* Build configuration list for PBXNativeTarget "LiftLog" */;
+			buildConfigurationList = E51000102B5A00000000 /* Build configuration list for PBXNativeTarget "GPLift" */;
 			buildPhases = (
 				E5100FFC2B5A00000000 /* Sources */,
 				E5100FFD2B5A00000000 /* Frameworks */,
@@ -203,9 +203,9 @@
 			);
 			dependencies = (
 			);
-			name = LiftLog;
-			productName = LiftLog;
-			productReference = E51000002B5A00000000 /* LiftLog.app */;
+			name = GPLift;
+			productName = GPLift;
+			productReference = E51000002B5A00000000 /* GPLift.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -223,7 +223,7 @@
 					};
 				};
 			};
-			buildConfigurationList = E5100FFB2B5A00000000 /* Build configuration list for PBXProject "LiftLog" */;
+			buildConfigurationList = E5100FFB2B5A00000000 /* Build configuration list for PBXProject "GPLift" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -237,7 +237,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				E5100FFF2B5A00000000 /* LiftLog */,
+				E5100FFF2B5A00000000 /* GPLift */,
 			);
 		};
 /* End PBXProject section */
@@ -259,7 +259,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				E51000012B5A00000001 /* LiftLogApp.swift in Sources */,
+				E51000012B5A00000001 /* GPLiftApp.swift in Sources */,
 				E51000012B5A00000002 /* Exercise.swift in Sources */,
 				E51000012B5A00000003 /* WorkoutSet.swift in Sources */,
 				E51000012B5A00000004 /* MainTabView.swift in Sources */,
@@ -489,7 +489,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		E51000102B5A00000000 /* Build configuration list for PBXNativeTarget "LiftLog" */ = {
+		E51000102B5A00000000 /* Build configuration list for PBXNativeTarget "GPLift" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				E510000F2B5A00000000 /* Debug */,
@@ -498,7 +498,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		E5100FFB2B5A00000000 /* Build configuration list for PBXProject "LiftLog" */ = {
+		E5100FFB2B5A00000000 /* Build configuration list for PBXProject "GPLift" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				E510000D2B5A00000000 /* Debug */,

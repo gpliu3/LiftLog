@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// A view that renders the LiftLog app icon
+/// A view that renders the GPLift app icon
 /// This can be used to preview the icon or export it at various sizes
 struct AppIconView: View {
     let size: CGFloat
