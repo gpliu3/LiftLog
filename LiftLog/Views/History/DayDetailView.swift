@@ -180,13 +180,37 @@ struct DaySetRowView: View {
                 .frame(width: 50, alignment: .leading)
 
             if exerciseType == "timeOnly" {
-                Text(workoutSet.formattedDuration)
-                    .font(AppTextStyle.bodyStrong)
-                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    Text(workoutSet.formattedDuration)
+                        .font(AppTextStyle.bodyStrong)
+                        .lineLimit(1)
+
+                    if let rir = workoutSet.rir {
+                        Text("RIR \(rir)")
+                            .font(AppTextStyle.caption2Strong)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.blue.opacity(0.15))
+                            .foregroundStyle(.blue)
+                            .clipShape(Capsule())
+                    }
+                }
             } else if exerciseType == "repsOnly" {
-                Text("\(workoutSet.reps) \("common.reps".localized)")
-                    .font(AppTextStyle.bodyStrong)
-                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    Text("\(workoutSet.reps) \("common.reps".localized)")
+                        .font(AppTextStyle.bodyStrong)
+                        .lineLimit(1)
+
+                    if let rir = workoutSet.rir {
+                        Text("RIR \(rir)")
+                            .font(AppTextStyle.caption2Strong)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.blue.opacity(0.15))
+                            .foregroundStyle(.blue)
+                            .clipShape(Capsule())
+                    }
+                }
             } else {
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 6) {
@@ -197,32 +221,39 @@ struct DaySetRowView: View {
                             .allowsTightening(true)
                             .layoutPriority(1)
 
-                        Text("\(Int(workoutSet.volume)) kg")
-                            .foregroundStyle(.secondary)
-                            .font(AppTextStyle.caption2)
-                            .lineLimit(1)
+                        if let rir = workoutSet.rir {
+                            Text("RIR \(rir)")
+                                .font(AppTextStyle.caption2Strong)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.blue.opacity(0.15))
+                                .foregroundStyle(.blue)
+                                .clipShape(Capsule())
+                        }
                     }
 
-                    Text(weightRepsMetric)
-                        .font(AppTextStyle.bodyStrong)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.68)
-                        .allowsTightening(true)
-                        .layoutPriority(1)
+                    HStack(spacing: 6) {
+                        Text(weightRepsMetric)
+                            .font(AppTextStyle.bodyStrong)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.68)
+                            .allowsTightening(true)
+                            .layoutPriority(1)
+
+                        if let rir = workoutSet.rir {
+                            Text("RIR \(rir)")
+                                .font(AppTextStyle.caption2Strong)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.blue.opacity(0.15))
+                                .foregroundStyle(.blue)
+                                .clipShape(Capsule())
+                        }
+                    }
                 }
             }
 
             Spacer(minLength: 6)
-
-            if let rir = workoutSet.rir {
-                Text("RIR \(rir)")
-                    .font(AppTextStyle.caption2Strong)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.blue.opacity(0.15))
-                    .foregroundStyle(.blue)
-                    .clipShape(Capsule())
-            }
 
             if isPersonalBest {
                 Image(systemName: "sparkles")
