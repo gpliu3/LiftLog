@@ -7,6 +7,7 @@ struct DayDetailView: View {
     @Query private var allSets: [WorkoutSet]
 
     let date: Date
+    @State private var dayNoteText: String = ""
 
     private var daySets: [WorkoutSet] {
         let calendar = Calendar.current
@@ -39,6 +40,7 @@ struct DayDetailView: View {
         NavigationStack {
             List {
                 summarySection
+                dayNoteSection
 
                 ForEach(groupedByExercise, id: \.0.id) { exercise, sets in
                     Section {
@@ -76,6 +78,12 @@ struct DayDetailView: View {
                         dismiss()
                     }
                 }
+            }
+            .onAppear {
+                dayNoteText = WorkoutSet.dayNote(for: date, in: allSets)
+            }
+            .onChange(of: daySets.count) { _, _ in
+                dayNoteText = WorkoutSet.dayNote(for: date, in: allSets)
             }
         }
     }
@@ -140,6 +148,27 @@ struct DayDetailView: View {
                     .font(AppTextStyle.body)
                     .foregroundStyle(.orange)
             }
+        }
+    }
+
+    private var dayNoteSection: some View {
+        Section("dayNote.title".localized) {
+            TextEditor(text: $dayNoteText)
+                .font(AppTextStyle.body)
+                .frame(minHeight: 88)
+                .onChange(of: dayNoteText) { _, newValue in
+                    WorkoutSet.setDayNote(newValue, for: date, in: daySets)
+                }
+                .overlay(alignment: .topLeading) {
+                    if dayNoteText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Text("dayNote.placeholder".localized)
+                            .font(AppTextStyle.body)
+                            .foregroundStyle(.secondary)
+                            .padding(.top, 8)
+                            .padding(.leading, 4)
+                            .allowsHitTesting(false)
+                    }
+                }
         }
     }
 

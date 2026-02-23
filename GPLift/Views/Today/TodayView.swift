@@ -15,6 +15,7 @@ struct TodayView: View {
     @State private var expandedPreviousDay: Set<UUID> = []
     @State private var inlineEditingSetID: UUID?
     @State private var todayAnchor = Calendar.current.startOfDay(for: Date())
+    @State private var todayDayNote = ""
 
     private var todaySets: [WorkoutSet] {
         let calendar = Calendar.current
@@ -34,6 +35,10 @@ struct TodayView: View {
             if lhsLatest != rhsLatest { return lhsLatest > rhsLatest }
             return lhs.0.displayName < rhs.0.displayName
         }
+    }
+
+    private var sortedTodaySets: [WorkoutSet] {
+        todaySets.sorted(by: WorkoutSet.trainingOrder(lhs:rhs:))
     }
 
     private var totalVolume: Double {
@@ -77,6 +82,12 @@ struct TodayView: View {
                 refreshTodayAnchor()
             }
         }
+        .onAppear {
+            syncTodayDayNoteFromData()
+        }
+        .onChange(of: todaySets.count) { _, _ in
+            syncTodayDayNoteFromData()
+        }
         .id(languageManager.currentLanguage)
     }
 
@@ -91,6 +102,7 @@ struct TodayView: View {
     private func workoutList(proxy: ScrollViewProxy) -> some View {
         List {
             statsCard
+            dayNoteCard
 
             ForEach(groupedSets, id: \.0.id) { exercise, sets in
                 Section {
@@ -325,6 +337,27 @@ struct TodayView: View {
         }
     }
 
+    private var dayNoteCard: some View {
+        Section("dayNote.title".localized) {
+            TextEditor(text: $todayDayNote)
+                .font(AppTextStyle.body)
+                .frame(minHeight: 88)
+                .onChange(of: todayDayNote) { _, newValue in
+                    WorkoutSet.setDayNote(newValue, for: todayAnchor, in: sortedTodaySets)
+                }
+                .overlay(alignment: .topLeading) {
+                    if todayDayNote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Text("dayNote.placeholder".localized)
+                            .font(AppTextStyle.body)
+                            .foregroundStyle(.secondary)
+                            .padding(.top, 8)
+                            .padding(.leading, 4)
+                            .allowsHitTesting(false)
+                    }
+                }
+        }
+    }
+
     private var addSetButton: some View {
         Button {
             showingAddSet = true
@@ -349,6 +382,11 @@ struct TodayView: View {
 
     private func refreshTodayAnchor() {
         todayAnchor = Calendar.current.startOfDay(for: Date())
+        syncTodayDayNoteFromData()
+    }
+
+    private func syncTodayDayNoteFromData() {
+        todayDayNote = WorkoutSet.dayNote(for: todayAnchor, in: sortedTodaySets)
     }
 
     private func deleteSet(at offsets: IndexSet, from sets: [WorkoutSet]) {

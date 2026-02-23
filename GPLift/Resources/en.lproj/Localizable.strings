@@ -88,6 +88,7 @@
 "history.title" = "History";
 "history.week" = "Week";
 "history.month" = "Month";
+"history.all" = "All";
 "history.trainingDays" = "Training Days";
 "history.totalVolume" = "Total Volume (kg)";
 "history.noWorkouts" = "No Workouts";
@@ -123,6 +124,8 @@
 "dayDetail.volume" = "Volume (kg)";
 "dayDetail.subtotal" = "Subtotal";
 "dayDetail.setsVolume" = "%d sets • %d kg";
+"dayNote.title" = "Today's Note";
+"dayNote.placeholder" = "Write how you felt, pain/recovery notes, or anything to remember for this training day...";
 
 /* Progress View */
 "progress.title" = "Progress";

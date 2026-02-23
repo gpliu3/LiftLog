@@ -15,11 +15,13 @@ struct HistoryView: View {
     enum TimePeriod: String, CaseIterable {
         case week = "Week"
         case month = "Month"
+        case all = "All"
 
         var localized: String {
             switch self {
             case .week: return "history.week".localized
             case .month: return "history.month".localized
+            case .all: return "history.all".localized
             }
         }
     }
@@ -31,6 +33,8 @@ struct HistoryView: View {
             return calendar.date(byAdding: .day, value: -7, to: now) ?? now
         case .month:
             return calendar.date(byAdding: .month, value: -1, to: now) ?? now
+        case .all:
+            return allSets.map(\.date).min() ?? now
         }
     }
 

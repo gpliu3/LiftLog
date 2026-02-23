@@ -12,6 +12,7 @@ final class WorkoutSet {
     var setNumber: Int
     var rir: Int?
     var notes: String
+    var dayNote: String
     var createdAt: Date
 
     init(
@@ -24,6 +25,7 @@ final class WorkoutSet {
         setNumber: Int = 1,
         rir: Int? = nil,
         notes: String = "",
+        dayNote: String = "",
         createdAt: Date = Date()
     ) {
         self.id = id
@@ -35,6 +37,7 @@ final class WorkoutSet {
         self.setNumber = setNumber
         self.rir = rir
         self.notes = notes
+        self.dayNote = dayNote
         self.createdAt = createdAt
     }
 
@@ -94,5 +97,21 @@ extension WorkoutSet {
         if lhs.date != rhs.date { return lhs.date < rhs.date }
         if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
         return lhs.id.uuidString < rhs.id.uuidString
+    }
+
+    static func dayNote(for day: Date, in sets: [WorkoutSet], calendar: Calendar = .current) -> String {
+        let dayStart = calendar.startOfDay(for: day)
+        return sets
+            .filter { calendar.startOfDay(for: $0.date) == dayStart && !$0.dayNote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+            .sorted(by: WorkoutSet.trainingOrder(lhs:rhs:))
+            .last?
+            .dayNote ?? ""
+    }
+
+    static func setDayNote(_ note: String, for day: Date, in sets: [WorkoutSet], calendar: Calendar = .current) {
+        let dayStart = calendar.startOfDay(for: day)
+        for set in sets where calendar.startOfDay(for: set.date) == dayStart {
+            set.dayNote = note
+        }
     }
 }

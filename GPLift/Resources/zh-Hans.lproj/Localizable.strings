@@ -88,6 +88,7 @@
 "history.title" = "历史";
 "history.week" = "本周";
 "history.month" = "本月";
+"history.all" = "全部";
 "history.trainingDays" = "训练天数";
 "history.totalVolume" = "总容量 (kg)";
 "history.noWorkouts" = "暂无记录";
@@ -123,6 +124,8 @@
 "dayDetail.volume" = "容量 (kg)";
 "dayDetail.subtotal" = "小计";
 "dayDetail.setsVolume" = "%d 组 • %d kg";
+"dayNote.title" = "今日备注";
+"dayNote.placeholder" = "记录当天感受、酸痛情况（隔天/隔两天）或任何训练注意事项...";
 
 /* Progress View */
 "progress.title" = "进度";
