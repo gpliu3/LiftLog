@@ -573,6 +573,11 @@ struct AddSetView: View {
         )
 
         modelContext.insert(workoutSet)
+        do {
+            try modelContext.save()
+        } catch {
+            assertionFailure("Failed to save added set: \(error)")
+        }
 
         // Haptic feedback
         let generator = UINotificationFeedbackGenerator()

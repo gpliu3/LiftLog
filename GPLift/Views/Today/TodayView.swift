@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UIKit
 
 struct TodayView: View {
     @Environment(\.modelContext) private var modelContext
@@ -64,6 +65,13 @@ struct TodayView: View {
             }
             .navigationTitle(todayDateString)
             .font(AppTextStyle.body)
+            .simultaneousGesture(
+                TapGesture().onEnded {
+                    if inlineEditingSetID != nil {
+                        closeInlineEditor()
+                    }
+                }
+            )
             .sheet(isPresented: $showingAddSet) {
                 AddSetView()
             }
@@ -122,6 +130,7 @@ struct TodayView: View {
                     ForEach(sets) { set in
                         VStack(spacing: 2) {
                             SetRowView(workoutSet: set, isPersonalBest: set.isPersonalBest(in: allSets), onTap: {
+                                dismissKeyboard()
                                 withAnimation(.easeInOut(duration: 0.18)) {
                                     inlineEditingSetID = (inlineEditingSetID == set.id) ? nil : set.id
                                 }
@@ -156,9 +165,9 @@ struct TodayView: View {
                     ExerciseHeaderView(
                         exercise: exercise,
                         sets: sets,
-                        hasNotes: !exercise.displayNotes.isEmpty,
                         hasPreviousDaySets: !previousDaySets(for: exercise).isEmpty,
                         onInfoTap: {
+                            closeInlineEditor()
                             withAnimation {
                                 if expandedNotes.contains(exercise.id) {
                                     expandedNotes.remove(exercise.id)
@@ -168,6 +177,7 @@ struct TodayView: View {
                             }
                         },
                         onPreviousDayTap: {
+                            closeInlineEditor()
                             withAnimation {
                                 if expandedPreviousDay.contains(exercise.id) {
                                     expandedPreviousDay.remove(exercise.id)
@@ -266,6 +276,7 @@ struct TodayView: View {
         )
 
         modelContext.insert(workoutSet)
+        persistContext()
 
         // Haptic feedback
         let generator = UIImpactFeedbackGenerator(style: .medium)
@@ -344,6 +355,7 @@ struct TodayView: View {
                 .frame(minHeight: 88)
                 .onChange(of: todayDayNote) { _, newValue in
                     WorkoutSet.setDayNote(newValue, for: todayAnchor, in: sortedTodaySets)
+                    persistContext()
                 }
                 .overlay(alignment: .topLeading) {
                     if todayDayNote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -360,6 +372,7 @@ struct TodayView: View {
 
     private var addSetButton: some View {
         Button {
+            closeInlineEditor()
             showingAddSet = true
         } label: {
             Image(systemName: "plus")
@@ -396,6 +409,26 @@ struct TodayView: View {
             }
             modelContext.delete(sets[index])
         }
+        persistContext()
+    }
+
+    private func persistContext() {
+        do {
+            try modelContext.save()
+        } catch {
+            assertionFailure("Failed to save model context: \(error)")
+        }
+    }
+
+    private func closeInlineEditor() {
+        dismissKeyboard()
+        withAnimation(.easeInOut(duration: 0.18)) {
+            inlineEditingSetID = nil
+        }
+    }
+
+    private func dismissKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
 
@@ -528,6 +561,7 @@ struct SetRowView: View {
 }
 
 struct InlineSetEditorRow: View {
+    @Environment(\.modelContext) private var modelContext
     let workoutSet: WorkoutSet
     var onStartEditingWeight: (() -> Void)?
     var onDone: (() -> Void)?
@@ -536,11 +570,17 @@ struct InlineSetEditorRow: View {
     @State private var reps: Int
     @State private var durationSeconds: Int
     @State private var rirSelection: Int
+    @State private var adjustmentTarget: AdjustmentTarget
     @State private var hasPendingChanges = false
     @FocusState private var focusedField: Field?
 
     private enum Field: Hashable {
         case weight
+    }
+
+    private enum AdjustmentTarget {
+        case weight
+        case reps
     }
 
     private var exerciseType: String {
@@ -555,6 +595,7 @@ struct InlineSetEditorRow: View {
         _reps = State(initialValue: max(1, workoutSet.reps))
         _durationSeconds = State(initialValue: max(5, workoutSet.durationSeconds))
         _rirSelection = State(initialValue: workoutSet.rir ?? -1)
+        _adjustmentTarget = State(initialValue: .weight)
     }
 
     var body: some View {
@@ -570,14 +611,38 @@ struct InlineSetEditorRow: View {
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 90)
                         .onTapGesture {
+                            adjustmentTarget = .weight
                             onStartEditingWeight?()
                         }
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(adjustmentTarget == .weight ? Color.orange : Color.clear, lineWidth: 1)
+                        )
+
+                    Button {
+                        adjustmentTarget = .reps
+                        if focusedField == .weight {
+                            focusedField = nil
+                        }
+                    } label: {
+                        Text("\(reps) \("common.reps".localized)")
+                            .font(AppTextStyle.bodyStrong)
+                            .foregroundStyle(adjustmentTarget == .reps ? .orange : .primary)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 4)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(adjustmentTarget == .reps ? Color.orange.opacity(0.15) : Color.clear)
+                            )
+                    }
+                    .buttonStyle(.plain)
 
                     Spacer()
 
-                    Stepper(value: $reps, in: 1...200) {
-                        Text("\(reps) \("common.reps".localized)")
-                            .font(AppTextStyle.body)
+                    stepperButtons {
+                        applyIncrement(-1)
+                    } incrementAction: {
+                        applyIncrement(1)
                     }
                 }
             } else if exerciseType == "repsOnly" {
@@ -605,16 +670,6 @@ struct InlineSetEditorRow: View {
                     onDone?()
                 }
                 .font(AppTextStyle.caption)
-
-                Spacer()
-
-                Button("common.save".localized) {
-                    saveChangesIfNeeded()
-                    onDone?()
-                }
-                .font(AppTextStyle.captionStrong)
-                .buttonStyle(.borderedProminent)
-                .tint(.orange)
             }
         }
         .padding(6)
@@ -638,9 +693,7 @@ struct InlineSetEditorRow: View {
             }
         }
         .onTapGesture {
-            if focusedField == .weight {
-                focusedField = nil
-            }
+            dismissKeyboardAndPersist()
         }
         .onDisappear {
             saveChangesIfNeeded()
@@ -649,9 +702,10 @@ struct InlineSetEditorRow: View {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
                 Button("common.save".localized) {
-                    saveChangesIfNeeded()
+                    dismissKeyboardAndPersist()
                     onDone?()
                 }
+                .font(AppTextStyle.captionStrong)
             }
         }
     }
@@ -673,6 +727,11 @@ struct InlineSetEditorRow: View {
         }
         workoutSet.rir = rirSelection < 0 ? nil : rirSelection
         hasPendingChanges = false
+        do {
+            try modelContext.save()
+        } catch {
+            assertionFailure("Failed to save inline set edit: \(error)")
+        }
 
         let generator = UIImpactFeedbackGenerator(style: .light)
         generator.impactOccurred()
@@ -683,12 +742,69 @@ struct InlineSetEditorRow: View {
         let value = Double(normalized) ?? 0
         return max(0, value)
     }
+
+    private func formattedWeight(_ value: Double) -> String {
+        String(format: "%.1f", value)
+    }
+
+    private func applyIncrement(_ delta: Int) {
+        if exerciseType == "weightReps" {
+            if adjustmentTarget == .weight {
+                let newWeight = max(0, parsedWeight() + (Double(delta) * 2.5))
+                weightText = formattedWeight(newWeight)
+            } else {
+                reps = max(1, reps + delta)
+            }
+            hasPendingChanges = true
+            return
+        }
+
+        if exerciseType == "repsOnly" {
+            reps = max(1, reps + delta)
+            hasPendingChanges = true
+            return
+        }
+
+        durationSeconds = max(5, durationSeconds + (delta * 5))
+        hasPendingChanges = true
+    }
+
+    private func dismissKeyboardAndPersist() {
+        if focusedField == .weight {
+            focusedField = nil
+        } else {
+            saveChangesIfNeeded()
+        }
+    }
+
+    @ViewBuilder
+    private func stepperButtons(decrementAction: @escaping () -> Void, incrementAction: @escaping () -> Void) -> some View {
+        HStack(spacing: 0) {
+            Button(action: decrementAction) {
+                Image(systemName: "minus")
+                    .font(AppTextStyle.bodyStrong)
+                    .frame(width: 30, height: 30)
+            }
+            .buttonStyle(.plain)
+
+            Divider()
+                .frame(height: 20)
+
+            Button(action: incrementAction) {
+                Image(systemName: "plus")
+                    .font(AppTextStyle.bodyStrong)
+                    .frame(width: 30, height: 30)
+            }
+            .buttonStyle(.plain)
+        }
+        .background(Color(.secondarySystemBackground))
+        .clipShape(Capsule())
+    }
 }
 
 struct ExerciseHeaderView: View {
     let exercise: Exercise
     let sets: [WorkoutSet]
-    var hasNotes: Bool = false
     var hasPreviousDaySets: Bool = false
     var onInfoTap: (() -> Void)?
     var onPreviousDayTap: (() -> Void)?
@@ -717,7 +833,7 @@ struct ExerciseHeaderView: View {
                         .font(.headline.bold())
                         .foregroundStyle(Color.primary)
 
-                    if hasNotes, let onInfoTap = onInfoTap {
+                    if let onInfoTap = onInfoTap {
                         Button {
                             onInfoTap()
                         } label: {
@@ -911,6 +1027,7 @@ struct StatItemView: View {
 }
 
 struct NotesEditorRow: View {
+    @Environment(\.modelContext) private var modelContext
     @Bindable var exercise: Exercise
     @State private var editableNotes: String = ""
     @FocusState private var isFocused: Bool
@@ -923,6 +1040,11 @@ struct NotesEditorRow: View {
                 .focused($isFocused)
                 .onChange(of: editableNotes) {
                     exercise.notes = editableNotes
+                    do {
+                        try modelContext.save()
+                    } catch {
+                        assertionFailure("Failed to save exercise notes: \(error)")
+                    }
                 }
         }
         .onAppear {
