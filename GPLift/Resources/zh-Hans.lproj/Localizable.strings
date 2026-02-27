@@ -124,7 +124,7 @@
 "dayDetail.volume" = "容量 (kg)";
 "dayDetail.subtotal" = "小计";
 "dayDetail.setsVolume" = "%d 组 • %d kg";
-"dayNote.title" = "今日备注";
+"dayNote.title" = "今日训练备注";
 "dayNote.placeholder" = "记录当天感受、酸痛情况（隔天/隔两天）或任何训练注意事项...";
 
 /* Progress View */

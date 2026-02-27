@@ -65,13 +65,6 @@ struct TodayView: View {
             }
             .navigationTitle(todayDateString)
             .font(AppTextStyle.body)
-            .simultaneousGesture(
-                TapGesture().onEnded {
-                    if inlineEditingSetID != nil {
-                        closeInlineEditor()
-                    }
-                }
-            )
             .sheet(isPresented: $showingAddSet) {
                 AddSetView()
             }
@@ -110,7 +103,6 @@ struct TodayView: View {
     private func workoutList(proxy: ScrollViewProxy) -> some View {
         List {
             statsCard
-            dayNoteCard
 
             ForEach(groupedSets, id: \.0.id) { exercise, sets in
                 Section {
@@ -189,6 +181,8 @@ struct TodayView: View {
                     )
                 }
             }
+
+            dayNoteCard
         }
         .listStyle(.plain)
         .environment(\.defaultMinListRowHeight, 24)
@@ -206,6 +200,7 @@ struct TodayView: View {
         let lastSet = sets.last
 
         return Button {
+            closeInlineEditor()
             quickAddSet(for: exercise, basedOn: lastSet)
         } label: {
             HStack {
@@ -567,7 +562,7 @@ struct InlineSetEditorRow: View {
     var onDone: (() -> Void)?
 
     @State private var weightText: String
-    @State private var reps: Int
+    @State private var repsText: String
     @State private var durationSeconds: Int
     @State private var rirSelection: Int
     @State private var adjustmentTarget: AdjustmentTarget
@@ -576,11 +571,13 @@ struct InlineSetEditorRow: View {
 
     private enum Field: Hashable {
         case weight
+        case reps
     }
 
     private enum AdjustmentTarget {
         case weight
         case reps
+        case duration
     }
 
     private var exerciseType: String {
@@ -592,10 +589,19 @@ struct InlineSetEditorRow: View {
         self.onStartEditingWeight = onStartEditingWeight
         self.onDone = onDone
         _weightText = State(initialValue: String(format: "%.1f", workoutSet.weightKg))
-        _reps = State(initialValue: max(1, workoutSet.reps))
+        _repsText = State(initialValue: "\(max(1, workoutSet.reps))")
         _durationSeconds = State(initialValue: max(5, workoutSet.durationSeconds))
         _rirSelection = State(initialValue: workoutSet.rir ?? -1)
-        _adjustmentTarget = State(initialValue: .weight)
+        let defaultTarget: AdjustmentTarget
+        switch workoutSet.exercise?.exerciseType ?? "weightReps" {
+        case "repsOnly":
+            defaultTarget = .reps
+        case "timeOnly":
+            defaultTarget = .duration
+        default:
+            defaultTarget = .weight
+        }
+        _adjustmentTarget = State(initialValue: defaultTarget)
     }
 
     var body: some View {
@@ -610,32 +616,29 @@ struct InlineSetEditorRow: View {
                         .focused($focusedField, equals: .weight)
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 90)
-                        .onTapGesture {
-                            adjustmentTarget = .weight
-                            onStartEditingWeight?()
-                        }
+                        .onTapGesture { selectTarget(.weight) }
                         .background(
                             RoundedRectangle(cornerRadius: 8)
                                 .stroke(adjustmentTarget == .weight ? Color.orange : Color.clear, lineWidth: 1)
                         )
 
-                    Button {
-                        adjustmentTarget = .reps
-                        if focusedField == .weight {
-                            focusedField = nil
-                        }
-                    } label: {
-                        Text("\(reps) \("common.reps".localized)")
+                    HStack(spacing: 4) {
+                        TextField("0", text: $repsText)
+                            .keyboardType(.numberPad)
+                            .focused($focusedField, equals: .reps)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 66)
+                            .onTapGesture { selectTarget(.reps) }
+                        Text("common.reps".localized)
                             .font(AppTextStyle.bodyStrong)
                             .foregroundStyle(adjustmentTarget == .reps ? .orange : .primary)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 4)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(adjustmentTarget == .reps ? Color.orange.opacity(0.15) : Color.clear)
-                            )
                     }
-                    .buttonStyle(.plain)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(adjustmentTarget == .reps ? Color.orange.opacity(0.15) : Color.clear)
+                    )
 
                     Spacer()
 
@@ -646,14 +649,45 @@ struct InlineSetEditorRow: View {
                     }
                 }
             } else if exerciseType == "repsOnly" {
-                Stepper(value: $reps, in: 1...500) {
-                    Text("\(reps) \("common.reps".localized)")
-                        .font(AppTextStyle.body)
+                HStack(spacing: 8) {
+                    HStack(spacing: 4) {
+                        TextField("0", text: $repsText)
+                            .keyboardType(.numberPad)
+                            .focused($focusedField, equals: .reps)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 74)
+                            .onTapGesture { selectTarget(.reps) }
+                        Text("common.reps".localized)
+                            .font(AppTextStyle.bodyStrong)
+                            .foregroundStyle(adjustmentTarget == .reps ? .orange : .primary)
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(adjustmentTarget == .reps ? Color.orange.opacity(0.15) : Color.clear)
+                    )
+
+                    Spacer()
+
+                    stepperButtons {
+                        applyIncrement(-1)
+                    } incrementAction: {
+                        applyIncrement(1)
+                    }
                 }
             } else {
-                Stepper(value: $durationSeconds, in: 5...3600, step: 5) {
+                HStack(spacing: 8) {
                     Text(WorkoutSet.formatDuration(durationSeconds))
-                        .font(AppTextStyle.body)
+                        .font(AppTextStyle.bodyStrong)
+
+                    Spacer()
+
+                    stepperButtons {
+                        applyIncrement(-1)
+                    } incrementAction: {
+                        applyIncrement(1)
+                    }
                 }
             }
 
@@ -678,7 +712,7 @@ struct InlineSetEditorRow: View {
         .onChange(of: weightText) { _, _ in
             hasPendingChanges = true
         }
-        .onChange(of: reps) { _, _ in
+        .onChange(of: repsText) { _, _ in
             hasPendingChanges = true
         }
         .onChange(of: durationSeconds) { _, _ in
@@ -688,7 +722,7 @@ struct InlineSetEditorRow: View {
             hasPendingChanges = true
         }
         .onChange(of: focusedField) { oldValue, newValue in
-            if oldValue == .weight && newValue != .weight {
+            if oldValue != nil && newValue != oldValue {
                 saveChangesIfNeeded()
             }
         }
@@ -714,11 +748,11 @@ struct InlineSetEditorRow: View {
         guard hasPendingChanges else { return }
         if exerciseType == "weightReps" {
             workoutSet.weightKg = parsedWeight()
-            workoutSet.reps = max(1, reps)
+            workoutSet.reps = parsedReps()
             workoutSet.durationSeconds = 0
         } else if exerciseType == "repsOnly" {
             workoutSet.weightKg = 0
-            workoutSet.reps = max(1, reps)
+            workoutSet.reps = parsedReps()
             workoutSet.durationSeconds = 0
         } else {
             workoutSet.weightKg = 0
@@ -743,6 +777,12 @@ struct InlineSetEditorRow: View {
         return max(0, value)
     }
 
+    private func parsedReps() -> Int {
+        let digitsOnly = repsText.filter(\.isNumber)
+        let value = Int(digitsOnly) ?? 0
+        return max(1, value)
+    }
+
     private func formattedWeight(_ value: Double) -> String {
         String(format: "%.1f", value)
     }
@@ -752,15 +792,17 @@ struct InlineSetEditorRow: View {
             if adjustmentTarget == .weight {
                 let newWeight = max(0, parsedWeight() + (Double(delta) * 2.5))
                 weightText = formattedWeight(newWeight)
-            } else {
-                reps = max(1, reps + delta)
+            } else if adjustmentTarget == .reps {
+                let newReps = max(1, parsedReps() + delta)
+                repsText = "\(newReps)"
             }
             hasPendingChanges = true
             return
         }
 
         if exerciseType == "repsOnly" {
-            reps = max(1, reps + delta)
+            let newReps = max(1, parsedReps() + delta)
+            repsText = "\(newReps)"
             hasPendingChanges = true
             return
         }
@@ -770,10 +812,23 @@ struct InlineSetEditorRow: View {
     }
 
     private func dismissKeyboardAndPersist() {
-        if focusedField == .weight {
+        if focusedField != nil {
             focusedField = nil
         } else {
             saveChangesIfNeeded()
+        }
+    }
+
+    private func selectTarget(_ target: AdjustmentTarget) {
+        adjustmentTarget = target
+        switch target {
+        case .weight:
+            focusedField = .weight
+            onStartEditingWeight?()
+        case .reps:
+            focusedField = .reps
+        case .duration:
+            focusedField = nil
         }
     }
 
