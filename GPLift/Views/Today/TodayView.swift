@@ -566,6 +566,10 @@ struct InlineSetEditorRow: View {
     @State private var durationSeconds: Int
     @State private var rirSelection: Int
     @State private var adjustmentTarget: AdjustmentTarget
+    @State private var initialWeight: Double
+    @State private var initialReps: Int
+    @State private var initialDurationSeconds: Int
+    @State private var initialRirSelection: Int
     @State private var hasPendingChanges = false
     @FocusState private var focusedField: Field?
 
@@ -588,10 +592,18 @@ struct InlineSetEditorRow: View {
         self.workoutSet = workoutSet
         self.onStartEditingWeight = onStartEditingWeight
         self.onDone = onDone
-        _weightText = State(initialValue: String(format: "%.1f", workoutSet.weightKg))
-        _repsText = State(initialValue: "\(max(1, workoutSet.reps))")
-        _durationSeconds = State(initialValue: max(5, workoutSet.durationSeconds))
-        _rirSelection = State(initialValue: workoutSet.rir ?? -1)
+        let startWeight = workoutSet.weightKg
+        let startReps = max(1, workoutSet.reps)
+        let startDuration = max(5, workoutSet.durationSeconds)
+        let startRirSelection = workoutSet.rir ?? -1
+        _weightText = State(initialValue: String(format: "%.1f", startWeight))
+        _repsText = State(initialValue: "\(startReps)")
+        _durationSeconds = State(initialValue: startDuration)
+        _rirSelection = State(initialValue: startRirSelection)
+        _initialWeight = State(initialValue: startWeight)
+        _initialReps = State(initialValue: startReps)
+        _initialDurationSeconds = State(initialValue: startDuration)
+        _initialRirSelection = State(initialValue: startRirSelection)
         let defaultTarget: AdjustmentTarget
         switch workoutSet.exercise?.exerciseType ?? "weightReps" {
         case "repsOnly":
@@ -633,6 +645,8 @@ struct InlineSetEditorRow: View {
                             .font(AppTextStyle.bodyStrong)
                             .foregroundStyle(adjustmentTarget == .reps ? .orange : .primary)
                     }
+                    .contentShape(Rectangle())
+                    .onTapGesture { selectTarget(.reps) }
                     .padding(.horizontal, 6)
                     .padding(.vertical, 4)
                     .background(
@@ -661,6 +675,8 @@ struct InlineSetEditorRow: View {
                             .font(AppTextStyle.bodyStrong)
                             .foregroundStyle(adjustmentTarget == .reps ? .orange : .primary)
                     }
+                    .contentShape(Rectangle())
+                    .onTapGesture { selectTarget(.reps) }
                     .padding(.horizontal, 6)
                     .padding(.vertical, 4)
                     .background(
@@ -701,9 +717,10 @@ struct InlineSetEditorRow: View {
 
             HStack {
                 Button("common.cancel".localized) {
-                    onDone?()
+                    cancelEditing()
                 }
                 .font(AppTextStyle.caption)
+                .buttonStyle(.borderless)
             }
         }
         .padding(6)
@@ -725,22 +742,14 @@ struct InlineSetEditorRow: View {
             if oldValue != nil && newValue != oldValue {
                 saveChangesIfNeeded()
             }
-        }
-        .onTapGesture {
-            dismissKeyboardAndPersist()
+            if newValue == .weight {
+                adjustmentTarget = .weight
+            } else if newValue == .reps {
+                adjustmentTarget = .reps
+            }
         }
         .onDisappear {
             saveChangesIfNeeded()
-        }
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("common.save".localized) {
-                    dismissKeyboardAndPersist()
-                    onDone?()
-                }
-                .font(AppTextStyle.captionStrong)
-            }
         }
     }
 
@@ -773,13 +782,13 @@ struct InlineSetEditorRow: View {
 
     private func parsedWeight() -> Double {
         let normalized = weightText.replacingOccurrences(of: ",", with: ".")
-        let value = Double(normalized) ?? 0
+        let value = Double(normalized) ?? workoutSet.weightKg
         return max(0, value)
     }
 
     private func parsedReps() -> Int {
         let digitsOnly = repsText.filter(\.isNumber)
-        let value = Int(digitsOnly) ?? 0
+        let value = Int(digitsOnly) ?? max(1, workoutSet.reps)
         return max(1, value)
     }
 
@@ -789,13 +798,23 @@ struct InlineSetEditorRow: View {
 
     private func applyIncrement(_ delta: Int) {
         if exerciseType == "weightReps" {
-            if adjustmentTarget == .weight {
+            let activeTarget: AdjustmentTarget
+            if focusedField == .weight {
+                activeTarget = .weight
+            } else if focusedField == .reps {
+                activeTarget = .reps
+            } else {
+                activeTarget = adjustmentTarget
+            }
+
+            if activeTarget == .weight {
                 let newWeight = max(0, parsedWeight() + (Double(delta) * 2.5))
                 weightText = formattedWeight(newWeight)
-            } else if adjustmentTarget == .reps {
+            } else {
                 let newReps = max(1, parsedReps() + delta)
                 repsText = "\(newReps)"
             }
+            adjustmentTarget = activeTarget
             hasPendingChanges = true
             return
         }
@@ -811,12 +830,14 @@ struct InlineSetEditorRow: View {
         hasPendingChanges = true
     }
 
-    private func dismissKeyboardAndPersist() {
-        if focusedField != nil {
-            focusedField = nil
-        } else {
-            saveChangesIfNeeded()
-        }
+    private func cancelEditing() {
+        weightText = formattedWeight(initialWeight)
+        repsText = "\(initialReps)"
+        durationSeconds = initialDurationSeconds
+        rirSelection = initialRirSelection
+        hasPendingChanges = false
+        focusedField = nil
+        onDone?()
     }
 
     private func selectTarget(_ target: AdjustmentTarget) {
@@ -838,9 +859,9 @@ struct InlineSetEditorRow: View {
             Button(action: decrementAction) {
                 Image(systemName: "minus")
                     .font(AppTextStyle.bodyStrong)
-                    .frame(width: 30, height: 30)
+                    .frame(width: 36, height: 32)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.borderless)
 
             Divider()
                 .frame(height: 20)
@@ -848,9 +869,9 @@ struct InlineSetEditorRow: View {
             Button(action: incrementAction) {
                 Image(systemName: "plus")
                     .font(AppTextStyle.bodyStrong)
-                    .frame(width: 30, height: 30)
+                    .frame(width: 36, height: 32)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.borderless)
         }
         .background(Color(.secondarySystemBackground))
         .clipShape(Capsule())
