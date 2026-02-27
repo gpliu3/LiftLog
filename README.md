@@ -96,6 +96,29 @@ GPLift/
 
 ## Release
 
-- Current version: `1.0` (`CURRENT_PROJECT_VERSION` `26`)
+- Current version: `1.1` (`CURRENT_PROJECT_VERSION` `37`)
 - Bundle ID: `com.gengpuliu.LiftLog`
 - App Store Connect metadata draft: `AppStore/metadata.md`
+
+### TestFlight Publish (One Command)
+
+Use the scripted flow to reduce failed upload attempts and notification emails:
+
+```bash
+cd /Users/gengpuliu/Projects/GPList
+./scripts/release_testflight.sh \
+  --api-key AAN76TPC9V \
+  --issuer 33142954-a2ca-4a17-96b9-ee0cda4a3382 \
+  --p8 /Users/gengpuliu/Desktop/AuthKey_AAN76TPC9V.p8
+```
+
+What it does:
+- Archive app (`Release`)
+- Export IPA
+- Validate with Apple first (upload is blocked if validation fails)
+- Upload to TestFlight
+- Wait for delivery status (`VALID` / error)
+
+Notes:
+- If you have local edits, commit first (or pass `--allow-dirty`)
+- This avoids most “failed build/upload” email noise from premature uploads
