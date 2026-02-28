@@ -166,7 +166,12 @@ UPLOAD_OUTPUT="$(
 )"
 printf "%s\n" "$UPLOAD_OUTPUT"
 
-DELIVERY_ID="$(printf "%s\n" "$UPLOAD_OUTPUT" | sed -n 's/.*Delivery UUID: \([a-fA-F0-9-]\+\).*/\1/p' | head -n1)"
+DELIVERY_ID="$(
+  printf "%s\n" "$UPLOAD_OUTPUT" |
+    awk -F'Delivery UUID: ' '/Delivery UUID:/ {print $2}' |
+    tr -d '\r' |
+    head -n1
+)"
 if [[ -z "$DELIVERY_ID" ]]; then
   echo "Upload completed but Delivery UUID was not found in output." >&2
   exit 1
