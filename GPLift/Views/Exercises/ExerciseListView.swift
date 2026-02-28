@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UIKit
 
 struct ExerciseListView: View {
     @Environment(\.modelContext) private var modelContext
@@ -8,6 +9,7 @@ struct ExerciseListView: View {
 
     @State private var searchText = ""
     @State private var showingAddExercise = false
+    @State private var showingExportSheet = false
     @State private var selectedExercise: Exercise?
     @State private var quickAddExercise: Exercise?
 
@@ -43,7 +45,14 @@ struct ExerciseListView: View {
             .font(AppTextStyle.body)
             .searchable(text: $searchText, prompt: "exercises.search".localized)
             .toolbar {
-                ToolbarItem(placement: .primaryAction) {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button {
+                        showingExportSheet = true
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    .accessibilityLabel("exercises.export".localized)
+
                     Button {
                         showingAddExercise = true
                     } label: {
@@ -59,6 +68,9 @@ struct ExerciseListView: View {
             }
             .sheet(item: $quickAddExercise) { exercise in
                 AddSetView(preselectedExercise: exercise)
+            }
+            .sheet(isPresented: $showingExportSheet) {
+                ExerciseExportView(exercises: exercises)
             }
         }
         .id(languageManager.currentLanguage)
@@ -98,6 +110,116 @@ struct ExerciseListView: View {
     private func deleteExercises(at offsets: IndexSet, from exercises: [Exercise]) {
         for index in offsets {
             modelContext.delete(exercises[index])
+        }
+    }
+}
+
+private struct ExerciseExportView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    let exercises: [Exercise]
+
+    @State private var exportedCSV = ""
+    @State private var exportedFileURL: URL?
+    @State private var copied = false
+    @State private var exportError = false
+
+    private var notesCount: Int {
+        exercises.filter { !$0.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count
+    }
+
+    private var exportFilename: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        return "gplift_exercises_\(formatter.string(from: Date())).csv"
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("history.export.preview".localized) {
+                    HStack {
+                        Label("history.export.exercises".localized, systemImage: "dumbbell")
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Text("\(exercises.count)")
+                            .fontWeight(.semibold)
+                    }
+
+                    HStack {
+                        Label("exercises.export.notes".localized, systemImage: "note.text")
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Text("\(notesCount)")
+                            .fontWeight(.semibold)
+                    }
+                }
+
+                Section {
+                    if let url = exportedFileURL, !exercises.isEmpty {
+                        ShareLink(item: url) {
+                            Label("history.export.share".localized, systemImage: "square.and.arrow.up")
+                        }
+
+                        Button {
+                            UIPasteboard.general.string = exportedCSV
+                            copied = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                                copied = false
+                            }
+                        } label: {
+                            Label("history.export.copy".localized, systemImage: "doc.on.doc")
+                        }
+
+                        if copied {
+                            Text("history.export.copied".localized)
+                                .font(.caption)
+                                .foregroundStyle(.green)
+                        }
+                    }
+                } header: {
+                    Text("history.export.actions".localized)
+                } footer: {
+                    Text("history.export.footer".localized)
+                }
+            }
+            .navigationTitle("exercises.export.title".localized)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("common.done".localized) {
+                        dismiss()
+                    }
+                }
+            }
+            .onAppear {
+                refreshExportPayload()
+            }
+            .alert("history.export.errorTitle".localized, isPresented: $exportError) {
+                Button("common.done".localized, role: .cancel) {}
+            } message: {
+                Text("history.export.errorMessage".localized)
+            }
+        }
+    }
+
+    private func refreshExportPayload() {
+        copied = false
+        guard !exercises.isEmpty else {
+            exportedCSV = ""
+            exportedFileURL = nil
+            return
+        }
+
+        let csv = ExerciseLibraryCSVExporter.makeCSV(from: exercises)
+        do {
+            exportedFileURL = try CSVDocumentWriter.writeCSVFile(content: csv, filename: exportFilename)
+            exportedCSV = csv
+        } catch {
+            exportedFileURL = nil
+            exportedCSV = ""
+            exportError = true
         }
     }
 }

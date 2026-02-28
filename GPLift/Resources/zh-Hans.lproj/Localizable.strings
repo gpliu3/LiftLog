@@ -53,6 +53,9 @@
 "exercises.noExercisesDescription" = "点击 + 添加你的第一个动作";
 "exercises.sessions" = "%d 次训练";
 "exercises.quickAdd" = "快速记录";
+"exercises.export" = "导出 CSV";
+"exercises.export.title" = "导出动作 CSV";
+"exercises.export.notes" = "含备注动作数";
 
 /* Exercise Edit View */
 "exerciseEdit.newTitle" = "新建动作";
@@ -109,7 +112,6 @@
 "history.export.sets" = "组数";
 "history.export.exercises" = "动作数";
 "history.export.actions" = "导出";
-"history.export.generate" = "生成 CSV";
 "history.export.share" = "分享 CSV";
 "history.export.copy" = "复制 CSV";
 "history.export.copied" = "CSV 已复制到剪贴板";

@@ -56,6 +56,35 @@ enum DateFormatters {
         formatter.dateFormat = "EEEE, MMM d"
         return formatter
     }()
+
+    static func historyDayLabel(for date: Date, locale: Locale) -> String {
+        date.formatted(
+            Date.FormatStyle()
+                .locale(locale)
+                .weekday(.abbreviated)
+                .month(.abbreviated)
+                .day()
+                .year()
+        )
+    }
+
+    static func historyWeekRange(startingAt weekStart: Date, locale: Locale, calendar: Calendar = .current) -> String {
+        let weekEnd = calendar.date(byAdding: .day, value: 6, to: weekStart) ?? weekStart
+        let start = weekStart.formatted(
+            Date.FormatStyle()
+                .locale(locale)
+                .month(.abbreviated)
+                .day()
+        )
+        let end = weekEnd.formatted(
+            Date.FormatStyle()
+                .locale(locale)
+                .month(.abbreviated)
+                .day()
+                .year()
+        )
+        return "\(start) - \(end)"
+    }
 }
 
 extension Date {

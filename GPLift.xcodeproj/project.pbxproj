@@ -27,6 +27,7 @@
 		E51000012B5A00000012 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = E51000002B5A00000012 /* Localizable.strings */; };
 		E51000012B5A00000015 /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51000002B5A00000015 /* SettingsManager.swift */; };
 		E51000012B5A00000016 /* EditSetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51000002B5A00000016 /* EditSetView.swift */; };
+		E51000012B5A00000017 /* CSVExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51000002B5A00000017 /* CSVExport.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -52,6 +53,7 @@
 		E51000002B5A00000014 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		E51000002B5A00000015 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
 		E51000002B5A00000016 /* EditSetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditSetView.swift; sourceTree = "<group>"; };
+		E51000002B5A00000017 /* CSVExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVExport.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -167,6 +169,7 @@
 				E51000002B5A0000000E /* DateFormatters.swift */,
 				E51000002B5A00000010 /* LanguageManager.swift */,
 				E51000002B5A00000015 /* SettingsManager.swift */,
+				E51000002B5A00000017 /* CSVExport.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -277,6 +280,7 @@
 				E51000012B5A00000011 /* SettingsView.swift in Sources */,
 				E51000012B5A00000015 /* SettingsManager.swift in Sources */,
 				E51000012B5A00000016 /* EditSetView.swift in Sources */,
+				E51000012B5A00000017 /* CSVExport.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

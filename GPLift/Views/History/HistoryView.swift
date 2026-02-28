@@ -7,7 +7,7 @@ struct HistoryView: View {
     @Query(sort: \WorkoutSet.date, order: .reverse) private var allSets: [WorkoutSet]
     @State private var languageManager = LanguageManager.shared
 
-    @State private var selectedPeriod: TimePeriod = .week
+    @State private var selectedPeriod: TimePeriod = .all
     @State private var selectedDay: Date?
     @State private var showingExportSheet = false
     @State private var now = Date()
@@ -26,8 +26,15 @@ struct HistoryView: View {
         }
     }
 
+    private var locale: Locale {
+        languageManager.currentLanguage.locale ?? Locale.current
+    }
+
+    private var calendar: Calendar {
+        Calendar.current
+    }
+
     private var startDate: Date {
-        let calendar = Calendar.current
         switch selectedPeriod {
         case .week:
             return calendar.date(byAdding: .day, value: -7, to: now) ?? now
@@ -42,16 +49,32 @@ struct HistoryView: View {
         allSets.filter { $0.date >= startDate && $0.exercise != nil }
     }
 
-    private var groupedByDay: [(Date, [WorkoutSet])] {
-        let calendar = Calendar.current
-        let grouped = Dictionary(grouping: filteredSets) { set in
+    private var weeklySections: [HistoryWeekSection] {
+        let groupedByDay = Dictionary(grouping: filteredSets) { set in
             calendar.startOfDay(for: set.date)
         }
-        return grouped.sorted { $0.key > $1.key }
+
+        let dayGroups = groupedByDay.map { day, sets in
+            HistoryDayGroup(date: day, sets: sets.sorted(by: WorkoutSet.trainingOrder(lhs:rhs:)))
+        }
+        .sorted { $0.date > $1.date }
+
+        let groupedByWeek = Dictionary(grouping: dayGroups) { dayGroup in
+            dayGroup.date.startOfWeek
+        }
+
+        return groupedByWeek
+            .map { weekStart, days in
+                HistoryWeekSection(
+                    weekStart: weekStart,
+                    days: days.sorted { $0.date > $1.date }
+                )
+            }
+            .sorted { $0.weekStart > $1.weekStart }
     }
 
     private var trainingDaysCount: Int {
-        groupedByDay.count
+        weeklySections.reduce(0) { $0 + $1.days.count }
     }
 
     private var totalVolume: Double {
@@ -63,7 +86,7 @@ struct HistoryView: View {
             VStack(spacing: 0) {
                 periodPicker
 
-                if groupedByDay.isEmpty {
+                if weeklySections.isEmpty {
                     emptyState
                 } else {
                     historyList
@@ -150,16 +173,42 @@ struct HistoryView: View {
 
     private var historyList: some View {
         List {
-            ForEach(groupedByDay, id: \.0) { date, sets in
-                DayRowView(date: date, sets: sets)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        selectedDay = date
+            ForEach(weeklySections) { section in
+                Section {
+                    ForEach(section.days) { dayGroup in
+                        DayRowView(date: dayGroup.date, sets: dayGroup.sets, locale: locale)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                selectedDay = dayGroup.date
+                            }
                     }
+                } header: {
+                    WeekBreakHeader(
+                        title: DateFormatters.historyWeekRange(
+                            startingAt: section.weekStart,
+                            locale: locale,
+                            calendar: calendar
+                        )
+                    )
+                }
             }
         }
         .environment(\.defaultMinListRowHeight, 24)
     }
+}
+
+private struct HistoryDayGroup: Identifiable {
+    let date: Date
+    let sets: [WorkoutSet]
+
+    var id: Date { date }
+}
+
+private struct HistoryWeekSection: Identifiable {
+    let weekStart: Date
+    let days: [HistoryDayGroup]
+
+    var id: Date { weekStart }
 }
 
 private struct HistoryExportView: View {
@@ -222,7 +271,7 @@ private struct HistoryExportView: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        return "liftlog_\(formatter.string(from: normalizedStart))_to_\(formatter.string(from: normalizedEnd)).csv"
+        return "gplift_history_\(formatter.string(from: normalizedStart))_to_\(formatter.string(from: normalizedEnd)).csv"
     }
 
     private var canExport: Bool {
@@ -250,9 +299,17 @@ private struct HistoryExportView: View {
             }
             .onChange(of: rangePreset) { _, newValue in
                 applyPreset(newValue)
+                refreshExportPayload()
+            }
+            .onChange(of: fromDate) { _, _ in
+                refreshExportPayload()
+            }
+            .onChange(of: toDate) { _, _ in
+                refreshExportPayload()
             }
             .onAppear {
                 applyPreset(rangePreset)
+                refreshExportPayload()
             }
             .alert("history.export.errorTitle".localized, isPresented: $exportError) {
                 Button("common.done".localized, role: .cancel) {}
@@ -303,14 +360,7 @@ private struct HistoryExportView: View {
     @ViewBuilder
     private var actionSection: some View {
         Section {
-            Button {
-                prepareExport()
-            } label: {
-                Label("history.export.generate".localized, systemImage: "doc.text")
-            }
-            .disabled(!canExport)
-
-            if let url = exportedFileURL {
+            if let url = exportedFileURL, canExport {
                 ShareLink(item: url) {
                     Label("history.export.share".localized, systemImage: "square.and.arrow.up")
                 }
@@ -361,93 +411,51 @@ private struct HistoryExportView: View {
         }
     }
 
-    private func prepareExport() {
-        guard canExport else { return }
+    private func refreshExportPayload() {
+        copied = false
+        guard canExport else {
+            exportedCSV = ""
+            exportedFileURL = nil
+            return
+        }
 
-        let csv = CSVExporter.makeCSV(from: filteredSets)
+        let csv = WorkoutHistoryCSVExporter.makeCSV(from: filteredSets)
         do {
-            let url = try CSVExporter.writeCSVFile(content: csv, filename: exportFilename)
+            exportedFileURL = try CSVDocumentWriter.writeCSVFile(content: csv, filename: exportFilename)
             exportedCSV = csv
-            exportedFileURL = url
         } catch {
+            exportedFileURL = nil
+            exportedCSV = ""
             exportError = true
         }
     }
 }
 
-private enum CSVExporter {
-    private static let header = [
-        "date",
-        "time",
-        "exercise_name",
-        "muscle_group",
-        "exercise_type",
-        "set_number",
-        "weight_kg",
-        "reps",
-        "duration_seconds",
-        "rir",
-        "notes",
-        "volume_kg"
-    ].joined(separator: ",")
+private struct WeekBreakHeader: View {
+    let title: String
 
-    static func makeCSV(from sets: [WorkoutSet]) -> String {
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Capsule()
+                    .fill(Color.orange.opacity(0.35))
+                    .frame(width: 10, height: 10)
+                Text(title)
+                    .font(AppTextStyle.captionStrong)
+                    .foregroundStyle(.secondary)
+            }
 
-        let timeFormatter = DateFormatter()
-        timeFormatter.dateFormat = "HH:mm:ss"
-        timeFormatter.locale = Locale(identifier: "en_US_POSIX")
-
-        var lines: [String] = [header]
-
-        for set in sets.sorted(by: { $0.date < $1.date }) {
-            let exercise = set.exercise
-            let row: [String] = [
-                dateFormatter.string(from: set.date),
-                timeFormatter.string(from: set.date),
-                csvEscape(exercise?.displayName ?? ""),
-                csvEscape(exercise?.localizedMuscleGroup ?? ""),
-                csvEscape(exercise?.exerciseType ?? ""),
-                "\(set.setNumber)",
-                String(format: "%.2f", set.weightKg),
-                "\(set.reps)",
-                "\(set.durationSeconds)",
-                set.rir.map(String.init) ?? "",
-                csvEscape(set.notes),
-                String(format: "%.2f", set.volume)
-            ]
-            lines.append(row.joined(separator: ","))
+            Divider()
         }
-
-        return lines.joined(separator: "\n")
-    }
-
-    static func writeCSVFile(content: String, filename: String) throws -> URL {
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
-        if FileManager.default.fileExists(atPath: url.path) {
-            try FileManager.default.removeItem(at: url)
-        }
-
-        // UTF-8 BOM improves Excel compatibility for Chinese text.
-        var data = Data([0xEF, 0xBB, 0xBF])
-        if let csvData = content.data(using: .utf8) {
-            data.append(csvData)
-        }
-        try data.write(to: url, options: .atomic)
-        return url
-    }
-
-    private static func csvEscape(_ value: String) -> String {
-        let escaped = value.replacingOccurrences(of: "\"", with: "\"\"")
-        return "\"\(escaped)\""
+        .textCase(nil)
+        .padding(.top, 4)
     }
 }
 
 struct DayRowView: View {
     let date: Date
     let sets: [WorkoutSet]
+    let locale: Locale
 
     private var exerciseNames: [String] {
         let grouped = Dictionary(grouping: sets) { $0.exercise?.id }
@@ -467,12 +475,18 @@ struct DayRowView: View {
         Calendar.current.isDateInToday(date)
     }
 
+    private var dateLabel: String {
+        DateFormatters.historyDayLabel(for: date, locale: locale)
+    }
+
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text(date, style: .date)
+                HStack(spacing: 6) {
+                    Text(dateLabel)
                         .font(AppTextStyle.sectionTitle)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
 
                     if isToday {
                         Text("history.today".localized)
@@ -491,7 +505,7 @@ struct DayRowView: View {
                     .lineLimit(1)
             }
 
-            Spacer()
+            Spacer(minLength: 12)
 
             VStack(alignment: .trailing, spacing: 4) {
                 Text("history.sets".localized(with: sets.count))
@@ -506,7 +520,7 @@ struct DayRowView: View {
                 .font(AppTextStyle.caption)
                 .foregroundStyle(.tertiary)
         }
-        .padding(.vertical, 0)
+        .padding(.vertical, 1)
     }
 }
 

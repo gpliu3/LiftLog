@@ -53,6 +53,9 @@
 "exercises.noExercisesDescription" = "Tap + to add your first exercise";
 "exercises.sessions" = "%d sessions";
 "exercises.quickAdd" = "Quick Add";
+"exercises.export" = "Export CSV";
+"exercises.export.title" = "Export Exercises CSV";
+"exercises.export.notes" = "Exercises with Notes";
 
 /* Exercise Edit View */
 "exerciseEdit.newTitle" = "New Exercise";
@@ -109,7 +112,6 @@
 "history.export.sets" = "Sets";
 "history.export.exercises" = "Exercises";
 "history.export.actions" = "Export";
-"history.export.generate" = "Generate CSV";
 "history.export.share" = "Share CSV";
 "history.export.copy" = "Copy CSV";
 "history.export.copied" = "CSV copied to clipboard";
