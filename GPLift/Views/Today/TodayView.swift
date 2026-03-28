@@ -721,6 +721,14 @@ struct InlineSetEditorRow: View {
                 }
                 .font(AppTextStyle.caption)
                 .buttonStyle(.borderless)
+
+                Spacer()
+
+                Button("common.confirm".localized) {
+                    confirmEditing()
+                }
+                .font(AppTextStyle.captionStrong)
+                .buttonStyle(.borderless)
             }
         }
         .padding(6)
@@ -837,6 +845,12 @@ struct InlineSetEditorRow: View {
         rirSelection = initialRirSelection
         hasPendingChanges = false
         focusedField = nil
+        onDone?()
+    }
+
+    private func confirmEditing() {
+        focusedField = nil
+        saveChangesIfNeeded()
         onDone?()
     }
 

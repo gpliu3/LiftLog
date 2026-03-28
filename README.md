@@ -9,6 +9,7 @@ A clean, modern iOS strength training tracker built with SwiftUI and SwiftData.
 ## Features
 
 - **Quick Logging** — Tap to instantly add sets with one tap. Tap a set to edit inline, or long press for full edit view.
+- **Flexible Weight Entry** — When logging new weighted sets, enter either `kg` or `lb`; the app converts and keeps all saved data in `kg`.
 - **Smart Defaults** — New training days auto-fill from the first (starting) set of your previous training day for that exercise.
 - **PR Highlights** — Sets that hit personal bests (weight/volume/duration/reps up to that day) get a celebration marker.
 - **One-Time PB Markers** — PB sparkles appear only on the first set that breaks a previous best (no repeated sparkle for ties later).
@@ -17,7 +18,7 @@ A clean, modern iOS strength training tracker built with SwiftUI and SwiftData.
 - **Progress Charts** — Track volume, max weight, and estimated 1RM over time with Swift Charts.
 - **Exercise Library** — Create and manage exercises with muscle group tags and form notes.
 - **Exercise Quick Add** — In Exercises, each row shows last-trained date plus "X days ago" and a direct Quick Add button.
-- **Training History** — Browse past workouts by week or month with per-day breakdowns.
+- **Training History** — Browse past workouts in all-time, week, or month views with Monday-based week grouping and per-day breakdowns.
 - **CSV Export** — Export selected date-range training records to CSV for Excel analysis, share, or copy/paste.
 - **Backdated Logging** — Choose a date (default today) when adding a set to log past training days.
 - **Due-Aware Exercise Picker** — In Log Set, exercises show last-trained date plus "X days ago", ordered by longest due first.
@@ -42,7 +43,7 @@ A clean, modern iOS strength training tracker built with SwiftUI and SwiftData.
 | Quick add from Exercises | Exercises tab → tap **Quick Add** on any exercise |
 | Set optional RIR | In Log Set / Edit Set choose **RIR**: `-`, `0`, `1`, `2` |
 | Spot PR sets | Look for the sparkle marker on set rows |
-| Export records | History tab → Export button → Generate/Share/Copy CSV |
+| Export records | History tab → Export button → Share or Copy CSV directly |
 
 ## Tech Stack
 
@@ -96,7 +97,7 @@ GPLift/
 
 ## Release
 
-- Current version: `1.1` (`CURRENT_PROJECT_VERSION` `37`)
+- Current version: `1.1` (`CURRENT_PROJECT_VERSION` `38`)
 - Bundle ID: `com.gengpuliu.LiftLog`
 - App Store Connect metadata draft: `AppStore/metadata.md`
 

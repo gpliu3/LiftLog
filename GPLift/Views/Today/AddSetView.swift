@@ -15,6 +15,7 @@ struct AddSetView: View {
     @State private var selectedExercise: Exercise?
     @State private var selectedDate: Date = Date()
     @State private var weight: Double = 20.0
+    @State private var weightUnit: WeightUnit = .kg
     @State private var reps: Int = 10
     @State private var durationSeconds: Int = 30
     @State private var rirSelection: Int = -1
@@ -26,6 +27,17 @@ struct AddSetView: View {
 
     private var exerciseType: String {
         selectedExercise?.exerciseType ?? "weightReps"
+    }
+
+    private var displayedWeightBinding: Binding<Double> {
+        Binding(
+            get: {
+                weightUnit.formattedInputValue(fromKilograms: weight)
+            },
+            set: { newValue in
+                weight = max(0, weightUnit.convertToKilograms(newValue))
+            }
+        )
     }
 
     private var filteredExercises: [Exercise] {
@@ -351,10 +363,17 @@ struct AddSetView: View {
     }
 
     private var weightSection: some View {
-        Section("addSet.weight".localized) {
+        Section {
+            Picker("addSet.weightUnit".localized, selection: $weightUnit) {
+                ForEach(WeightUnit.allCases) { unit in
+                    Text(unit.localizedLabel).tag(unit)
+                }
+            }
+            .pickerStyle(.segmented)
+
             HStack {
                 Button {
-                    weight = max(0, weight - 2.5)
+                    adjustWeight(by: -weightUnit.step)
                 } label: {
                     Image(systemName: "minus.circle.fill")
                         .font(.title2)
@@ -364,19 +383,19 @@ struct AddSetView: View {
 
                 Spacer()
 
-                TextField("Weight", value: $weight, format: .number)
+                TextField("Weight", value: displayedWeightBinding, format: .number)
                     .font(AppTextStyle.metric)
                     .keyboardType(.decimalPad)
                     .multilineTextAlignment(.center)
                     .frame(width: 84)
 
-                Text("kg")
+                Text(weightUnit.localizedLabel)
                     .foregroundStyle(.secondary)
 
                 Spacer()
 
                 Button {
-                    weight += 2.5
+                    adjustWeight(by: weightUnit.step)
                 } label: {
                     Image(systemName: "plus.circle.fill")
                         .font(.title2)
@@ -385,6 +404,10 @@ struct AddSetView: View {
                 .buttonStyle(.plain)
             }
             .padding(.vertical, 4)
+        } header: {
+            Text("addSet.weight".localized)
+        } footer: {
+            Text("addSet.weightUnitFooter".localized)
         }
     }
 
@@ -598,6 +621,11 @@ struct AddSetView: View {
         } else {
             dismiss()
         }
+    }
+
+    private func adjustWeight(by deltaInSelectedUnit: Double) {
+        let updatedValue = max(0, weightUnit.formattedInputValue(fromKilograms: weight) + deltaInSelectedUnit)
+        weight = max(0, weightUnit.convertToKilograms(updatedValue))
     }
 
     private func combinedDateWithCurrentTime(_ day: Date) -> Date {

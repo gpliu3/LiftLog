@@ -20,7 +20,9 @@
 "addSet.searchExercises" = "搜索动作...";
 "addSet.change" = "更换";
 "addSet.date" = "日期";
-"addSet.weight" = "重量 (kg)";
+"addSet.weight" = "重量";
+"addSet.weightUnit" = "重量单位";
+"addSet.weightUnitFooter" = "这里可用公斤或磅输入。保存数据和其他页面显示仍统一使用公斤。";
 "addSet.reps" = "次数";
 "addSet.notes" = "备注（可选）";
 "addSet.addNote" = "添加备注...";
@@ -263,7 +265,9 @@
 "common.delete" = "删除";
 "common.done" = "完成";
 "common.edit" = "编辑";
+"common.confirm" = "确认";
 "common.kg" = "公斤";
+"common.lb" = "磅";
 "common.reps" = "次";
 "common.set" = "第%d组";
 "common.noneShort" = "-";

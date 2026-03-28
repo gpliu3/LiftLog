@@ -20,7 +20,9 @@
 "addSet.searchExercises" = "Search exercises...";
 "addSet.change" = "Change";
 "addSet.date" = "Date";
-"addSet.weight" = "Weight (kg)";
+"addSet.weight" = "Weight";
+"addSet.weightUnit" = "Weight Unit";
+"addSet.weightUnitFooter" = "You can enter kg or lb here. Saved data and the rest of the app continue to use kg.";
 "addSet.reps" = "Reps";
 "addSet.notes" = "Notes (Optional)";
 "addSet.addNote" = "Add a note...";
@@ -263,7 +265,9 @@
 "common.delete" = "Delete";
 "common.done" = "Done";
 "common.edit" = "Edit";
+"common.confirm" = "Confirm";
 "common.kg" = "kg";
+"common.lb" = "lb";
 "common.reps" = "reps";
 "common.set" = "Set %d";
 "common.noneShort" = "-";

@@ -28,6 +28,7 @@
 		E51000012B5A00000015 /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51000002B5A00000015 /* SettingsManager.swift */; };
 		E51000012B5A00000016 /* EditSetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51000002B5A00000016 /* EditSetView.swift */; };
 		E51000012B5A00000017 /* CSVExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51000002B5A00000017 /* CSVExport.swift */; };
+		E51000012B5A00000018 /* WeightUnit.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51000002B5A00000018 /* WeightUnit.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -54,6 +55,7 @@
 		E51000002B5A00000015 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
 		E51000002B5A00000016 /* EditSetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditSetView.swift; sourceTree = "<group>"; };
 		E51000002B5A00000017 /* CSVExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVExport.swift; sourceTree = "<group>"; };
+		E51000002B5A00000018 /* WeightUnit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeightUnit.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -170,6 +172,7 @@
 				E51000002B5A00000010 /* LanguageManager.swift */,
 				E51000002B5A00000015 /* SettingsManager.swift */,
 				E51000002B5A00000017 /* CSVExport.swift */,
+				E51000002B5A00000018 /* WeightUnit.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -281,6 +284,7 @@
 				E51000012B5A00000015 /* SettingsManager.swift in Sources */,
 				E51000012B5A00000016 /* EditSetView.swift in Sources */,
 				E51000012B5A00000017 /* CSVExport.swift in Sources */,
+				E51000012B5A00000018 /* WeightUnit.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
