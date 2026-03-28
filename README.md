@@ -97,7 +97,7 @@ GPLift/
 
 ## Release
 
-- Current version: `1.1` (`CURRENT_PROJECT_VERSION` `38`)
+- Current version: `1.2` (`CURRENT_PROJECT_VERSION` `39`)
 - Bundle ID: `com.gengpuliu.LiftLog`
 - App Store Connect metadata draft: `AppStore/metadata.md`
 
