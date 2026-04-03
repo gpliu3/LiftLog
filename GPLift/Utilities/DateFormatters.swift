@@ -105,7 +105,7 @@ extension Date {
         calendar.firstWeekday = 2
         calendar.minimumDaysInFirstWeek = 4
         let components = calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: self)
-        return calendar.date(from: components) ?? self
+        return calendar.startOfDay(for: calendar.date(from: components) ?? self)
     }
 
     var startOfMonth: Date {

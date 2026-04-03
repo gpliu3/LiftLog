@@ -93,6 +93,8 @@ struct ExerciseDetailView: View {
                 LabeledContent("exerciseEdit.exerciseType".localized, value: exercise.localizedExerciseType)
             }
 
+            LabeledContent("exerciseEdit.active".localized, value: exercise.isActiveResolved ? "exerciseEdit.active".localized : "exerciseEdit.inactive".localized)
+
             if !exercise.displayNotes.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("exerciseDetail.notes".localized)

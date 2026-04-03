@@ -8,6 +8,7 @@ final class Exercise {
     var notes: String
     var muscleGroup: String
     var exerciseType: String
+    var isActive: Bool?
     var createdAt: Date
 
     @Relationship(deleteRule: .cascade, inverse: \WorkoutSet.exercise)
@@ -19,6 +20,7 @@ final class Exercise {
         notes: String = "",
         muscleGroup: String = "",
         exerciseType: String = "weightReps",
+        isActive: Bool = true,
         createdAt: Date = Date()
     ) {
         self.id = id
@@ -26,12 +28,14 @@ final class Exercise {
         self.notes = notes
         self.muscleGroup = muscleGroup
         self.exerciseType = exerciseType
+        self.isActive = isActive
         self.createdAt = createdAt
     }
 
     var isWeightReps: Bool { exerciseType == "weightReps" }
     var isRepsOnly: Bool { exerciseType == "repsOnly" }
     var isTimeOnly: Bool { exerciseType == "timeOnly" }
+    var isActiveResolved: Bool { isActive ?? true }
 
     var localizedExerciseType: String {
         Exercise.localizedExerciseTypeName(for: exerciseType)

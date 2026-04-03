@@ -66,6 +66,11 @@
 "exerciseEdit.namePlaceholder" = "Exercise name";
 "exerciseEdit.muscleGroup" = "Muscle Group";
 "exerciseEdit.muscleGroupNone" = "None";
+"exerciseEdit.visibility" = "Visibility";
+"exerciseEdit.active" = "Active";
+"exerciseEdit.inactive" = "Inactive";
+"exerciseEdit.activeHint" = "Active exercises appear in the Log Set exercise picker.";
+"exerciseEdit.inactiveHint" = "Inactive exercises stay in your history and library, but are hidden from the Log Set exercise picker.";
 "exerciseEdit.notes" = "Notes";
 "exerciseEdit.notesPlaceholder" = "Form cues, tips, instructions...";
 "exerciseEdit.defaultNotesHint" = "Leave blank to use default notes";
@@ -100,12 +105,15 @@
 "history.noWorkoutsDescription" = "No workouts recorded in this period";
 "history.today" = "Today";
 "history.sets" = "%d sets";
+"history.weekRange" = "%@ - %@";
+"history.weekTrainingDays" = "%d training days";
+"history.weekVolume" = "%d kg";
 "history.export" = "Export";
 "history.export.title" = "Export CSV";
 "history.export.range" = "Date Range";
 "history.export.range.last7" = "7D";
 "history.export.range.last30" = "30D";
-"history.export.range.thisMonth" = "Month";
+"history.export.range.all" = "All";
 "history.export.range.custom" = "Custom";
 "history.export.customRange" = "Custom Dates";
 "history.export.from" = "From";
@@ -261,6 +269,7 @@
 
 /* Common */
 "common.cancel" = "Cancel";
+"common.confirm" = "Confirm";
 "common.save" = "Save";
 "common.delete" = "Delete";
 "common.done" = "Done";

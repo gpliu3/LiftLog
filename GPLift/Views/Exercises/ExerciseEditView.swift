@@ -11,6 +11,7 @@ struct ExerciseEditView: View {
     @State private var exerciseType: String = "weightReps"
     @State private var muscleGroup: String = ""
     @State private var notes: String = ""
+    @State private var isActive = true
     @State private var showingDeleteAlert = false
 
     private var isEditing: Bool {
@@ -62,6 +63,14 @@ struct ExerciseEditView: View {
                     }
                 }
 
+                Section("exerciseEdit.visibility".localized) {
+                    Toggle("exerciseEdit.active".localized, isOn: $isActive)
+
+                    Text(isActive ? "exerciseEdit.activeHint".localized : "exerciseEdit.inactiveHint".localized)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 if isEditing {
                     Section {
                         Button("exerciseEdit.delete".localized, role: .destructive) {
@@ -100,6 +109,7 @@ struct ExerciseEditView: View {
                     exerciseType = exercise.exerciseType
                     muscleGroup = exercise.muscleGroup
                     notes = exercise.notes
+                    isActive = exercise.isActiveResolved
                 }
             }
         }
@@ -112,15 +122,23 @@ struct ExerciseEditView: View {
             exercise.exerciseType = exerciseType
             exercise.muscleGroup = muscleGroup
             exercise.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+            exercise.isActive = isActive
         } else {
             // Create new
             let newExercise = Exercise(
                 name: name.trimmingCharacters(in: .whitespaces),
                 notes: notes.trimmingCharacters(in: .whitespacesAndNewlines),
                 muscleGroup: muscleGroup,
-                exerciseType: exerciseType
+                exerciseType: exerciseType,
+                isActive: isActive
             )
             modelContext.insert(newExercise)
+        }
+
+        do {
+            try modelContext.save()
+        } catch {
+            assertionFailure("Failed to save exercise: \(error)")
         }
 
         dismiss()
@@ -129,6 +147,11 @@ struct ExerciseEditView: View {
     private func deleteExercise() {
         if let exercise = exercise {
             modelContext.delete(exercise)
+        }
+        do {
+            try modelContext.save()
+        } catch {
+            assertionFailure("Failed to delete exercise: \(error)")
         }
         dismiss()
     }

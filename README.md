@@ -1,60 +1,53 @@
 # GPLift
 
-A clean, modern iOS strength training tracker built with SwiftUI and SwiftData.
+GPLift is a compact iOS strength workout log focused on fast daily logging, clear history, and on-device privacy.
 
 ![Platform](https://img.shields.io/badge/Platform-iOS%2017%2B-blue)
 ![Language](https://img.shields.io/badge/Language-Swift-orange)
 ![Framework](https://img.shields.io/badge/Framework-SwiftUI%20%7C%20SwiftData-purple)
 
-## Features
+## Highlights
 
-- **Quick Logging** — Tap to instantly add sets with one tap. Tap a set to edit inline, or long press for full edit view.
-- **Flexible Weight Entry** — When logging new weighted sets, enter either `kg` or `lb`; the app converts and keeps all saved data in `kg`.
-- **Smart Defaults** — New training days auto-fill from the first (starting) set of your previous training day for that exercise.
-- **PR Highlights** — Sets that hit personal bests (weight/volume/duration/reps up to that day) get a celebration marker.
-- **One-Time PB Markers** — PB sparkles appear only on the first set that breaks a previous best (no repeated sparkle for ties later).
-- **RIR Tracking** — Optional RIR input (0/1/2) per set, editable later and shown only when set.
-- **Previous-Day Reference** — In Today, each exercise header has a clock button to show only the immediately previous training day's sets for planning.
-- **Progress Charts** — Track volume, max weight, and estimated 1RM over time with Swift Charts.
-- **Exercise Library** — Create and manage exercises with muscle group tags and form notes.
-- **Exercise Quick Add** — In Exercises, each row shows last-trained date plus "X days ago" and a direct Quick Add button.
-- **Training History** — Browse past workouts in all-time, week, or month views with Monday-based week grouping and per-day breakdowns.
-- **CSV Export** — Export selected date-range training records to CSV for Excel analysis, share, or copy/paste.
-- **Backdated Logging** — Choose a date (default today) when adding a set to log past training days.
-- **Due-Aware Exercise Picker** — In Log Set, exercises show last-trained date plus "X days ago", ordered by longest due first.
-- **One-Tap Save Actions** — Log Set provides direct **Save & Add Another** and **Save & Close** buttons (no extra menu step).
-- **Compact UI System** — Unified rounded typography and tighter row/control spacing across Today, History, Exercises, and edit forms so more records fit on screen (including larger display zoom).
-- **Bilingual** — Full English and Chinese (简体中文) support with in-app language switching.
+- **Fast set logging**: add a set in one flow, or add the next set directly from Today.
+- **Inline editing**: tap a set to edit it in place, with shared `- / +` controls for the active field.
+- **Dual-unit entry**: weight entry supports both `kg` and `lb` in Log Set and inline editing, while all saved data stays standardized in `kg`.
+- **Smart defaults**: first set of a new day starts from the first set of the most recent previous day for that exercise.
+- **Backdated logging**: log to a past date without changing current-day data.
+- **Previous-day reference**: each exercise in Today can reveal only the immediately previous training day for planning.
+- **One-time PB markers**: sparkles appear only on the first set that establishes a new personal best.
+- **Optional RIR**: `0`, `1`, `2`, or blank, editable later.
+- **Exercise activity control**: exercises can be marked active or inactive; inactive exercises stay in history and the library but are hidden from the Log Set picker.
+- **History by week, month, or all**: the default History view is `All`, grouped by Monday-based weeks with weekly totals.
+- **CSV export**: export workout history and exercises to UTF-8 BOM CSV for better Excel compatibility with Chinese text.
+- **Bilingual UI**: English and Simplified Chinese, with in-app language switching.
 
-## How It Works
+## Main Flows
 
 | Action | How |
 |---|---|
-| Log a new set | Tap the **+** FAB button |
-| Save in one tap | Use **Save & Add Another** or **Save & Close** directly at the bottom of Log Set |
-| Choose log date | In Log Set, pick **Date** (defaults to today) |
-| Add another set | Tap "Add another set" at the bottom of an exercise group |
-| Duplicate a set | Swipe right on any set |
-| Edit a set quickly | Tap any set row (inline editor) |
-| Inline edit safety | Keyboard includes Save; tapping outside weight auto-saves to avoid losing edits |
-| Edit a set (full view) | Long press any set |
-| Delete a set | Swipe left on any set |
-| See previous day sets | In Today exercise header, tap the clock icon |
-| Quick add from Exercises | Exercises tab → tap **Quick Add** on any exercise |
-| Set optional RIR | In Log Set / Edit Set choose **RIR**: `-`, `0`, `1`, `2` |
-| Spot PR sets | Look for the sparkle marker on set rows |
-| Export records | History tab → Export button → Share or Copy CSV directly |
+| Log a new set | Tap the floating `+` button in Today |
+| Choose an exercise | Log Set opens with the due-sorted active exercise list |
+| Enter weight | Tap either `kg` or `lb`; both stay in sync |
+| Save quickly | Use `Save & Add Another` or `Save & Close` |
+| Edit a set inline | Tap any Today set row |
+| Edit a set in full-screen | Long press a Today set row |
+| Add another set | Tap `Add another set` under an exercise in Today |
+| Review previous day | Tap the clock button in an exercise header |
+| Edit exercise notes and status | Open Exercises and edit the exercise |
+| Toggle active/inactive | Use the inline active switch in Exercises or the toggle in Edit Exercise |
+| Export workout history | History → export button → choose range → share or copy CSV |
 
-## Tech Stack
+## Data Model Notes
 
-- **SwiftUI** — Declarative UI
-- **SwiftData** — On-device persistence with `@Model` and `@Query`
-- **Swift Charts** — Progress visualization
-- **`@Observable`** — Reactive language and settings management
+- `WorkoutSet.weightKg` is the single persisted weight field.
+- `lb` input is converted to `kg` before saving, so existing records remain compatible.
+- `Exercise.isActive` is stored as an optional field for backward compatibility with older SwiftData stores.
+- Missing `isActive` values are treated as active, which preserves existing users' exercise visibility after upgrading.
+- No migration fallback recreates or wipes the database.
 
 ## Project Structure
 
-```
+```text
 GPLift/
 ├── App/
 │   └── GPLiftApp.swift
@@ -68,58 +61,68 @@ GPLift/
 │   │   ├── AddSetView.swift
 │   │   └── EditSetView.swift
 │   ├── Exercises/
+│   │   ├── ExerciseListView.swift
+│   │   ├── ExerciseDetailView.swift
+│   │   └── ExerciseEditView.swift
 │   ├── History/
+│   │   ├── HistoryView.swift
+│   │   └── DayDetailView.swift
 │   ├── Progress/
 │   └── Settings/
 │       └── SettingsView.swift
 ├── Utilities/
+│   ├── CSVExport.swift
+│   ├── DateFormatters.swift
 │   ├── LanguageManager.swift
 │   ├── SettingsManager.swift
 │   ├── VolumeCalculator.swift
-│   └── DateFormatters.swift
+│   └── WeightUnit.swift
 └── Resources/
     ├── Assets.xcassets/
     ├── en.lproj/Localizable.strings
     └── zh-Hans.lproj/Localizable.strings
 ```
 
+## Tech Stack
+
+- **SwiftUI** for UI composition
+- **SwiftData** for on-device persistence
+- **Swift Charts** for progress charts
+- **UIKit interop** for keyboard dismissal, clipboard, and haptics where SwiftUI alone is not enough
+
 ## Settings
 
-- **Language** — Follow system, English, or 简体中文
-- **Default Start Value** — New day set defaults use the first set from the most recent previous training day
-- **Restore Default Exercises** — Add missing built-in exercises without modifying existing user data
+- **Language**: follow system, English, or 简体中文
+- **Restore Default Exercises**: restore built-in exercises without overwriting existing user-created data or preferences
 
 ## Requirements
 
 - Xcode 15+
 - iOS 17+
-- No external dependencies
+- No third-party dependencies
 
 ## Release
 
-- Current version: `1.2` (`CURRENT_PROJECT_VERSION` `40`)
-- Bundle ID: `com.gengpuliu.LiftLog`
-- App Store Connect metadata draft: `AppStore/metadata.md`
+- Current App Store/TestFlight version prepared in this repo: `1.3 (40)`
+- Bundle identifier: `com.gengpuliu.LiftLog`
+- Export compliance: `ITSAppUsesNonExemptEncryption = NO`
+- Build/version values are managed from `GPLift.xcodeproj/project.pbxproj`
 
-### TestFlight Publish (One Command)
+### TestFlight Publish
 
 Use the scripted flow to reduce failed upload attempts and notification emails:
 
 ```bash
-cd /Users/gengpuliu/Projects/GPList
+cd /Users/gengpuliu/Projects/LiftLog/LiftLog
 ./scripts/release_testflight.sh \
   --api-key AAN76TPC9V \
   --issuer 33142954-a2ca-4a17-96b9-ee0cda4a3382 \
-  --p8 /Users/gengpuliu/Desktop/AuthKey_AAN76TPC9V.p8
+  --p8 /Users/gengpuliu/.appstoreconnect/private_keys/AuthKey_AAN76TPC9V.p8
 ```
 
 What it does:
-- Archive app (`Release`)
-- Export IPA
-- Validate with Apple first (upload is blocked if validation fails)
-- Upload to TestFlight
-- Wait for delivery status (`VALID` / error)
-
-Notes:
-- If you have local edits, commit first (or pass `--allow-dirty`)
-- This avoids most “failed build/upload” email noise from premature uploads
+- Archive the app in `Release`
+- Export the IPA
+- Validate with Apple first
+- Upload only after validation succeeds
+- Wait for delivery status

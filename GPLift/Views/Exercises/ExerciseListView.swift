@@ -91,12 +91,9 @@ struct ExerciseListView: View {
                     ForEach(exercises) { exercise in
                         ExerciseRowView(
                             exercise: exercise,
+                            onOpenDetails: { selectedExercise = exercise },
                             onQuickAdd: { quickAddExercise = exercise }
                         )
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            selectedExercise = exercise
-                        }
                     }
                     .onDelete { indexSet in
                         deleteExercises(at: indexSet, from: exercises)
@@ -110,6 +107,11 @@ struct ExerciseListView: View {
     private func deleteExercises(at offsets: IndexSet, from exercises: [Exercise]) {
         for index in offsets {
             modelContext.delete(exercises[index])
+        }
+        do {
+            try modelContext.save()
+        } catch {
+            assertionFailure("Failed to delete exercises: \(error)")
         }
     }
 }
@@ -225,7 +227,9 @@ private struct ExerciseExportView: View {
 }
 
 struct ExerciseRowView: View {
-    let exercise: Exercise
+    @Environment(\.modelContext) private var modelContext
+    @Bindable var exercise: Exercise
+    let onOpenDetails: () -> Void
     let onQuickAdd: () -> Void
 
     private var lastTrainedLabel: String {
@@ -260,26 +264,25 @@ struct ExerciseRowView: View {
     }
 
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(exercise.displayName)
-                    .font(AppTextStyle.sectionTitle)
+        HStack(alignment: .center, spacing: 10) {
+            Button(action: onOpenDetails) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(exercise.displayName)
+                        .font(AppTextStyle.sectionTitle)
+                        .foregroundStyle(.primary)
 
-                Text(lastTrainedLabel)
-                    .font(AppTextStyle.caption2)
-                    .foregroundStyle(.secondary)
-
-                if !exercise.displayNotes.isEmpty {
-                    Text(exercise.displayNotes)
-                        .font(AppTextStyle.caption)
+                    Text(lastTrainedLabel)
+                        .font(AppTextStyle.caption2)
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
 
             Spacer()
 
-            VStack(alignment: .trailing, spacing: 4) {
+            VStack(alignment: .trailing, spacing: 6) {
                 if exercise.timesPerformed > 0 {
                     Text("exercises.sessions".localized(with: exercise.timesPerformed))
                         .font(AppTextStyle.caption)
@@ -296,16 +299,47 @@ struct ExerciseRowView: View {
                         .cornerRadius(4)
                 }
 
-                Button {
-                    onQuickAdd()
-                } label: {
-                    Label("exercises.quickAdd".localized, systemImage: "plus.circle.fill")
+                HStack(spacing: 8) {
+                    Toggle(isOn: Binding(
+                        get: { exercise.isActiveResolved },
+                        set: { newValue in
+                            exercise.isActive = newValue
+                            persistChanges()
+                        }
+                    )) {
+                        Text("exerciseEdit.active".localized)
+                            .font(AppTextStyle.caption2)
+                            .foregroundStyle(exercise.isActiveResolved ? .green : .secondary)
+                    }
+                    .toggleStyle(.switch)
+                    .labelsHidden()
+                    .scaleEffect(0.78)
+                    .frame(width: 38)
+
+                    Text(exercise.isActiveResolved ? "exerciseEdit.active".localized : "exerciseEdit.inactive".localized)
                         .font(AppTextStyle.caption2)
+                        .foregroundStyle(exercise.isActiveResolved ? .green : .secondary)
+
+                    Button {
+                        onQuickAdd()
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(.orange)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
         }
         .padding(.vertical, 0)
+    }
+
+    private func persistChanges() {
+        do {
+            try modelContext.save()
+        } catch {
+            assertionFailure("Failed to save exercise active state: \(error)")
+        }
     }
 }
 

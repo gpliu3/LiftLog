@@ -66,6 +66,11 @@
 "exerciseEdit.namePlaceholder" = "动作名称";
 "exerciseEdit.muscleGroup" = "目标肌群";
 "exerciseEdit.muscleGroupNone" = "无";
+"exerciseEdit.visibility" = "显示设置";
+"exerciseEdit.active" = "启用";
+"exerciseEdit.inactive" = "停用";
+"exerciseEdit.activeHint" = "启用的动作会出现在“记录训练”的动作选择列表中。";
+"exerciseEdit.inactiveHint" = "停用的动作仍保留在历史和动作库中，但不会出现在“记录训练”的动作选择列表中。";
 "exerciseEdit.notes" = "备注";
 "exerciseEdit.notesPlaceholder" = "动作要点、技巧、注意事项...";
 "exerciseEdit.defaultNotesHint" = "留空则使用默认备注";
@@ -100,12 +105,15 @@
 "history.noWorkoutsDescription" = "该时段内没有训练记录";
 "history.today" = "今天";
 "history.sets" = "%d 组";
+"history.weekRange" = "%@ - %@";
+"history.weekTrainingDays" = "%d 天训练";
+"history.weekVolume" = "%d kg";
 "history.export" = "导出";
 "history.export.title" = "导出 CSV";
 "history.export.range" = "日期范围";
 "history.export.range.last7" = "7天";
 "history.export.range.last30" = "30天";
-"history.export.range.thisMonth" = "本月";
+"history.export.range.all" = "全部";
 "history.export.range.custom" = "自定义";
 "history.export.customRange" = "自定义日期";
 "history.export.from" = "开始";
@@ -261,6 +269,7 @@
 
 /* Common */
 "common.cancel" = "取消";
+"common.confirm" = "确认";
 "common.save" = "保存";
 "common.delete" = "删除";
 "common.done" = "完成";

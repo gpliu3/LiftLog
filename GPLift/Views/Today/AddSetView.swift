@@ -15,7 +15,8 @@ struct AddSetView: View {
     @State private var selectedExercise: Exercise?
     @State private var selectedDate: Date = Date()
     @State private var weight: Double = 20.0
-    @State private var weightUnit: WeightUnit = .kg
+    @State private var weightKgText: String = "20.0"
+    @State private var weightLbText: String = "44"
     @State private var reps: Int = 10
     @State private var durationSeconds: Int = 30
     @State private var rirSelection: Int = -1
@@ -24,28 +25,25 @@ struct AddSetView: View {
     @State private var searchText: String = ""
     @State private var justSaved: Bool = false
     @State private var savedSetNumber: Int = 0
+    @State private var isSynchronizingWeightFields = false
+    @FocusState private var focusedWeightField: WeightField?
+
+    private enum WeightField: Hashable {
+        case kg
+        case lb
+    }
 
     private var exerciseType: String {
         selectedExercise?.exerciseType ?? "weightReps"
     }
 
-    private var displayedWeightBinding: Binding<Double> {
-        Binding(
-            get: {
-                weightUnit.formattedInputValue(fromKilograms: weight)
-            },
-            set: { newValue in
-                weight = max(0, weightUnit.convertToKilograms(newValue))
-            }
-        )
-    }
-
     private var filteredExercises: [Exercise] {
+        let visibleExercises = exercises.filter(\.isActiveResolved)
         let source: [Exercise]
         if searchText.isEmpty {
-            source = exercises
+            source = visibleExercises
         } else {
-            source = exercises.filter {
+            source = visibleExercises.filter {
                 $0.name.localizedCaseInsensitiveContains(searchText) ||
                 $0.displayName.localizedCaseInsensitiveContains(searchText)
             }
@@ -188,19 +186,21 @@ struct AddSetView: View {
                 }
 
                 exerciseSection
-                if exerciseType == "weightReps" {
-                    weightSection
+                if selectedExercise != nil {
+                    if exerciseType == "weightReps" {
+                        weightSection
+                    }
+                    if exerciseType == "weightReps" || exerciseType == "repsOnly" {
+                        repsSection
+                    }
+                    if exerciseType == "timeOnly" {
+                        durationSection
+                    }
+                    rirSection
+                    dateSection
+                    notesSection
+                    summarySection
                 }
-                if exerciseType == "weightReps" || exerciseType == "repsOnly" {
-                    repsSection
-                }
-                if exerciseType == "timeOnly" {
-                    durationSection
-                }
-                rirSection
-                dateSection
-                notesSection
-                summarySection
             }
             .navigationTitle("addSet.title".localized)
             .navigationBarTitleDisplayMode(.inline)
@@ -251,6 +251,12 @@ struct AddSetView: View {
                     applySuggestedDefaults(for: exercise)
                 }
             }
+            .onChange(of: weightKgText) { _, newValue in
+                handleWeightTextChange(from: .kg, newValue: newValue)
+            }
+            .onChange(of: weightLbText) { _, newValue in
+                handleWeightTextChange(from: .lb, newValue: newValue)
+            }
         }
     }
 
@@ -277,6 +283,7 @@ struct AddSetView: View {
                 reps = r
             }
         }
+        syncWeightFields(fromKilograms: weight)
     }
 
     private var exerciseSection: some View {
@@ -363,51 +370,14 @@ struct AddSetView: View {
     }
 
     private var weightSection: some View {
-        Section {
-            Picker("addSet.weightUnit".localized, selection: $weightUnit) {
-                ForEach(WeightUnit.allCases) { unit in
-                    Text(unit.localizedLabel).tag(unit)
-                }
-            }
-            .pickerStyle(.segmented)
-
-            HStack {
-                Button {
-                    adjustWeight(by: -weightUnit.step)
-                } label: {
-                    Image(systemName: "minus.circle.fill")
-                        .font(.title2)
-                        .foregroundStyle(.orange)
-                }
-                .buttonStyle(.plain)
-
-                Spacer()
-
-                TextField("Weight", value: displayedWeightBinding, format: .number)
-                    .font(AppTextStyle.metric)
-                    .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.center)
-                    .frame(width: 84)
-
-                Text(weightUnit.localizedLabel)
-                    .foregroundStyle(.secondary)
-
-                Spacer()
-
-                Button {
-                    adjustWeight(by: weightUnit.step)
-                } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title2)
-                        .foregroundStyle(.orange)
-                }
-                .buttonStyle(.plain)
+        Section("addSet.weight".localized) {
+            HStack(spacing: 12) {
+                weightInputField(label: "kg", text: $weightKgText, field: .kg)
+                weightInputField(label: "lb", text: $weightLbText, field: .lb)
+                Spacer(minLength: 0)
+                stepperControl
             }
             .padding(.vertical, 4)
-        } header: {
-            Text("addSet.weight".localized)
-        } footer: {
-            Text("addSet.weightUnitFooter".localized)
         }
     }
 
@@ -534,6 +504,7 @@ struct AddSetView: View {
             reps = latestTodaySet.reps > 0 ? latestTodaySet.reps : reps
             durationSeconds = latestTodaySet.durationSeconds > 0 ? latestTodaySet.durationSeconds : durationSeconds
             rirSelection = latestTodaySet.rir ?? -1
+            syncWeightFields(fromKilograms: weight)
             return
         }
 
@@ -542,6 +513,7 @@ struct AddSetView: View {
             reps = previousStartSet.reps > 0 ? previousStartSet.reps : reps
             durationSeconds = previousStartSet.durationSeconds > 0 ? previousStartSet.durationSeconds : durationSeconds
             rirSelection = previousStartSet.rir ?? -1
+            syncWeightFields(fromKilograms: weight)
             return
         }
 
@@ -549,6 +521,114 @@ struct AddSetView: View {
             weight = lastWeight
         }
         rirSelection = -1
+        syncWeightFields(fromKilograms: weight)
+    }
+
+    private var activeWeightField: WeightField {
+        focusedWeightField ?? .kg
+    }
+
+    private var stepperControl: some View {
+        HStack(spacing: 0) {
+            Button {
+                adjustWeight(by: -activeWeightUnit.step)
+            } label: {
+                Image(systemName: "minus.circle.fill")
+                    .font(.title2)
+                    .foregroundStyle(.orange)
+            }
+            .buttonStyle(.plain)
+
+            Divider()
+                .frame(height: 20)
+                .padding(.horizontal, 10)
+
+            Button {
+                adjustWeight(by: activeWeightUnit.step)
+            } label: {
+                Image(systemName: "plus.circle.fill")
+                    .font(.title2)
+                    .foregroundStyle(.orange)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func weightInputField(label: String, text: Binding<String>, field: WeightField) -> some View {
+        HStack(spacing: 6) {
+            Text(label)
+                .font(AppTextStyle.caption)
+                .foregroundStyle(.secondary)
+
+            TextField("0", text: text)
+                .font(AppTextStyle.metric)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.center)
+                .frame(width: 74)
+                .focused($focusedWeightField, equals: field)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(activeWeightField == field ? Color.orange.opacity(0.12) : Color(.secondarySystemBackground))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(activeWeightField == field ? Color.orange : Color.clear, lineWidth: 1)
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            focusedWeightField = field
+        }
+    }
+
+    private func adjustWeight(by delta: Double) {
+        let currentKilograms: Double
+        if activeWeightUnit == .lb {
+            let pounds = Double(weightLbText.replacingOccurrences(of: ",", with: ".")) ?? WeightUnit.lb.formattedInputValue(fromKilograms: weight)
+            currentKilograms = WeightUnit.lb.convertToKilograms(pounds)
+        } else {
+            currentKilograms = Double(weightKgText.replacingOccurrences(of: ",", with: ".")) ?? weight
+        }
+
+        let updatedKilograms: Double
+        if activeWeightUnit == .lb {
+            let updatedPounds = max(0, WeightUnit.lb.formattedInputValue(fromKilograms: currentKilograms) + delta)
+            updatedKilograms = WeightUnit.lb.convertToKilograms(updatedPounds)
+        } else {
+            updatedKilograms = max(0, currentKilograms + delta)
+        }
+
+        weight = updatedKilograms
+        syncWeightFields(fromKilograms: updatedKilograms)
+    }
+
+    private func handleWeightTextChange(from field: WeightField, newValue: String) {
+        guard !isSynchronizingWeightFields, focusedWeightField == field else { return }
+
+        let normalized = newValue.replacingOccurrences(of: ",", with: ".")
+        guard let value = Double(normalized) else { return }
+
+        let unit = weightUnit(for: field)
+        let kilograms = max(0, unit.convertToKilograms(value))
+        weight = kilograms
+        syncWeightFields(fromKilograms: kilograms)
+    }
+
+    private func syncWeightFields(fromKilograms kilograms: Double) {
+        isSynchronizingWeightFields = true
+        weightKgText = WeightUnit.kg.formattedInputText(fromKilograms: kilograms)
+        weightLbText = WeightUnit.lb.formattedInputText(fromKilograms: kilograms)
+        isSynchronizingWeightFields = false
+    }
+
+    private var activeWeightUnit: WeightUnit {
+        weightUnit(for: activeWeightField)
+    }
+
+    private func weightUnit(for field: WeightField) -> WeightUnit {
+        field == .kg ? .kg : .lb
     }
 
     private func targetDaySets(for exercise: Exercise, on date: Date) -> [WorkoutSet] {
@@ -599,7 +679,7 @@ struct AddSetView: View {
         do {
             try modelContext.save()
         } catch {
-            assertionFailure("Failed to save added set: \(error)")
+            assertionFailure("Failed to save logged set: \(error)")
         }
 
         // Haptic feedback
@@ -621,11 +701,6 @@ struct AddSetView: View {
         } else {
             dismiss()
         }
-    }
-
-    private func adjustWeight(by deltaInSelectedUnit: Double) {
-        let updatedValue = max(0, weightUnit.formattedInputValue(fromKilograms: weight) + deltaInSelectedUnit)
-        weight = max(0, weightUnit.convertToKilograms(updatedValue))
     }
 
     private func combinedDateWithCurrentTime(_ day: Date) -> Date {

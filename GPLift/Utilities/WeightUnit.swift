@@ -51,4 +51,13 @@ enum WeightUnit: String, CaseIterable, Identifiable {
             return value.rounded()
         }
     }
+
+    func formattedInputText(fromKilograms kilograms: Double) -> String {
+        switch self {
+        case .kg:
+            return String(format: "%.1f", formattedInputValue(fromKilograms: kilograms))
+        case .lb:
+            return String(format: "%.0f", formattedInputValue(fromKilograms: kilograms))
+        }
+    }
 }
