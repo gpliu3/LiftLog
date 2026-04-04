@@ -803,6 +803,21 @@ struct InlineSetEditorRow: View {
         return max(0, value)
     }
 
+    private func parsedWeight(from unit: WeightUnit) -> Double {
+        let sourceText: String
+        switch unit {
+        case .kg:
+            sourceText = weightKgText
+        case .lb:
+            sourceText = weightLbText
+        }
+
+        let normalized = sourceText.replacingOccurrences(of: ",", with: ".")
+        let fallback = unit.formattedInputValue(fromKilograms: workoutSet.weightKg)
+        let value = Double(normalized) ?? fallback
+        return max(0, unit.convertToKilograms(value))
+    }
+
     private func parsedReps() -> Int {
         let digitsOnly = repsText.filter(\.isNumber)
         let value = Int(digitsOnly) ?? max(1, workoutSet.reps)
@@ -811,25 +826,16 @@ struct InlineSetEditorRow: View {
 
     private func applyIncrement(_ delta: Int) {
         if exerciseType == "weightReps" {
-            let activeTarget: AdjustmentTarget
-            if focusedField == .weightKg {
-                activeTarget = .weightKg
-            } else if focusedField == .weightLb {
-                activeTarget = .weightLb
-            } else if focusedField == .reps {
-                activeTarget = .reps
-            } else {
-                activeTarget = adjustmentTarget
-            }
+            let activeTarget = adjustmentTarget
 
             switch activeTarget {
             case .weightKg:
-                let newWeight = max(0, parsedWeight() + (Double(delta) * WeightUnit.kg.step))
-                syncWeightFields(from: .kg, using: WeightUnit.kg.formattedInputText(fromKilograms: newWeight))
+                let newWeightKg = max(0, parsedWeight(from: .kg) + (Double(delta) * WeightUnit.kg.step))
+                setWeightFields(fromKilograms: newWeightKg)
             case .weightLb:
-                let currentPounds = WeightUnit.lb.formattedInputValue(fromKilograms: parsedWeight())
-                let newWeight = max(0, currentPounds + (Double(delta) * WeightUnit.lb.step))
-                syncWeightFields(from: .lb, using: String(format: "%.0f", newWeight))
+                let currentPounds = WeightUnit.lb.formattedInputValue(fromKilograms: parsedWeight(from: .lb))
+                let newWeightLb = max(0, currentPounds + (Double(delta) * WeightUnit.lb.step))
+                setWeightFields(fromKilograms: WeightUnit.lb.convertToKilograms(newWeightLb))
             case .reps:
                 repsText = "\(max(1, parsedReps() + delta))"
                 hasPendingChanges = true
@@ -903,13 +909,20 @@ struct InlineSetEditorRow: View {
         hasPendingChanges = true
     }
 
+    private func setWeightFields(fromKilograms kilograms: Double, markPendingChanges: Bool = true) {
+        let clampedKilograms = max(0, kilograms)
+        isSynchronizingWeightFields = true
+        weightKgText = WeightUnit.kg.formattedInputText(fromKilograms: clampedKilograms)
+        weightLbText = WeightUnit.lb.formattedInputText(fromKilograms: clampedKilograms)
+        isSynchronizingWeightFields = false
+        if markPendingChanges {
+            hasPendingChanges = true
+        }
+    }
+
     private func normalizeWeightFieldsIfNeeded() {
         guard exerciseType == "weightReps" else { return }
-        let kilograms = parsedWeight()
-        isSynchronizingWeightFields = true
-        weightKgText = WeightUnit.kg.formattedInputText(fromKilograms: kilograms)
-        weightLbText = WeightUnit.lb.formattedInputText(fromKilograms: kilograms)
-        isSynchronizingWeightFields = false
+        setWeightFields(fromKilograms: parsedWeight(), markPendingChanges: false)
     }
 
     private func weightField(
