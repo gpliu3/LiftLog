@@ -140,7 +140,7 @@ struct HistoryView: View {
     }
 
     private var periodPicker: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 4) {
             Picker("Period", selection: $selectedPeriod) {
                 ForEach(TimePeriod.allCases, id: \.self) { period in
                     Text(period.localized).tag(period)
@@ -149,7 +149,7 @@ struct HistoryView: View {
             .pickerStyle(.segmented)
             .padding(.horizontal)
 
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 HistorySummaryItemView(
                     value: "\(trainingDaysCount)",
                     label: "history.trainingDays".localized
@@ -169,10 +169,10 @@ struct HistoryView: View {
                     label: "history.totalVolume".localized
                 )
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 2)
+            .padding(.horizontal, 14)
+            .padding(.bottom, 0)
         }
-        .padding(.top, 6)
+        .padding(.top, 4)
         .background(Color(.systemGroupedBackground))
     }
 
@@ -556,20 +556,20 @@ private struct HistorySummaryItemView: View {
     let label: String
 
     var body: some View {
-        VStack(spacing: 2) {
+        VStack(spacing: 0) {
             Text(value)
-                .font(AppTextStyle.sectionTitle)
+                .font(.system(size: 17, weight: .semibold, design: .rounded))
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
 
             Text(label)
-                .font(AppTextStyle.caption2)
+                .font(.system(size: 10, weight: .regular, design: .rounded))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 2)
+        .padding(.vertical, 0)
     }
 }
 
