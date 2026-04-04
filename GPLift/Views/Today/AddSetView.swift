@@ -37,30 +37,81 @@ struct AddSetView: View {
         selectedExercise?.exerciseType ?? "weightReps"
     }
 
+    private struct ExerciseGroupSection: Identifiable {
+        let muscleGroup: String
+        let exercises: [Exercise]
+        let sortDate: Date?
+
+        var id: String { muscleGroup }
+
+        var localizedTitle: String {
+            Exercise.localizedMuscleGroupName(for: muscleGroup)
+        }
+    }
+
+    private var visibleExercises: [Exercise] {
+        exercises.filter(\.isActiveResolved)
+    }
+
     private var filteredExercises: [Exercise] {
-        let visibleExercises = exercises.filter(\.isActiveResolved)
         let source: [Exercise]
         if searchText.isEmpty {
             source = visibleExercises
         } else {
             source = visibleExercises.filter {
                 $0.name.localizedCaseInsensitiveContains(searchText) ||
-                $0.displayName.localizedCaseInsensitiveContains(searchText)
+                $0.displayName.localizedCaseInsensitiveContains(searchText) ||
+                $0.localizedMuscleGroup.localizedCaseInsensitiveContains(searchText)
             }
         }
 
-        return source.sorted { lhs, rhs in
-            switch (lhs.lastTrainedDate, rhs.lastTrainedDate) {
-            case let (l?, r?):
-                if l != r { return l < r } // long due first, short due last
-                return lhs.displayName < rhs.displayName
-            case (_?, nil):
-                return true // ever trained before never trained
-            case (nil, _?):
-                return false
-            case (nil, nil):
-                return lhs.displayName < rhs.displayName
-            }
+        return source
+    }
+
+    private var groupedExercises: [ExerciseGroupSection] {
+        let grouped = Dictionary(grouping: filteredExercises) { exercise in
+            normalizedMuscleGroup(for: exercise)
+        }
+
+        return grouped.map { muscleGroup, exercises in
+            ExerciseGroupSection(
+                muscleGroup: muscleGroup,
+                exercises: exercises.sorted(by: compareExercises(lhs:rhs:)),
+                sortDate: exercises.compactMap(\.lastTrainedDate).max()
+            )
+        }
+        .sorted(by: compareExerciseGroups(lhs:rhs:))
+    }
+
+    private func normalizedMuscleGroup(for exercise: Exercise) -> String {
+        exercise.muscleGroup.isEmpty ? "Other" : exercise.muscleGroup
+    }
+
+    private func compareExercises(lhs: Exercise, rhs: Exercise) -> Bool {
+        switch (lhs.lastTrainedDate, rhs.lastTrainedDate) {
+        case let (l?, r?):
+            if l != r { return l < r }
+            return lhs.displayName < rhs.displayName
+        case (_?, nil):
+            return true
+        case (nil, _?):
+            return false
+        case (nil, nil):
+            return lhs.displayName < rhs.displayName
+        }
+    }
+
+    private func compareExerciseGroups(lhs: ExerciseGroupSection, rhs: ExerciseGroupSection) -> Bool {
+        switch (lhs.sortDate, rhs.sortDate) {
+        case let (l?, r?):
+            if l != r { return l < r }
+            return lhs.localizedTitle < rhs.localizedTitle
+        case (_?, nil):
+            return true
+        case (nil, _?):
+            return false
+        case (nil, nil):
+            return lhs.localizedTitle < rhs.localizedTitle
         }
     }
 
@@ -108,50 +159,56 @@ struct AddSetView: View {
         return "addSet.orderingHint".localized(with: trainedCount, neverTrainedCount)
     }
 
-    @ViewBuilder
-    private var exerciseSearchSectionFooter: some View {
-        if exerciseOrderingHint.isEmpty {
-            EmptyView()
-        } else {
-            Text(exerciseOrderingHint)
+    private func exerciseRow(for exercise: Exercise) -> some View {
+        Button {
+            selectedExercise = exercise
+            showExerciseNotes = false
+            searchText = ""
+            applySuggestedDefaults(for: exercise)
+        } label: {
+            HStack(alignment: .top, spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(exercise.displayName)
+                        .font(AppTextStyle.sectionTitle)
+                    Text(lastTrainedLabel(for: exercise))
+                        .font(AppTextStyle.caption2)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                if !exercise.muscleGroup.isEmpty {
+                    Text(exercise.localizedMuscleGroup)
+                        .font(AppTextStyle.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(Color.orange.opacity(0.2))
+                        .cornerRadius(4)
+                }
+            }
         }
+        .foregroundStyle(.primary)
     }
 
-    private var searchableExerciseSection: some View {
-        Group {
+    @ViewBuilder
+    private var exercisePickerSections: some View {
+        Section {
             TextField("addSet.searchExercises".localized, text: $searchText)
                 .textFieldStyle(.plain)
+        } header: {
+            Text("addSet.exercise".localized)
+        } footer: {
+            if !exerciseOrderingHint.isEmpty {
+                Text(exerciseOrderingHint)
+            }
+        }
 
-            ForEach(filteredExercises) { exercise in
-                Button {
-                    selectedExercise = exercise
-                    showExerciseNotes = false
-                    searchText = ""
-                    applySuggestedDefaults(for: exercise)
-                } label: {
-                    HStack(alignment: .top, spacing: 8) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(exercise.displayName)
-                                .font(AppTextStyle.sectionTitle)
-                            Text(lastTrainedLabel(for: exercise))
-                                .font(AppTextStyle.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        Spacer()
-
-                        if !exercise.muscleGroup.isEmpty {
-                            Text(exercise.localizedMuscleGroup)
-                                .font(AppTextStyle.caption)
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 2)
-                                .background(Color.orange.opacity(0.2))
-                                .cornerRadius(4)
-                        }
-                    }
+        ForEach(groupedExercises) { group in
+            Section(group.localizedTitle) {
+                ForEach(group.exercises) { exercise in
+                    exerciseRow(for: exercise)
                 }
-                .foregroundStyle(.primary)
             }
         }
     }
@@ -286,9 +343,10 @@ struct AddSetView: View {
         syncWeightFields(fromKilograms: weight)
     }
 
+    @ViewBuilder
     private var exerciseSection: some View {
-        Section {
-            if let exercise = selectedExercise {
+        if let exercise = selectedExercise {
+            Section {
                 HStack {
                     Text(exercise.displayName)
                         .font(AppTextStyle.sectionTitle)
@@ -338,15 +396,11 @@ struct AddSetView: View {
                     .background(Color.orange.opacity(0.08))
                     .cornerRadius(10)
                 }
-            } else {
-                searchableExerciseSection
+            } header: {
+                Text("addSet.exercise".localized)
             }
-        } header: {
-            Text("addSet.exercise".localized)
-        } footer: {
-            if selectedExercise == nil {
-                exerciseSearchSectionFooter
-            }
+        } else {
+            exercisePickerSections
         }
     }
 
