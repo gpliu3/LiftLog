@@ -57,32 +57,32 @@ enum DateFormatters {
         return formatter
     }()
 
+    static func monthDayLabel(for date: Date, locale: Locale) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = locale
+        formatter.setLocalizedDateFormatFromTemplate("MMM d")
+        return formatter.string(from: date)
+    }
+
+    static func weekdayMonthDayLabel(for date: Date, locale: Locale, abbreviatedWeekday: Bool) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = locale
+        formatter.setLocalizedDateFormatFromTemplate(abbreviatedWeekday ? "EEE MMM d" : "EEEE MMM d")
+        return formatter.string(from: date)
+    }
+
     static func historyDayLabel(for date: Date, locale: Locale) -> String {
-        date.formatted(
-            Date.FormatStyle()
-                .locale(locale)
-                .weekday(.abbreviated)
-                .month(.abbreviated)
-                .day()
-                .year()
-        )
+        weekdayMonthDayLabel(for: date, locale: locale, abbreviatedWeekday: true)
+    }
+
+    static func todayHeaderLabel(for date: Date, locale: Locale) -> String {
+        weekdayMonthDayLabel(for: date, locale: locale, abbreviatedWeekday: false)
     }
 
     static func historyWeekRange(startingAt weekStart: Date, locale: Locale, calendar: Calendar = .current) -> String {
         let weekEnd = calendar.date(byAdding: .day, value: 6, to: weekStart) ?? weekStart
-        let start = weekStart.formatted(
-            Date.FormatStyle()
-                .locale(locale)
-                .month(.abbreviated)
-                .day()
-        )
-        let end = weekEnd.formatted(
-            Date.FormatStyle()
-                .locale(locale)
-                .month(.abbreviated)
-                .day()
-                .year()
-        )
+        let start = monthDayLabel(for: weekStart, locale: locale)
+        let end = monthDayLabel(for: weekEnd, locale: locale)
         return "\(start) - \(end)"
     }
 }

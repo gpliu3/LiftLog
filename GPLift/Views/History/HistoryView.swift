@@ -140,7 +140,7 @@ struct HistoryView: View {
     }
 
     private var periodPicker: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
             Picker("Period", selection: $selectedPeriod) {
                 ForEach(TimePeriod.allCases, id: \.self) { period in
                     Text(period.localized).tag(period)
@@ -149,32 +149,30 @@ struct HistoryView: View {
             .pickerStyle(.segmented)
             .padding(.horizontal)
 
-            HStack(spacing: 12) {
-                StatItemView(
+            HStack(spacing: 10) {
+                HistorySummaryItemView(
                     value: "\(trainingDaysCount)",
-                    label: "history.trainingDays".localized,
-                    icon: "calendar"
+                    label: "history.trainingDays".localized
                 )
 
                 Divider()
 
-                StatItemView(
+                HistorySummaryItemView(
                     value: "\(totalSets)",
-                    label: "history.totalSets".localized,
-                    icon: "number"
+                    label: "history.totalSets".localized
                 )
 
                 Divider()
 
-                StatItemView(
+                HistorySummaryItemView(
                     value: String(format: "%.0f", totalVolume),
-                    label: "history.totalVolume".localized,
-                    icon: "scalemass"
+                    label: "history.totalVolume".localized
                 )
             }
-            .padding(.bottom, 4)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 2)
         }
-        .padding(.top, 8)
+        .padding(.top, 6)
         .background(Color(.systemGroupedBackground))
     }
 
@@ -451,10 +449,11 @@ private struct WeekSummaryHeaderView: View {
     }
 
     private var weekRangeText: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d"
-        formatter.locale = LanguageManager.shared.currentLanguage.locale ?? Locale.current
-        return "history.weekRange".localized(with: formatter.string(from: weekStart), formatter.string(from: weekEnd))
+        let locale = LanguageManager.shared.currentLanguage.locale ?? Locale.current
+        return "history.weekRange".localized(
+            with: DateFormatters.monthDayLabel(for: weekStart, locale: locale),
+            DateFormatters.monthDayLabel(for: weekEnd, locale: locale)
+        )
     }
 
     var body: some View {
@@ -505,10 +504,8 @@ struct DayRowView: View {
     }
 
     private var formattedDayLabel: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEE, MMM d"
-        formatter.locale = LanguageManager.shared.currentLanguage.locale ?? Locale.current
-        return formatter.string(from: date)
+        let locale = LanguageManager.shared.currentLanguage.locale ?? Locale.current
+        return DateFormatters.historyDayLabel(for: date, locale: locale)
     }
 
     var body: some View {
@@ -551,6 +548,28 @@ struct DayRowView: View {
                 .foregroundStyle(.tertiary)
         }
         .padding(.vertical, 0)
+    }
+}
+
+private struct HistorySummaryItemView: View {
+    let value: String
+    let label: String
+
+    var body: some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(AppTextStyle.sectionTitle)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+
+            Text(label)
+                .font(AppTextStyle.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 2)
     }
 }
 

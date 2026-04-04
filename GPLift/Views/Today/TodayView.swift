@@ -389,10 +389,8 @@ struct TodayView: View {
     }
 
     private var todayDateString: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE, MMM d"
-        formatter.locale = LanguageManager.shared.currentLanguage.locale ?? Locale.current
-        return formatter.string(from: todayAnchor)
+        let locale = LanguageManager.shared.currentLanguage.locale ?? Locale.current
+        return DateFormatters.todayHeaderLabel(for: todayAnchor, locale: locale)
     }
 
     private func refreshTodayAnchor() {

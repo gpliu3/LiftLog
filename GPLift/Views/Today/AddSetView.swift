@@ -270,35 +270,35 @@ struct AddSetView: View {
                 }
             }
             .safeAreaInset(edge: .bottom) {
-                HStack(spacing: 10) {
-                    Button {
-                        saveSet(andContinue: true)
-                    } label: {
-                        Label("addSet.saveAndAddAnother".localized, systemImage: "plus.circle")
-                            .font(AppTextStyle.captionStrong)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.72)
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                    .disabled(selectedExercise == nil)
+                if selectedExercise != nil {
+                    HStack(spacing: 10) {
+                        Button {
+                            saveSet(andContinue: true)
+                        } label: {
+                            Label("addSet.saveAndAddAnother".localized, systemImage: "plus.circle")
+                                .font(AppTextStyle.captionStrong)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.72)
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
 
-                    Button {
-                        saveSet(andContinue: false)
-                    } label: {
-                        Label("addSet.saveAndClose".localized, systemImage: "checkmark.circle")
-                            .font(AppTextStyle.captionStrong)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.72)
-                            .frame(maxWidth: .infinity)
+                        Button {
+                            saveSet(andContinue: false)
+                        } label: {
+                            Label("addSet.saveAndClose".localized, systemImage: "checkmark.circle")
+                                .font(AppTextStyle.captionStrong)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.72)
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(selectedExercise == nil)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 6)
+                    .padding(.bottom, 10)
+                    .background(.thinMaterial)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 6)
-                .padding(.bottom, 10)
-                .background(.thinMaterial)
             }
             .onAppear {
                 setupInitialValues()
