@@ -314,6 +314,11 @@ struct AddSetView: View {
             .onChange(of: weightLbText) { _, newValue in
                 handleWeightTextChange(from: .lb, newValue: newValue)
             }
+            .onChange(of: focusedWeightField) { oldValue, newValue in
+                if oldValue != nil && oldValue != newValue {
+                    syncWeightFields(fromKilograms: weight)
+                }
+            }
         }
     }
 
@@ -425,13 +430,28 @@ struct AddSetView: View {
 
     private var weightSection: some View {
         Section("addSet.weight".localized) {
-            HStack(spacing: 12) {
-                weightInputField(label: "kg", text: $weightKgText, field: .kg)
-                weightInputField(label: "lb", text: $weightLbText, field: .lb)
-                Spacer(minLength: 0)
-                stepperControl
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .bottom, spacing: 10) {
+                    weightFieldsRow
+                    stepperControl
+                }
+
+                VStack(alignment: .leading, spacing: 10) {
+                    weightFieldsRow
+                    HStack {
+                        Spacer()
+                        stepperControl
+                    }
+                }
             }
             .padding(.vertical, 4)
+        }
+    }
+
+    private var weightFieldsRow: some View {
+        HStack(spacing: 8) {
+            weightInputField(label: WeightUnit.kg.localizedLabel, text: $weightKgText, field: .kg)
+            weightInputField(label: WeightUnit.lb.localizedLabel, text: $weightLbText, field: .lb)
         }
     }
 
@@ -606,23 +626,31 @@ struct AddSetView: View {
             }
             .buttonStyle(.plain)
         }
+        .padding(.horizontal, 2)
+        .frame(minWidth: 84, minHeight: 38)
+        .background(Color(.secondarySystemBackground))
+        .clipShape(Capsule())
     }
 
     private func weightInputField(label: String, text: Binding<String>, field: WeightField) -> some View {
-        HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(label)
-                .font(AppTextStyle.caption)
+                .font(AppTextStyle.caption2)
                 .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
 
             TextField("0", text: text)
                 .font(AppTextStyle.metric)
                 .keyboardType(.decimalPad)
-                .multilineTextAlignment(.center)
-                .frame(width: 74)
+                .textFieldStyle(.plain)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .focused($focusedWeightField, equals: field)
         }
         .padding(.horizontal, 8)
-        .padding(.vertical, 6)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 10)
                 .fill(activeWeightField == field ? Color.orange.opacity(0.12) : Color(.secondarySystemBackground))
@@ -667,7 +695,15 @@ struct AddSetView: View {
         let unit = weightUnit(for: field)
         let kilograms = max(0, unit.convertToKilograms(value))
         weight = kilograms
-        syncWeightFields(fromKilograms: kilograms)
+
+        isSynchronizingWeightFields = true
+        switch field {
+        case .kg:
+            weightLbText = WeightUnit.lb.formattedInputText(fromKilograms: kilograms)
+        case .lb:
+            weightKgText = WeightUnit.kg.formattedInputText(fromKilograms: kilograms)
+        }
+        isSynchronizingWeightFields = false
     }
 
     private func syncWeightFields(fromKilograms kilograms: Double) {

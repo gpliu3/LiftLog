@@ -100,6 +100,7 @@
 "history.month" = "Month";
 "history.all" = "All";
 "history.trainingDays" = "Training Days";
+"history.totalSets" = "Total Sets";
 "history.totalVolume" = "Total Volume (kg)";
 "history.noWorkouts" = "No Workouts";
 "history.noWorkoutsDescription" = "No workouts recorded in this period";

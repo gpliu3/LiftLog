@@ -100,6 +100,7 @@
 "history.month" = "本月";
 "history.all" = "全部";
 "history.trainingDays" = "训练天数";
+"history.totalSets" = "总组数";
 "history.totalVolume" = "总容量 (kg)";
 "history.noWorkouts" = "暂无记录";
 "history.noWorkoutsDescription" = "该时段内没有训练记录";

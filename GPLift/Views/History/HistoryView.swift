@@ -73,6 +73,10 @@ struct HistoryView: View {
         filteredSets.reduce(0) { $0 + $1.volume }
     }
 
+    private var totalSets: Int {
+        filteredSets.count
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -145,22 +149,28 @@ struct HistoryView: View {
             .pickerStyle(.segmented)
             .padding(.horizontal)
 
-            HStack(spacing: 20) {
-                VStack {
-                    Text("\(trainingDaysCount)")
-                        .font(AppTextStyle.metric)
-                    Text("history.trainingDays".localized)
-                        .font(AppTextStyle.caption)
-                        .foregroundStyle(.secondary)
-                }
+            HStack(spacing: 12) {
+                StatItemView(
+                    value: "\(trainingDaysCount)",
+                    label: "history.trainingDays".localized,
+                    icon: "calendar"
+                )
 
-                VStack {
-                    Text(String(format: "%.0f", totalVolume))
-                        .font(AppTextStyle.metric)
-                    Text("history.totalVolume".localized)
-                        .font(AppTextStyle.caption)
-                        .foregroundStyle(.secondary)
-                }
+                Divider()
+
+                StatItemView(
+                    value: "\(totalSets)",
+                    label: "history.totalSets".localized,
+                    icon: "number"
+                )
+
+                Divider()
+
+                StatItemView(
+                    value: String(format: "%.0f", totalVolume),
+                    label: "history.totalVolume".localized,
+                    icon: "scalemass"
+                )
             }
             .padding(.bottom, 4)
         }

@@ -656,20 +656,39 @@ struct InlineSetEditorRow: View {
             }
 
             if exerciseType == "weightReps" {
-                HStack(spacing: 8) {
-                    weightField(label: "kg", text: $weightKgText, field: .weightKg, target: .weightKg, width: 66)
-                    weightField(label: "lb", text: $weightLbText, field: .weightLb, target: .weightLb, width: 66)
-                    repsEditorField(width: 60)
-                    Spacer(minLength: 0)
-                    stepperButtons {
-                        applyIncrement(-1)
-                    } incrementAction: {
-                        applyIncrement(1)
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .bottom, spacing: 8) {
+                        weightField(label: WeightUnit.kg.localizedLabel, text: $weightKgText, field: .weightKg, target: .weightKg)
+                        weightField(label: WeightUnit.lb.localizedLabel, text: $weightLbText, field: .weightLb, target: .weightLb)
+                        repsEditorField()
+                        Spacer(minLength: 0)
+                        stepperButtons {
+                            applyIncrement(-1)
+                        } incrementAction: {
+                            applyIncrement(1)
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(alignment: .bottom, spacing: 8) {
+                            weightField(label: WeightUnit.kg.localizedLabel, text: $weightKgText, field: .weightKg, target: .weightKg)
+                            weightField(label: WeightUnit.lb.localizedLabel, text: $weightLbText, field: .weightLb, target: .weightLb)
+                        }
+
+                        HStack(alignment: .bottom, spacing: 8) {
+                            repsEditorField()
+                            Spacer(minLength: 0)
+                            stepperButtons {
+                                applyIncrement(-1)
+                            } incrementAction: {
+                                applyIncrement(1)
+                            }
+                        }
                     }
                 }
             } else if exerciseType == "repsOnly" {
                 HStack(spacing: 8) {
-                    repsEditorField(width: 72)
+                    repsEditorField()
                     Spacer(minLength: 0)
                     stepperButtons {
                         applyIncrement(-1)
@@ -737,6 +756,7 @@ struct InlineSetEditorRow: View {
         }
         .onChange(of: focusedField) { oldValue, newValue in
             if oldValue != nil && newValue != oldValue {
+                normalizeWeightFieldsIfNeeded()
                 saveChangesIfNeeded()
             }
             if newValue == .weightKg {
@@ -845,6 +865,7 @@ struct InlineSetEditorRow: View {
 
     private func confirmEditing() {
         focusedField = nil
+        normalizeWeightFieldsIfNeeded()
         saveChangesIfNeeded()
         onDone?()
     }
@@ -874,36 +895,53 @@ struct InlineSetEditorRow: View {
 
         let kilograms = max(0, sourceUnit.convertToKilograms(value))
         isSynchronizingWeightFields = true
+        switch sourceUnit {
+        case .kg:
+            weightLbText = WeightUnit.lb.formattedInputText(fromKilograms: kilograms)
+        case .lb:
+            weightKgText = WeightUnit.kg.formattedInputText(fromKilograms: kilograms)
+        }
+        isSynchronizingWeightFields = false
+        hasPendingChanges = true
+    }
+
+    private func normalizeWeightFieldsIfNeeded() {
+        guard exerciseType == "weightReps" else { return }
+        let kilograms = parsedWeight()
+        isSynchronizingWeightFields = true
         weightKgText = WeightUnit.kg.formattedInputText(fromKilograms: kilograms)
         weightLbText = WeightUnit.lb.formattedInputText(fromKilograms: kilograms)
         isSynchronizingWeightFields = false
-        hasPendingChanges = true
     }
 
     private func weightField(
         label: String,
         text: Binding<String>,
         field: Field,
-        target: AdjustmentTarget,
-        width: CGFloat
+        target: AdjustmentTarget
     ) -> some View {
-        HStack(spacing: 4) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(label)
-                .font(AppTextStyle.caption)
+                .font(AppTextStyle.caption2)
                 .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
 
             TextField("0", text: text)
                 .keyboardType(.decimalPad)
                 .focused($focusedField, equals: field)
-                .textFieldStyle(.roundedBorder)
-                .frame(width: width)
+                .textFieldStyle(.plain)
+                .font(AppTextStyle.bodyStrong)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .onTapGesture { selectTarget(target) }
         }
-        .padding(.horizontal, 4)
-        .padding(.vertical, 4)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(adjustmentTarget == target ? Color.orange.opacity(0.15) : Color.clear)
+                .fill(adjustmentTarget == target ? Color.orange.opacity(0.15) : Color(.secondarySystemBackground))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 8)
@@ -913,25 +951,36 @@ struct InlineSetEditorRow: View {
         .onTapGesture { selectTarget(target) }
     }
 
-    private func repsEditorField(width: CGFloat) -> some View {
-        HStack(spacing: 4) {
-            TextField("0", text: $repsText)
-                .keyboardType(.numberPad)
-                .focused($focusedField, equals: .reps)
-                .textFieldStyle(.roundedBorder)
-                .frame(width: width)
-                .onTapGesture { selectTarget(.reps) }
+    private func repsEditorField() -> some View {
+        VStack(alignment: .leading, spacing: 4) {
             Text("common.reps".localized)
-                .font(AppTextStyle.bodyStrong)
-                .foregroundStyle(adjustmentTarget == .reps ? .orange : .primary)
+                .font(AppTextStyle.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+
+            HStack(spacing: 4) {
+                TextField("0", text: $repsText)
+                    .keyboardType(.numberPad)
+                    .focused($focusedField, equals: .reps)
+                    .textFieldStyle(.plain)
+                    .font(AppTextStyle.bodyStrong)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .onTapGesture { selectTarget(.reps) }
+                Text("common.reps".localized)
+                    .font(AppTextStyle.bodyStrong)
+                    .foregroundStyle(adjustmentTarget == .reps ? .orange : .primary)
+            }
         }
         .contentShape(Rectangle())
         .onTapGesture { selectTarget(.reps) }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 4)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 8)
+        .frame(minWidth: 92, minHeight: 58, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(adjustmentTarget == .reps ? Color.orange.opacity(0.15) : Color.clear)
+                .fill(adjustmentTarget == .reps ? Color.orange.opacity(0.15) : Color(.secondarySystemBackground))
         )
     }
 
@@ -955,6 +1004,7 @@ struct InlineSetEditorRow: View {
             }
             .buttonStyle(.borderless)
         }
+        .frame(minWidth: 84, minHeight: 38)
         .background(Color(.secondarySystemBackground))
         .clipShape(Capsule())
     }
