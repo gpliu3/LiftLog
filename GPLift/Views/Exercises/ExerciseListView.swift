@@ -264,42 +264,46 @@ struct ExerciseRowView: View {
     }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 10) {
+        HStack(alignment: .center, spacing: 12) {
             Button(action: onOpenDetails) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(exercise.displayName)
-                        .font(AppTextStyle.sectionTitle)
-                        .foregroundStyle(.primary)
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text(exercise.displayName)
+                            .font(AppTextStyle.sectionTitle)
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+
+                        if !exercise.muscleGroup.isEmpty {
+                            Text(exercise.localizedMuscleGroup)
+                                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.orange.opacity(0.16))
+                                .foregroundStyle(.orange)
+                                .clipShape(Capsule())
+                                .lineLimit(1)
+                        }
+                    }
 
                     Text(lastTrainedLabel)
                         .font(AppTextStyle.caption2)
                         .foregroundStyle(.secondary)
+                        .lineLimit(2)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 6) {
+            VStack(alignment: .trailing, spacing: 8) {
                 if exercise.timesPerformed > 0 {
                     Text("exercises.sessions".localized(with: exercise.timesPerformed))
                         .font(AppTextStyle.caption)
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
 
-                if !exercise.muscleGroup.isEmpty {
-                    Text(exercise.localizedMuscleGroup)
-                        .font(AppTextStyle.caption2)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.orange.opacity(0.2))
-                        .foregroundStyle(.orange)
-                        .cornerRadius(4)
-                }
-
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     Toggle(isOn: Binding(
                         get: { exercise.isActiveResolved },
                         set: { newValue in
@@ -319,6 +323,7 @@ struct ExerciseRowView: View {
                     Text(exercise.isActiveResolved ? "exerciseEdit.active".localized : "exerciseEdit.inactive".localized)
                         .font(AppTextStyle.caption2)
                         .foregroundStyle(exercise.isActiveResolved ? .green : .secondary)
+                        .lineLimit(1)
 
                     Button {
                         onQuickAdd()
@@ -331,7 +336,7 @@ struct ExerciseRowView: View {
                 }
             }
         }
-        .padding(.vertical, 0)
+        .padding(.vertical, 2)
     }
 
     private func persistChanges() {

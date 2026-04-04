@@ -152,26 +152,24 @@ struct HistoryView: View {
             HStack(spacing: 8) {
                 HistorySummaryItemView(
                     value: "\(trainingDaysCount)",
-                    label: "history.trainingDays".localized
+                    label: "history.trainingDays".localized,
+                    systemImage: "calendar"
                 )
-
-                Divider()
 
                 HistorySummaryItemView(
                     value: "\(totalSets)",
-                    label: "history.totalSets".localized
+                    label: "history.totalSets".localized,
+                    systemImage: "number"
                 )
-
-                Divider()
 
                 HistorySummaryItemView(
                     value: String(format: "%.0f", totalVolume),
-                    label: "history.totalVolume".localized
+                    label: "history.totalVolume".localized,
+                    systemImage: "scalemass"
                 )
             }
-            .frame(height: 48)
             .padding(.horizontal, 14)
-            .padding(.bottom, 0)
+            .padding(.bottom, 2)
         }
         .padding(.top, 4)
         .background(Color(.systemGroupedBackground))
@@ -555,22 +553,33 @@ struct DayRowView: View {
 private struct HistorySummaryItemView: View {
     let value: String
     let label: String
+    let systemImage: String
 
     var body: some View {
-        VStack(spacing: 1) {
+        VStack(alignment: .leading, spacing: 3) {
+            Image(systemName: systemImage)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(.orange)
+
             Text(value)
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .foregroundStyle(.primary)
                 .lineLimit(1)
-                .minimumScaleFactor(0.75)
+                .minimumScaleFactor(0.7)
 
             Text(label)
-                .font(.system(size: 9, weight: .regular, design: .rounded))
+                .font(.system(size: 10, weight: .medium, design: .rounded))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
         }
-        .frame(maxWidth: .infinity)
-        .frame(maxHeight: .infinity, alignment: .center)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color(.secondarySystemGroupedBackground))
+        )
     }
 }
 
