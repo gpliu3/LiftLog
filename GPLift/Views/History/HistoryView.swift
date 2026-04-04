@@ -169,6 +169,7 @@ struct HistoryView: View {
                     label: "history.totalVolume".localized
                 )
             }
+            .frame(height: 48)
             .padding(.horizontal, 14)
             .padding(.bottom, 0)
         }
@@ -556,20 +557,20 @@ private struct HistorySummaryItemView: View {
     let label: String
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 1) {
             Text(value)
-                .font(.system(size: 17, weight: .semibold, design: .rounded))
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
 
             Text(label)
-                .font(.system(size: 10, weight: .regular, design: .rounded))
+                .font(.system(size: 9, weight: .regular, design: .rounded))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 0)
+        .frame(maxHeight: .infinity, alignment: .center)
     }
 }
 
