@@ -1250,6 +1250,10 @@ struct NotesEditorRow: View {
     @Environment(\.modelContext) private var modelContext
     @Bindable var exercise: Exercise
     @State private var editableNotes: String = ""
+    @State private var initialEditorText: String = ""
+    @State private var loadedCustomNotes: String = ""
+    @State private var lastPersistedNotes: String = ""
+    @State private var pendingSaveTask: Task<Void, Never>?
     @FocusState private var isFocused: Bool
 
     var body: some View {
@@ -1258,18 +1262,60 @@ struct NotesEditorRow: View {
                 .font(AppTextStyle.body)
                 .frame(minHeight: 42)
                 .focused($isFocused)
-                .onChange(of: editableNotes) {
-                    exercise.notes = editableNotes
-                    do {
-                        try modelContext.save()
-                    } catch {
-                        assertionFailure("Failed to save exercise notes: \(error)")
+                .onChange(of: editableNotes) { _, _ in
+                    schedulePersist()
+                }
+                .onChange(of: isFocused) { _, focused in
+                    if !focused {
+                        flushPendingSave()
                     }
                 }
         }
         .onAppear {
             // Load: use custom notes if set, otherwise default notes
-            editableNotes = exercise.notes.isEmpty ? exercise.displayNotes : exercise.notes
+            loadedCustomNotes = exercise.notes
+            let startingText = loadedCustomNotes.isEmpty ? exercise.displayNotes : loadedCustomNotes
+            initialEditorText = startingText
+            editableNotes = startingText
+            lastPersistedNotes = loadedCustomNotes
+        }
+        .onDisappear {
+            flushPendingSave()
+        }
+    }
+
+    private func schedulePersist() {
+        pendingSaveTask?.cancel()
+        pendingSaveTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            guard !Task.isCancelled else { return }
+            persistIfNeeded()
+        }
+    }
+
+    private func flushPendingSave() {
+        pendingSaveTask?.cancel()
+        pendingSaveTask = nil
+        persistIfNeeded()
+    }
+
+    private func desiredPersistedNotes() -> String {
+        if loadedCustomNotes.isEmpty && editableNotes == initialEditorText {
+            return ""
+        }
+        return editableNotes
+    }
+
+    private func persistIfNeeded() {
+        let targetNotes = desiredPersistedNotes()
+        guard targetNotes != lastPersistedNotes else { return }
+
+        exercise.notes = targetNotes
+        do {
+            try modelContext.save()
+            lastPersistedNotes = targetNotes
+        } catch {
+            assertionFailure("Failed to save exercise notes: \(error)")
         }
     }
 }
