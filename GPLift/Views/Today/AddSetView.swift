@@ -25,6 +25,7 @@ struct AddSetView: View {
     @State private var searchText: String = ""
     @State private var justSaved: Bool = false
     @State private var savedSetNumber: Int = 0
+    @State private var cachedNextSetNumber: Int = 1
     @State private var isSynchronizingWeightFields = false
     @FocusState private var focusedWeightField: WeightField?
 
@@ -214,14 +215,7 @@ struct AddSetView: View {
     }
 
     private var nextSetNumber: Int {
-        guard let exercise = selectedExercise else { return 1 }
-        let calendar = Calendar.current
-        let targetDay = calendar.startOfDay(for: selectedDate)
-        let targetDaySets = allSets.filter {
-            $0.exercise?.id == exercise.id &&
-            calendar.startOfDay(for: $0.date) == targetDay
-        }
-        return (targetDaySets.map { $0.setNumber }.max() ?? 0) + 1
+        cachedNextSetNumber
     }
 
     var body: some View {
@@ -572,6 +566,7 @@ struct AddSetView: View {
 
     private func applySuggestedDefaults(for exercise: Exercise) {
         let currentDaySets = targetDaySets(for: exercise, on: selectedDate)
+        cachedNextSetNumber = nextSetNumber(from: currentDaySets)
 
         if let latestTodaySet = currentDaySets.sorted(by: WorkoutSet.trainingOrder(lhs:rhs:)).last {
             weight = latestTodaySet.weightKg
@@ -729,6 +724,10 @@ struct AddSetView: View {
         }
     }
 
+    private func nextSetNumber(from sets: [WorkoutSet]) -> Int {
+        (sets.map(\.setNumber).max() ?? 0) + 1
+    }
+
     private func previousDayStartingSet(for exercise: Exercise, before date: Date) -> WorkoutSet? {
         let calendar = Calendar.current
         let targetDay = calendar.startOfDay(for: date)
@@ -779,6 +778,7 @@ struct AddSetView: View {
         if andContinue {
             // Show success message and reset for next set
             savedSetNumber = setNumber
+            cachedNextSetNumber = setNumber + 1
             justSaved = true
             setNotes = "" // Clear notes for next set
 

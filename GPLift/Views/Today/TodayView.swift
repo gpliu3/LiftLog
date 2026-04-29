@@ -17,10 +17,6 @@ struct TodayView: View {
     @State private var inlineEditingSetID: UUID?
     @State private var inlineEditingInitialTarget: InlineEditTarget = .automatic
     @State private var todayAnchor = Calendar.current.startOfDay(for: Date())
-    @State private var todayDayNote = ""
-    @State private var lastPersistedTodayDayNote = ""
-    @State private var pendingTodayDayNoteSaveTask: Task<Void, Never>?
-    @FocusState private var isTodayDayNoteFocused: Bool
 
     private var todaySets: [WorkoutSet] {
         let calendar = Calendar.current
@@ -89,17 +85,6 @@ struct TodayView: View {
                 refreshTodayAnchor()
             }
         }
-        .onAppear {
-            syncTodayDayNoteFromData()
-        }
-        .onChange(of: todaySets.count) { _, _ in
-            if !isTodayDayNoteFocused {
-                syncTodayDayNoteFromData()
-            }
-        }
-        .onDisappear {
-            flushTodayDayNoteSave()
-        }
         .id(languageManager.currentLanguage)
     }
 
@@ -112,7 +97,10 @@ struct TodayView: View {
     }
 
     private func workoutList(proxy: ScrollViewProxy) -> some View {
-        List {
+        let todayExerciseIDs = Set(todaySets.compactMap { $0.exercise?.id })
+        let personalBestSetIDs = WorkoutSet.personalBestSetIDs(in: allSets, limitedTo: todayExerciseIDs)
+
+        return List {
             statsCard
 
             ForEach(groupedSets, id: \.0.id) { exercise, sets in
@@ -134,7 +122,7 @@ struct TodayView: View {
                         if inlineEditingSetID == set.id {
                             InlineSetEditorRow(
                                 workoutSet: set,
-                                isPersonalBest: set.isPersonalBest(in: allSets),
+                                isPersonalBest: personalBestSetIDs.contains(set.id),
                                 initialTarget: inlineEditingInitialTarget,
                                 onStartEditingWeight: {
                                     scrollToSet(set.id, with: proxy)
@@ -147,7 +135,7 @@ struct TodayView: View {
                             )
                             .id(set.id)
                         } else {
-                            SetRowView(workoutSet: set, isPersonalBest: set.isPersonalBest(in: allSets), onTap: { target in
+                            SetRowView(workoutSet: set, isPersonalBest: personalBestSetIDs.contains(set.id), onTap: { target in
                                 dismissKeyboard()
                                 inlineEditingInitialTarget = target
                                 withAnimation(.easeInOut(duration: 0.18)) {
@@ -363,28 +351,8 @@ struct TodayView: View {
 
     private var dayNoteCard: some View {
         Section("dayNote.title".localized) {
-            TextEditor(text: $todayDayNote)
-                .font(AppTextStyle.body)
-                .frame(minHeight: 88)
-                .focused($isTodayDayNoteFocused)
-                .onChange(of: todayDayNote) { _, newValue in
-                    scheduleTodayDayNoteSave(newValue)
-                }
-                .onChange(of: isTodayDayNoteFocused) { _, isFocused in
-                    if !isFocused {
-                        flushTodayDayNoteSave()
-                    }
-                }
-                .overlay(alignment: .topLeading) {
-                    if todayDayNote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        Text("dayNote.placeholder".localized)
-                            .font(AppTextStyle.body)
-                            .foregroundStyle(.secondary)
-                            .padding(.top, 8)
-                            .padding(.leading, 4)
-                            .allowsHitTesting(false)
-                    }
-                }
+            DayNoteEditor(day: todayAnchor, sets: sortedTodaySets)
+                .id(todayAnchor)
         }
     }
 
@@ -411,35 +379,6 @@ struct TodayView: View {
 
     private func refreshTodayAnchor() {
         todayAnchor = Calendar.current.startOfDay(for: Date())
-        syncTodayDayNoteFromData()
-    }
-
-    private func syncTodayDayNoteFromData() {
-        let note = WorkoutSet.dayNote(for: todayAnchor, in: sortedTodaySets)
-        todayDayNote = note
-        lastPersistedTodayDayNote = note
-    }
-
-    private func scheduleTodayDayNoteSave(_ note: String) {
-        pendingTodayDayNoteSaveTask?.cancel()
-        pendingTodayDayNoteSaveTask = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 350_000_000)
-            guard !Task.isCancelled else { return }
-            persistTodayDayNoteIfNeeded(note)
-        }
-    }
-
-    private func flushTodayDayNoteSave() {
-        pendingTodayDayNoteSaveTask?.cancel()
-        pendingTodayDayNoteSaveTask = nil
-        persistTodayDayNoteIfNeeded(todayDayNote)
-    }
-
-    private func persistTodayDayNoteIfNeeded(_ note: String) {
-        guard note != lastPersistedTodayDayNote else { return }
-        WorkoutSet.setDayNote(note, for: todayAnchor, in: sortedTodaySets)
-        persistContext()
-        lastPersistedTodayDayNote = note
     }
 
     private func deleteSet(at offsets: IndexSet, from sets: [WorkoutSet]) {
@@ -478,6 +417,76 @@ enum InlineEditTarget {
     case weightLb
     case reps
     case duration
+}
+
+struct DayNoteEditor: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
+    let day: Date
+    let sets: [WorkoutSet]
+
+    @State private var noteText = ""
+    @State private var lastPersistedNote = ""
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        TextEditor(text: $noteText)
+            .font(AppTextStyle.body)
+            .frame(minHeight: 88)
+            .focused($isFocused)
+            .onAppear {
+                syncFromData()
+            }
+            .onChange(of: sets.count) { _, _ in
+                if !isFocused {
+                    syncFromData()
+                }
+            }
+            .onChange(of: isFocused) { _, focused in
+                if !focused {
+                    flushSave()
+                }
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase != .active {
+                    flushSave()
+                }
+            }
+            .onDisappear {
+                flushSave()
+            }
+            .overlay(alignment: .topLeading) {
+                if noteText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text("dayNote.placeholder".localized)
+                        .font(AppTextStyle.body)
+                        .foregroundStyle(.secondary)
+                        .padding(.top, 8)
+                        .padding(.leading, 4)
+                        .allowsHitTesting(false)
+                }
+            }
+    }
+
+    private func syncFromData() {
+        let note = WorkoutSet.dayNote(for: day, in: sets)
+        noteText = note
+        lastPersistedNote = note
+    }
+
+    private func flushSave() {
+        persistIfNeeded(noteText)
+    }
+
+    private func persistIfNeeded(_ note: String) {
+        guard note != lastPersistedNote else { return }
+        guard WorkoutSet.setDayNote(note, for: day, in: sets) else { return }
+        do {
+            try modelContext.save()
+            lastPersistedNote = note
+        } catch {
+            assertionFailure("Failed to save day note: \(error)")
+        }
+    }
 }
 
 struct SetRowView: View {

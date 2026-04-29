@@ -7,10 +7,6 @@ struct DayDetailView: View {
     @Query private var allSets: [WorkoutSet]
 
     let date: Date
-    @State private var dayNoteText: String = ""
-    @State private var lastPersistedDayNoteText: String = ""
-    @State private var pendingDayNoteSaveTask: Task<Void, Never>?
-    @FocusState private var isDayNoteFocused: Bool
 
     private var daySets: [WorkoutSet] {
         let calendar = Calendar.current
@@ -40,6 +36,9 @@ struct DayDetailView: View {
     }
 
     var body: some View {
+        let dayExerciseIDs = Set(daySets.compactMap { $0.exercise?.id })
+        let personalBestSetIDs = WorkoutSet.personalBestSetIDs(in: allSets, limitedTo: dayExerciseIDs)
+
         NavigationStack {
             List {
                 summarySection
@@ -50,7 +49,7 @@ struct DayDetailView: View {
                         ForEach(sets) { set in
                             DaySetRowView(
                                 workoutSet: set,
-                                isPersonalBest: set.isPersonalBest(in: allSets)
+                                isPersonalBest: personalBestSetIDs.contains(set.id)
                             )
                         }
                         .onDelete { indexSet in
@@ -81,17 +80,6 @@ struct DayDetailView: View {
                         dismiss()
                     }
                 }
-            }
-            .onAppear {
-                syncDayNoteFromData()
-            }
-            .onChange(of: daySets.count) { _, _ in
-                if !isDayNoteFocused {
-                    syncDayNoteFromData()
-                }
-            }
-            .onDisappear {
-                flushDayNoteSave()
             }
         }
     }
@@ -161,28 +149,8 @@ struct DayDetailView: View {
 
     private var dayNoteSection: some View {
         Section("dayNote.title".localized) {
-            TextEditor(text: $dayNoteText)
-                .font(AppTextStyle.body)
-                .frame(minHeight: 88)
-                .focused($isDayNoteFocused)
-                .onChange(of: dayNoteText) { _, newValue in
-                    scheduleDayNoteSave(newValue)
-                }
-                .onChange(of: isDayNoteFocused) { _, isFocused in
-                    if !isFocused {
-                        flushDayNoteSave()
-                    }
-                }
-                .overlay(alignment: .topLeading) {
-                    if dayNoteText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        Text("dayNote.placeholder".localized)
-                            .font(AppTextStyle.body)
-                            .foregroundStyle(.secondary)
-                            .padding(.top, 8)
-                            .padding(.leading, 4)
-                            .allowsHitTesting(false)
-                    }
-                }
+            DayNoteEditor(day: date, sets: daySets)
+                .id(Calendar.current.startOfDay(for: date))
         }
     }
 
@@ -191,38 +159,6 @@ struct DayDetailView: View {
         formatter.dateStyle = .long
         formatter.locale = LanguageManager.shared.currentLanguage.locale ?? Locale.current
         return formatter.string(from: date)
-    }
-
-    private func syncDayNoteFromData() {
-        let note = WorkoutSet.dayNote(for: date, in: allSets)
-        dayNoteText = note
-        lastPersistedDayNoteText = note
-    }
-
-    private func scheduleDayNoteSave(_ note: String) {
-        pendingDayNoteSaveTask?.cancel()
-        pendingDayNoteSaveTask = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 350_000_000)
-            guard !Task.isCancelled else { return }
-            persistDayNoteIfNeeded(note)
-        }
-    }
-
-    private func flushDayNoteSave() {
-        pendingDayNoteSaveTask?.cancel()
-        pendingDayNoteSaveTask = nil
-        persistDayNoteIfNeeded(dayNoteText)
-    }
-
-    private func persistDayNoteIfNeeded(_ note: String) {
-        guard note != lastPersistedDayNoteText else { return }
-        WorkoutSet.setDayNote(note, for: date, in: daySets)
-        do {
-            try modelContext.save()
-            lastPersistedDayNoteText = note
-        } catch {
-            assertionFailure("Failed to save day note: \(error)")
-        }
     }
 
     private func deleteSets(at offsets: IndexSet, from sets: [WorkoutSet]) {

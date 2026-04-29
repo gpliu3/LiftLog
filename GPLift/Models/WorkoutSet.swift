@@ -65,6 +65,43 @@ final class WorkoutSet {
 }
 
 extension WorkoutSet {
+    static func personalBestSetIDs(in sets: [WorkoutSet], limitedTo exerciseIDs: Set<UUID>? = nil) -> Set<UUID> {
+        let grouped = Dictionary(grouping: sets) { set in
+            set.exercise?.id
+        }
+
+        var personalBestIDs = Set<UUID>()
+        for (exerciseID, exerciseSets) in grouped {
+            guard let exerciseID, exerciseIDs?.contains(exerciseID) != false else { continue }
+            let ordered = exerciseSets.sorted(by: WorkoutSet.trainingOrder(lhs:rhs:))
+            var maxWeight: Double = 0
+            var maxVolume: Double = 0
+            var maxDuration: Int = 0
+            var maxReps: Int = 0
+
+            for set in ordered {
+                if set.exercise?.isTimeOnly == true {
+                    if set.durationSeconds > 0 && set.durationSeconds > maxDuration {
+                        personalBestIDs.insert(set.id)
+                    }
+                    maxDuration = max(maxDuration, set.durationSeconds)
+                } else if set.exercise?.isRepsOnly == true {
+                    if set.reps > 0 && set.reps > maxReps {
+                        personalBestIDs.insert(set.id)
+                    }
+                    maxReps = max(maxReps, set.reps)
+                } else {
+                    if (set.weightKg > 0 && set.weightKg > maxWeight) || (set.volume > 0 && set.volume > maxVolume) {
+                        personalBestIDs.insert(set.id)
+                    }
+                    maxWeight = max(maxWeight, set.weightKg)
+                    maxVolume = max(maxVolume, set.volume)
+                }
+            }
+        }
+        return personalBestIDs
+    }
+
     /// Whether this set is a personal best reached for the first time.
     /// Repeated ties do not count as PB again.
     func isPersonalBest(in exerciseSets: [WorkoutSet]) -> Bool {
@@ -113,11 +150,30 @@ extension WorkoutSet {
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     }
 
-    static func setDayNote(_ note: String, for day: Date, in sets: [WorkoutSet], calendar: Calendar = .current) {
+    @discardableResult
+    static func setDayNote(_ note: String, for day: Date, in sets: [WorkoutSet], calendar: Calendar = .current) -> Bool {
         let dayStart = calendar.startOfDay(for: day)
-        for set in sets where calendar.startOfDay(for: set.date) == dayStart {
-            let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
-            set.dayNote = trimmed.isEmpty ? nil : trimmed
+        let daySets = sets
+            .filter { calendar.startOfDay(for: $0.date) == dayStart }
+            .sorted(by: WorkoutSet.trainingOrder(lhs:rhs:))
+        let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if trimmed.isEmpty {
+            for set in daySets where set.dayNote != nil {
+                set.dayNote = nil
+            }
+            return !daySets.isEmpty
         }
+
+        // Keep old duplicated notes readable, but only mutate one canonical set for new edits.
+        let target = daySets.last(where: {
+            let existing = $0.dayNote?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return !existing.isEmpty
+        }) ?? daySets.last
+        guard let target else { return false }
+        if target.dayNote != trimmed {
+            target.dayNote = trimmed
+        }
+        return true
     }
 }
