@@ -15,8 +15,12 @@ struct TodayView: View {
     @State private var expandedNotes: Set<UUID> = []
     @State private var expandedPreviousDay: Set<UUID> = []
     @State private var inlineEditingSetID: UUID?
+    @State private var inlineEditingInitialTarget: InlineEditTarget = .automatic
     @State private var todayAnchor = Calendar.current.startOfDay(for: Date())
     @State private var todayDayNote = ""
+    @State private var lastPersistedTodayDayNote = ""
+    @State private var pendingTodayDayNoteSaveTask: Task<Void, Never>?
+    @FocusState private var isTodayDayNoteFocused: Bool
 
     private var todaySets: [WorkoutSet] {
         let calendar = Calendar.current
@@ -89,7 +93,12 @@ struct TodayView: View {
             syncTodayDayNoteFromData()
         }
         .onChange(of: todaySets.count) { _, _ in
-            syncTodayDayNoteFromData()
+            if !isTodayDayNoteFocused {
+                syncTodayDayNoteFromData()
+            }
+        }
+        .onDisappear {
+            flushTodayDayNoteSave()
         }
         .id(languageManager.currentLanguage)
     }
@@ -126,6 +135,7 @@ struct TodayView: View {
                             InlineSetEditorRow(
                                 workoutSet: set,
                                 isPersonalBest: set.isPersonalBest(in: allSets),
+                                initialTarget: inlineEditingInitialTarget,
                                 onStartEditingWeight: {
                                     scrollToSet(set.id, with: proxy)
                                 },
@@ -137,8 +147,9 @@ struct TodayView: View {
                             )
                             .id(set.id)
                         } else {
-                            SetRowView(workoutSet: set, isPersonalBest: set.isPersonalBest(in: allSets), onTap: {
+                            SetRowView(workoutSet: set, isPersonalBest: set.isPersonalBest(in: allSets), onTap: { target in
                                 dismissKeyboard()
+                                inlineEditingInitialTarget = target
                                 withAnimation(.easeInOut(duration: 0.18)) {
                                     inlineEditingSetID = set.id
                                 }
@@ -355,9 +366,14 @@ struct TodayView: View {
             TextEditor(text: $todayDayNote)
                 .font(AppTextStyle.body)
                 .frame(minHeight: 88)
+                .focused($isTodayDayNoteFocused)
                 .onChange(of: todayDayNote) { _, newValue in
-                    WorkoutSet.setDayNote(newValue, for: todayAnchor, in: sortedTodaySets)
-                    persistContext()
+                    scheduleTodayDayNoteSave(newValue)
+                }
+                .onChange(of: isTodayDayNoteFocused) { _, isFocused in
+                    if !isFocused {
+                        flushTodayDayNoteSave()
+                    }
                 }
                 .overlay(alignment: .topLeading) {
                     if todayDayNote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -399,7 +415,31 @@ struct TodayView: View {
     }
 
     private func syncTodayDayNoteFromData() {
-        todayDayNote = WorkoutSet.dayNote(for: todayAnchor, in: sortedTodaySets)
+        let note = WorkoutSet.dayNote(for: todayAnchor, in: sortedTodaySets)
+        todayDayNote = note
+        lastPersistedTodayDayNote = note
+    }
+
+    private func scheduleTodayDayNoteSave(_ note: String) {
+        pendingTodayDayNoteSaveTask?.cancel()
+        pendingTodayDayNoteSaveTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            guard !Task.isCancelled else { return }
+            persistTodayDayNoteIfNeeded(note)
+        }
+    }
+
+    private func flushTodayDayNoteSave() {
+        pendingTodayDayNoteSaveTask?.cancel()
+        pendingTodayDayNoteSaveTask = nil
+        persistTodayDayNoteIfNeeded(todayDayNote)
+    }
+
+    private func persistTodayDayNoteIfNeeded(_ note: String) {
+        guard note != lastPersistedTodayDayNote else { return }
+        WorkoutSet.setDayNote(note, for: todayAnchor, in: sortedTodaySets)
+        persistContext()
+        lastPersistedTodayDayNote = note
     }
 
     private func deleteSet(at offsets: IndexSet, from sets: [WorkoutSet]) {
@@ -432,10 +472,18 @@ struct TodayView: View {
     }
 }
 
+enum InlineEditTarget {
+    case automatic
+    case weightKg
+    case weightLb
+    case reps
+    case duration
+}
+
 struct SetRowView: View {
     let workoutSet: WorkoutSet
     let isPersonalBest: Bool
-    var onTap: (() -> Void)?
+    var onTap: ((InlineEditTarget) -> Void)?
     var onDuplicate: (() -> Void)?
     var onEdit: (() -> Void)?
 
@@ -443,8 +491,12 @@ struct SetRowView: View {
         workoutSet.exercise?.exerciseType ?? "weightReps"
     }
 
-    private var weightRepsMetric: String {
-        "\(String(format: "%.1f", workoutSet.weightKg)) kg × \(workoutSet.reps) \("common.reps".localized)"
+    private var weightText: String {
+        "\(String(format: "%.1f", workoutSet.weightKg)) kg"
+    }
+
+    private var repsText: String {
+        "\(workoutSet.reps) \("common.reps".localized)"
     }
 
     var body: some View {
@@ -456,12 +508,20 @@ struct SetRowView: View {
                 .minimumScaleFactor(0.78)
                 .fixedSize(horizontal: true, vertical: false)
                 .frame(width: 50, alignment: .leading)
+                .contentShape(Rectangle())
+                .highPriorityGesture(TapGesture().onEnded {
+                    onTap?(.automatic)
+                })
 
             if exerciseType == "timeOnly" {
                 HStack(spacing: 6) {
                     Text(workoutSet.formattedDuration)
                         .font(AppTextStyle.bodyStrong)
                         .lineLimit(1)
+                        .contentShape(Rectangle())
+                        .highPriorityGesture(TapGesture().onEnded {
+                            onTap?(.duration)
+                        })
 
                     if let rir = workoutSet.rir {
                         Text("RIR \(rir)")
@@ -471,13 +531,21 @@ struct SetRowView: View {
                             .background(Color.blue.opacity(0.15))
                             .foregroundStyle(.blue)
                             .clipShape(Capsule())
+                            .contentShape(Rectangle())
+                            .highPriorityGesture(TapGesture().onEnded {
+                                onTap?(.automatic)
+                            })
                     }
                 }
             } else if exerciseType == "repsOnly" {
                 HStack(spacing: 6) {
-                    Text("\(workoutSet.reps) \("common.reps".localized)")
+                    Text(repsText)
                         .font(AppTextStyle.bodyStrong)
                         .lineLimit(1)
+                        .contentShape(Rectangle())
+                        .highPriorityGesture(TapGesture().onEnded {
+                            onTap?(.reps)
+                        })
 
                     if let rir = workoutSet.rir {
                         Text("RIR \(rir)")
@@ -487,47 +555,16 @@ struct SetRowView: View {
                             .background(Color.blue.opacity(0.15))
                             .foregroundStyle(.blue)
                             .clipShape(Capsule())
+                            .contentShape(Rectangle())
+                            .highPriorityGesture(TapGesture().onEnded {
+                                onTap?(.automatic)
+                            })
                     }
                 }
             } else {
                 ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 6) {
-                        Text(weightRepsMetric)
-                            .font(AppTextStyle.bodyStrong)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.72)
-                            .allowsTightening(true)
-                            .layoutPriority(1)
-
-                        if let rir = workoutSet.rir {
-                            Text("RIR \(rir)")
-                                .font(AppTextStyle.caption2Strong)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.blue.opacity(0.15))
-                                .foregroundStyle(.blue)
-                                .clipShape(Capsule())
-                        }
-                    }
-
-                    HStack(spacing: 6) {
-                        Text(weightRepsMetric)
-                            .font(AppTextStyle.bodyStrong)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.68)
-                            .allowsTightening(true)
-                            .layoutPriority(1)
-
-                        if let rir = workoutSet.rir {
-                            Text("RIR \(rir)")
-                                .font(AppTextStyle.caption2Strong)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.blue.opacity(0.15))
-                                .foregroundStyle(.blue)
-                                .clipShape(Capsule())
-                        }
-                    }
+                    weightRepsDisplay(minimumScaleFactor: 0.72)
+                    weightRepsDisplay(minimumScaleFactor: 0.68)
                 }
             }
 
@@ -542,7 +579,7 @@ struct SetRowView: View {
         .padding(.vertical, -1)
         .contentShape(Rectangle())
         .onTapGesture {
-            onTap?()
+            onTap?(.automatic)
         }
         .onLongPressGesture {
             let generator = UIImpactFeedbackGenerator(style: .medium)
@@ -558,12 +595,62 @@ struct SetRowView: View {
             .tint(.orange)
         }
     }
+
+    private func weightRepsDisplay(minimumScaleFactor: CGFloat) -> some View {
+        HStack(spacing: 6) {
+            Text(weightText)
+                .font(AppTextStyle.bodyStrong)
+                .lineLimit(1)
+                .minimumScaleFactor(minimumScaleFactor)
+                .allowsTightening(true)
+                .layoutPriority(1)
+                .contentShape(Rectangle())
+                .highPriorityGesture(TapGesture().onEnded {
+                    onTap?(.weightKg)
+                })
+
+            Text("×")
+                .font(AppTextStyle.bodyStrong)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .contentShape(Rectangle())
+                .highPriorityGesture(TapGesture().onEnded {
+                    onTap?(.automatic)
+                })
+
+            Text(repsText)
+                .font(AppTextStyle.bodyStrong)
+                .lineLimit(1)
+                .minimumScaleFactor(minimumScaleFactor)
+                .allowsTightening(true)
+                .layoutPriority(1)
+                .contentShape(Rectangle())
+                .highPriorityGesture(TapGesture().onEnded {
+                    onTap?(.reps)
+                })
+
+            if let rir = workoutSet.rir {
+                Text("RIR \(rir)")
+                    .font(AppTextStyle.caption2Strong)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.blue.opacity(0.15))
+                    .foregroundStyle(.blue)
+                    .clipShape(Capsule())
+                    .contentShape(Rectangle())
+                    .highPriorityGesture(TapGesture().onEnded {
+                        onTap?(.automatic)
+                    })
+            }
+        }
+    }
 }
 
 struct InlineSetEditorRow: View {
     @Environment(\.modelContext) private var modelContext
     let workoutSet: WorkoutSet
     let isPersonalBest: Bool
+    let initialTarget: InlineEditTarget
     var onStartEditingWeight: (() -> Void)?
     var onDone: (() -> Void)?
 
@@ -578,6 +665,7 @@ struct InlineSetEditorRow: View {
     @State private var initialDurationSeconds: Int
     @State private var initialRirSelection: Int
     @State private var hasPendingChanges = false
+    @State private var didApplyInitialFocus = false
     @FocusState private var focusedField: Field?
     @State private var isSynchronizingWeightFields = false
 
@@ -601,11 +689,13 @@ struct InlineSetEditorRow: View {
     init(
         workoutSet: WorkoutSet,
         isPersonalBest: Bool,
+        initialTarget: InlineEditTarget = .automatic,
         onStartEditingWeight: (() -> Void)? = nil,
         onDone: (() -> Void)? = nil
     ) {
         self.workoutSet = workoutSet
         self.isPersonalBest = isPersonalBest
+        self.initialTarget = initialTarget
         self.onStartEditingWeight = onStartEditingWeight
         self.onDone = onDone
         let startWeight = workoutSet.weightKg
@@ -768,6 +858,13 @@ struct InlineSetEditorRow: View {
         .onDisappear {
             saveChangesIfNeeded()
         }
+        .onAppear {
+            guard !didApplyInitialFocus else { return }
+            didApplyInitialFocus = true
+            DispatchQueue.main.async {
+                selectTarget(adjustmentTarget(for: initialTarget))
+            }
+        }
     }
 
     private func saveChangesIfNeeded() {
@@ -887,6 +984,21 @@ struct InlineSetEditorRow: View {
             focusedField = .reps
         case .duration:
             focusedField = nil
+        }
+    }
+
+    private func adjustmentTarget(for target: InlineEditTarget) -> AdjustmentTarget {
+        switch target {
+        case .automatic:
+            return adjustmentTarget
+        case .weightKg:
+            return exerciseType == "weightReps" ? .weightKg : adjustmentTarget
+        case .weightLb:
+            return exerciseType == "weightReps" ? .weightLb : adjustmentTarget
+        case .reps:
+            return exerciseType == "timeOnly" ? adjustmentTarget : .reps
+        case .duration:
+            return exerciseType == "timeOnly" ? .duration : adjustmentTarget
         }
     }
 

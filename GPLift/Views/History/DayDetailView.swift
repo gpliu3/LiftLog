@@ -8,6 +8,9 @@ struct DayDetailView: View {
 
     let date: Date
     @State private var dayNoteText: String = ""
+    @State private var lastPersistedDayNoteText: String = ""
+    @State private var pendingDayNoteSaveTask: Task<Void, Never>?
+    @FocusState private var isDayNoteFocused: Bool
 
     private var daySets: [WorkoutSet] {
         let calendar = Calendar.current
@@ -80,10 +83,15 @@ struct DayDetailView: View {
                 }
             }
             .onAppear {
-                dayNoteText = WorkoutSet.dayNote(for: date, in: allSets)
+                syncDayNoteFromData()
             }
             .onChange(of: daySets.count) { _, _ in
-                dayNoteText = WorkoutSet.dayNote(for: date, in: allSets)
+                if !isDayNoteFocused {
+                    syncDayNoteFromData()
+                }
+            }
+            .onDisappear {
+                flushDayNoteSave()
             }
         }
     }
@@ -156,8 +164,14 @@ struct DayDetailView: View {
             TextEditor(text: $dayNoteText)
                 .font(AppTextStyle.body)
                 .frame(minHeight: 88)
+                .focused($isDayNoteFocused)
                 .onChange(of: dayNoteText) { _, newValue in
-                    WorkoutSet.setDayNote(newValue, for: date, in: daySets)
+                    scheduleDayNoteSave(newValue)
+                }
+                .onChange(of: isDayNoteFocused) { _, isFocused in
+                    if !isFocused {
+                        flushDayNoteSave()
+                    }
                 }
                 .overlay(alignment: .topLeading) {
                     if dayNoteText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -177,6 +191,38 @@ struct DayDetailView: View {
         formatter.dateStyle = .long
         formatter.locale = LanguageManager.shared.currentLanguage.locale ?? Locale.current
         return formatter.string(from: date)
+    }
+
+    private func syncDayNoteFromData() {
+        let note = WorkoutSet.dayNote(for: date, in: allSets)
+        dayNoteText = note
+        lastPersistedDayNoteText = note
+    }
+
+    private func scheduleDayNoteSave(_ note: String) {
+        pendingDayNoteSaveTask?.cancel()
+        pendingDayNoteSaveTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            guard !Task.isCancelled else { return }
+            persistDayNoteIfNeeded(note)
+        }
+    }
+
+    private func flushDayNoteSave() {
+        pendingDayNoteSaveTask?.cancel()
+        pendingDayNoteSaveTask = nil
+        persistDayNoteIfNeeded(dayNoteText)
+    }
+
+    private func persistDayNoteIfNeeded(_ note: String) {
+        guard note != lastPersistedDayNoteText else { return }
+        WorkoutSet.setDayNote(note, for: date, in: daySets)
+        do {
+            try modelContext.save()
+            lastPersistedDayNoteText = note
+        } catch {
+            assertionFailure("Failed to save day note: \(error)")
+        }
     }
 
     private func deleteSets(at offsets: IndexSet, from sets: [WorkoutSet]) {
