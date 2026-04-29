@@ -13,6 +13,10 @@ struct ExerciseDetailView: View {
             .map { $0 }
     }
 
+    private var personalBestSetIDs: Set<UUID> {
+        WorkoutSet.personalBestSetIDs(in: exercise.workoutSets, limitedTo: [exercise.id])
+    }
+
     private var orderedRecentSets: [WorkoutSet] {
         let calendar = Calendar.current
         return exercise.workoutSets.sorted { lhs, rhs in
@@ -143,7 +147,8 @@ struct ExerciseDetailView: View {
     }
 
     private var recentActivitySection: some View {
-        Section("exerciseDetail.recentActivity".localized) {
+        let cachedPersonalBestSetIDs = personalBestSetIDs
+        return Section("exerciseDetail.recentActivity".localized) {
             ForEach(recentSets) { set in
                 HStack(spacing: 8) {
                     Text(set.date, style: .date)
@@ -179,7 +184,7 @@ struct ExerciseDetailView: View {
                             .clipShape(Capsule())
                     }
 
-                    if set.isPersonalBest(in: exercise.workoutSets) {
+                    if cachedPersonalBestSetIDs.contains(set.id) {
                         Image(systemName: "sparkles")
                             .foregroundStyle(.orange)
                             .font(AppTextStyle.caption)

@@ -97,13 +97,16 @@ struct TodayView: View {
     }
 
     private func workoutList(proxy: ScrollViewProxy) -> some View {
-        let todayExerciseIDs = Set(todaySets.compactMap { $0.exercise?.id })
-        let personalBestSetIDs = WorkoutSet.personalBestSetIDs(in: allSets, limitedTo: todayExerciseIDs)
+        let groups = groupedSets
+        let personalBestSetIDs = WorkoutSet.personalBestSetIDs(
+            in: groups.flatMap { exercise, _ in exercise.workoutSets },
+            limitedTo: Set(groups.map { exercise, _ in exercise.id })
+        )
 
         return List {
             statsCard
 
-            ForEach(groupedSets, id: \.0.id) { exercise, sets in
+            ForEach(groups, id: \.0.id) { exercise, sets in
                 Section {
                     if expandedNotes.contains(exercise.id) {
                         NotesEditorRow(exercise: exercise)
@@ -238,7 +241,7 @@ struct TodayView: View {
     /// Directly add a new set without showing modal.
     private func quickAddSet(for exercise: Exercise, basedOn referenceSet: WorkoutSet?) {
         let calendar = Calendar.current
-        let todayExerciseSets = allSets.filter {
+        let todayExerciseSets = exercise.workoutSets.filter {
             $0.exercise?.id == exercise.id &&
             calendar.startOfDay(for: $0.date) == todayAnchor
         }

@@ -66,13 +66,23 @@ final class WorkoutSet {
 
 extension WorkoutSet {
     static func personalBestSetIDs(in sets: [WorkoutSet], limitedTo exerciseIDs: Set<UUID>? = nil) -> Set<UUID> {
-        let grouped = Dictionary(grouping: sets) { set in
+        let relevantSets: [WorkoutSet]
+        if let exerciseIDs {
+            relevantSets = sets.filter { set in
+                guard let exerciseID = set.exercise?.id else { return false }
+                return exerciseIDs.contains(exerciseID)
+            }
+        } else {
+            relevantSets = sets.filter { $0.exercise != nil }
+        }
+
+        let grouped = Dictionary(grouping: relevantSets) { set in
             set.exercise?.id
         }
 
         var personalBestIDs = Set<UUID>()
         for (exerciseID, exerciseSets) in grouped {
-            guard let exerciseID, exerciseIDs?.contains(exerciseID) != false else { continue }
+            guard exerciseID != nil else { continue }
             let ordered = exerciseSets.sorted(by: WorkoutSet.trainingOrder(lhs:rhs:))
             var maxWeight: Double = 0
             var maxVolume: Double = 0

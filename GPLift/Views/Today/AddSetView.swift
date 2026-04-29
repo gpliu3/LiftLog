@@ -5,7 +5,6 @@ struct AddSetView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \Exercise.name) private var exercises: [Exercise]
-    @Query private var allSets: [WorkoutSet]
 
     // Pre-selected exercise (for quick add)
     var preselectedExercise: Exercise?
@@ -719,7 +718,7 @@ struct AddSetView: View {
     private func targetDaySets(for exercise: Exercise, on date: Date) -> [WorkoutSet] {
         let calendar = Calendar.current
         let targetDay = calendar.startOfDay(for: date)
-        return allSets.filter {
+        return exercise.workoutSets.filter {
             $0.exercise?.id == exercise.id && calendar.startOfDay(for: $0.date) == targetDay
         }
     }
