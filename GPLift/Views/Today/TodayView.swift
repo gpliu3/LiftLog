@@ -36,6 +36,9 @@ private struct TodayContentView: View {
     @State private var expandedPreviousDay: Set<UUID> = []
     @State private var inlineEditingSetID: UUID?
     @State private var inlineEditingInitialTarget: InlineEditTarget = .automatic
+    @State private var cachedPersonalBestSetIDs: Set<UUID> = []
+    @State private var cachedPreviousDaySets: [UUID: [WorkoutSet]] = [:]
+    @State private var cachedTodaySetSignature = ""
     let todayAnchor: Date
 
     init(todayAnchor: Date) {
@@ -69,6 +72,24 @@ private struct TodayContentView: View {
 
     private var sortedTodaySets: [WorkoutSet] {
         todaySets.sorted(by: WorkoutSet.trainingOrder(lhs:rhs:))
+    }
+
+    private var todaySetSignature: String {
+        todaySets
+            .sorted { $0.id.uuidString < $1.id.uuidString }
+            .map { set in
+                [
+                    set.id.uuidString,
+                    set.exercise?.id.uuidString ?? "",
+                    "\(set.date.timeIntervalSinceReferenceDate)",
+                    "\(set.setNumber)",
+                    "\(set.weightKg)",
+                    "\(set.reps)",
+                    "\(set.durationSeconds)",
+                    "\(set.rir ?? -1)"
+                ].joined(separator: ":")
+            }
+            .joined(separator: "|")
     }
 
     private var totalVolume: Double {
@@ -106,6 +127,12 @@ private struct TodayContentView: View {
                 ExerciseEditView(exercise: exercise)
             }
         }
+        .onAppear {
+            refreshDerivedCachesIfNeeded(force: true)
+        }
+        .onChange(of: todaySetSignature) { _, _ in
+            refreshDerivedCachesIfNeeded()
+        }
     }
 
     private var emptyState: some View {
@@ -118,10 +145,6 @@ private struct TodayContentView: View {
 
     private func workoutList(proxy: ScrollViewProxy) -> some View {
         let groups = groupedSets
-        let personalBestSetIDs = WorkoutSet.personalBestSetIDs(
-            in: groups.flatMap { exercise, _ in exercise.workoutSets },
-            limitedTo: Set(groups.map { exercise, _ in exercise.id })
-        )
 
         return List {
             statsCard
@@ -145,25 +168,21 @@ private struct TodayContentView: View {
                         if inlineEditingSetID == set.id {
                             InlineSetEditorRow(
                                 workoutSet: set,
-                                isPersonalBest: personalBestSetIDs.contains(set.id),
+                                isPersonalBest: cachedPersonalBestSetIDs.contains(set.id),
                                 initialTarget: inlineEditingInitialTarget,
                                 onStartEditingWeight: {
                                     scrollToSet(set.id, with: proxy)
                                 },
                                 onDone: {
-                                    withAnimation(.easeInOut(duration: 0.18)) {
-                                        inlineEditingSetID = nil
-                                    }
+                                    inlineEditingSetID = nil
                                 }
                             )
                             .id(set.id)
                         } else {
-                            SetRowView(workoutSet: set, isPersonalBest: personalBestSetIDs.contains(set.id), onTap: { target in
+                            SetRowView(workoutSet: set, isPersonalBest: cachedPersonalBestSetIDs.contains(set.id), onTap: { target in
                                 dismissKeyboard()
                                 inlineEditingInitialTarget = target
-                                withAnimation(.easeInOut(duration: 0.18)) {
-                                    inlineEditingSetID = set.id
-                                }
+                                inlineEditingSetID = set.id
                                 if inlineEditingSetID == set.id {
                                     scrollToSet(set.id, with: proxy)
                                 }
@@ -186,7 +205,7 @@ private struct TodayContentView: View {
                         exercise: exercise,
                         sets: sets,
                         hasNotes: true,
-                        hasPreviousDaySets: !previousDaySets(for: exercise).isEmpty,
+                        hasPreviousDaySets: !(cachedPreviousDaySets[exercise.id] ?? []).isEmpty,
                         onInfoTap: {
                             closeInlineEditor()
                             withAnimation {
@@ -328,6 +347,43 @@ private struct TodayContentView: View {
     }
 
     private func previousDaySets(for exercise: Exercise) -> [WorkoutSet] {
+        if let cached = cachedPreviousDaySets[exercise.id] {
+            return cached
+        }
+
+        let calendar = Calendar.current
+        let today = todayAnchor
+        let previousSets = exercise.workoutSets
+            .filter { calendar.startOfDay(for: $0.date) < today }
+            .sorted(by: WorkoutSet.trainingOrder(lhs:rhs:))
+
+        guard let latestDayDate = previousSets.map({ calendar.startOfDay(for: $0.date) }).max() else {
+            return []
+        }
+
+        return previousSets
+            .filter { calendar.startOfDay(for: $0.date) == latestDayDate }
+            .sorted(by: WorkoutSet.trainingOrder(lhs:rhs:))
+    }
+
+    private func refreshDerivedCachesIfNeeded(force: Bool = false) {
+        let signature = todaySetSignature
+        guard force || signature != cachedTodaySetSignature else { return }
+        cachedTodaySetSignature = signature
+
+        let groups = groupedSets
+        let exerciseIDs = Set(groups.map { exercise, _ in exercise.id })
+        cachedPersonalBestSetIDs = WorkoutSet.personalBestSetIDs(
+            in: groups.flatMap { exercise, _ in exercise.workoutSets },
+            limitedTo: exerciseIDs
+        )
+
+        cachedPreviousDaySets = Dictionary(uniqueKeysWithValues: groups.map { exercise, _ in
+            (exercise.id, computePreviousDaySets(for: exercise))
+        })
+    }
+
+    private func computePreviousDaySets(for exercise: Exercise) -> [WorkoutSet] {
         let calendar = Calendar.current
         let today = todayAnchor
         let previousSets = exercise.workoutSets
@@ -873,7 +929,6 @@ struct InlineSetEditorRow: View {
         .onChange(of: focusedField) { oldValue, newValue in
             if oldValue != nil && newValue != oldValue {
                 normalizeWeightFieldsIfNeeded()
-                saveChangesIfNeeded()
             }
             if newValue == .weightKg {
                 adjustmentTarget = .weightKg
@@ -897,23 +952,48 @@ struct InlineSetEditorRow: View {
 
     private func saveChangesIfNeeded() {
         guard hasPendingChanges else { return }
+        let updatedWeight: Double
+        let updatedReps: Int
+        let updatedDurationSeconds: Int
+
         if exerciseType == "weightReps" {
-            workoutSet.weightKg = parsedWeight()
-            workoutSet.reps = parsedReps()
-            workoutSet.durationSeconds = 0
+            updatedWeight = parsedWeight()
+            updatedReps = parsedReps()
+            updatedDurationSeconds = 0
         } else if exerciseType == "repsOnly" {
-            workoutSet.weightKg = 0
-            workoutSet.reps = parsedReps()
-            workoutSet.durationSeconds = 0
+            updatedWeight = 0
+            updatedReps = parsedReps()
+            updatedDurationSeconds = 0
         } else {
-            workoutSet.weightKg = 0
-            workoutSet.reps = 0
-            workoutSet.durationSeconds = max(5, durationSeconds)
+            updatedWeight = 0
+            updatedReps = 0
+            updatedDurationSeconds = max(5, durationSeconds)
         }
-        workoutSet.rir = rirSelection < 0 ? nil : rirSelection
-        hasPendingChanges = false
+        let updatedRir = rirSelection < 0 ? nil : rirSelection
+
+        let didChange =
+            abs(workoutSet.weightKg - updatedWeight) > 0.0001 ||
+            workoutSet.reps != updatedReps ||
+            workoutSet.durationSeconds != updatedDurationSeconds ||
+            workoutSet.rir != updatedRir
+
+        guard didChange else {
+            hasPendingChanges = false
+            return
+        }
+
+        workoutSet.weightKg = updatedWeight
+        workoutSet.reps = updatedReps
+        workoutSet.durationSeconds = updatedDurationSeconds
+        workoutSet.rir = updatedRir
+
         do {
             try modelContext.save()
+            initialWeight = workoutSet.weightKg
+            initialReps = max(1, workoutSet.reps)
+            initialDurationSeconds = max(5, workoutSet.durationSeconds)
+            initialRirSelection = workoutSet.rir ?? -1
+            hasPendingChanges = false
         } catch {
             assertionFailure("Failed to save inline set edit: \(error)")
         }
