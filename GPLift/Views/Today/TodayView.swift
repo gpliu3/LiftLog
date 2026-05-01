@@ -3,11 +3,31 @@ import SwiftData
 import UIKit
 
 struct TodayView: View {
-    @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
-    @Query private var allSets: [WorkoutSet]
-    @Query private var exercises: [Exercise]
     @State private var languageManager = LanguageManager.shared
+    @State private var todayAnchor = Calendar.current.startOfDay(for: Date())
+
+    var body: some View {
+        TodayContentView(todayAnchor: todayAnchor)
+            .id("\(languageManager.currentLanguage.rawValue)-\(todayAnchor.timeIntervalSinceReferenceDate)")
+            .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
+                refreshTodayAnchor()
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .active {
+                    refreshTodayAnchor()
+                }
+            }
+    }
+
+    private func refreshTodayAnchor() {
+        todayAnchor = Calendar.current.startOfDay(for: Date())
+    }
+}
+
+private struct TodayContentView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Query private var daySets: [WorkoutSet]
 
     @State private var showingAddSet = false
     @State private var editingSet: WorkoutSet?
@@ -16,13 +36,22 @@ struct TodayView: View {
     @State private var expandedPreviousDay: Set<UUID> = []
     @State private var inlineEditingSetID: UUID?
     @State private var inlineEditingInitialTarget: InlineEditTarget = .automatic
-    @State private var todayAnchor = Calendar.current.startOfDay(for: Date())
+    let todayAnchor: Date
+
+    init(todayAnchor: Date) {
+        let dayStart = Calendar.current.startOfDay(for: todayAnchor)
+        let dayEnd = Calendar.current.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart
+        self.todayAnchor = dayStart
+        _daySets = Query(
+            filter: #Predicate<WorkoutSet> { set in
+                set.date >= dayStart && set.date < dayEnd
+            },
+            sort: \WorkoutSet.date
+        )
+    }
 
     private var todaySets: [WorkoutSet] {
-        let calendar = Calendar.current
-        return allSets.filter {
-            calendar.startOfDay(for: $0.date) == todayAnchor && $0.exercise != nil
-        }
+        daySets.filter { $0.exercise != nil }
     }
 
     private var groupedSets: [(Exercise, [WorkoutSet])] {
@@ -77,15 +106,6 @@ struct TodayView: View {
                 ExerciseEditView(exercise: exercise)
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
-            refreshTodayAnchor()
-        }
-        .onChange(of: scenePhase) { _, newPhase in
-            if newPhase == .active {
-                refreshTodayAnchor()
-            }
-        }
-        .id(languageManager.currentLanguage)
     }
 
     private var emptyState: some View {
@@ -378,10 +398,6 @@ struct TodayView: View {
     private var todayDateString: String {
         let locale = LanguageManager.shared.currentLanguage.locale ?? Locale.current
         return DateFormatters.todayHeaderLabel(for: todayAnchor, locale: locale)
-    }
-
-    private func refreshTodayAnchor() {
-        todayAnchor = Calendar.current.startOfDay(for: Date())
     }
 
     private func deleteSet(at offsets: IndexSet, from sets: [WorkoutSet]) {

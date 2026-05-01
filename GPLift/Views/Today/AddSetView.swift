@@ -4,13 +4,13 @@ import SwiftData
 struct AddSetView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-    @Query(sort: \Exercise.name) private var exercises: [Exercise]
 
     // Pre-selected exercise (for quick add)
     var preselectedExercise: Exercise?
     var prefilledWeight: Double?
     var prefilledReps: Int?
 
+    @State private var exercises: [Exercise] = []
     @State private var selectedExercise: Exercise?
     @State private var selectedDate: Date = Date()
     @State private var weight: Double = 20.0
@@ -294,6 +294,7 @@ struct AddSetView: View {
                 }
             }
             .onAppear {
+                refreshExerciseSnapshot()
                 setupInitialValues()
             }
             .onChange(of: selectedDate) { _, _ in
@@ -367,6 +368,7 @@ struct AddSetView: View {
                     // Only show change button if not preselected (quick add mode)
                     if preselectedExercise == nil {
                         Button("addSet.change".localized) {
+                            refreshExerciseSnapshot()
                             selectedExercise = nil
                             showExerciseNotes = false
                         }
@@ -800,6 +802,15 @@ struct AddSetView: View {
         dayComponents.minute = timeComponents.minute
         dayComponents.second = timeComponents.second
         return calendar.date(from: dayComponents) ?? day
+    }
+
+    private func refreshExerciseSnapshot() {
+        do {
+            let descriptor = FetchDescriptor<Exercise>(sortBy: [SortDescriptor(\Exercise.name)])
+            exercises = try modelContext.fetch(descriptor)
+        } catch {
+            assertionFailure("Failed to load exercises for logging: \(error)")
+        }
     }
 }
 

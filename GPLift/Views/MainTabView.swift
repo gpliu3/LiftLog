@@ -1,43 +1,71 @@
 import SwiftUI
 
 struct MainTabView: View {
-    @State private var selectedTab = 0
+    @State private var selectedTab: AppTab = .today
     @State private var languageManager = LanguageManager.shared
+
+    private enum AppTab: Hashable {
+        case today
+        case history
+        case exercises
+        case progress
+        case settings
+    }
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            TodayView()
+            tabContent(.today) {
+                TodayView()
+            }
                 .tabItem {
                     Label("tab.today".localized, systemImage: "calendar")
                 }
-                .tag(0)
+                .tag(AppTab.today)
 
-            HistoryView()
+            tabContent(.history) {
+                HistoryView()
+            }
                 .tabItem {
                     Label("tab.history".localized, systemImage: "clock")
                 }
-                .tag(1)
+                .tag(AppTab.history)
 
-            ExerciseListView()
+            tabContent(.exercises) {
+                ExerciseListView()
+            }
                 .tabItem {
                     Label("tab.exercises".localized, systemImage: "dumbbell")
                 }
-                .tag(2)
+                .tag(AppTab.exercises)
 
-            ProgressChartView()
+            tabContent(.progress) {
+                ProgressChartView()
+            }
                 .tabItem {
                     Label("tab.progress".localized, systemImage: "chart.line.uptrend.xyaxis")
                 }
-                .tag(3)
+                .tag(AppTab.progress)
 
-            SettingsView()
+            tabContent(.settings) {
+                SettingsView()
+            }
                 .tabItem {
                     Label("tab.settings".localized, systemImage: "gearshape")
                 }
-                .tag(4)
+                .tag(AppTab.settings)
         }
         .tint(.orange)
         .id(languageManager.currentLanguage) // Force refresh when language changes
+    }
+
+    @ViewBuilder
+    private func tabContent<Content: View>(_ tab: AppTab, @ViewBuilder content: () -> Content) -> some View {
+        if selectedTab == tab {
+            content()
+        } else {
+            Color.clear
+                .accessibilityHidden(true)
+        }
     }
 }
 
