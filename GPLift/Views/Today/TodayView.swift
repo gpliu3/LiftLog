@@ -187,7 +187,7 @@ private struct TodayContentView: View {
                                     scrollToSet(set.id, with: proxy)
                                 }
                             }, onDuplicate: {
-                                quickAddSet(for: exercise, basedOn: set)
+                                quickAddSet(for: exercise, basedOn: set, todaySetsForExercise: sets)
                             }, onEdit: {
                                 editingSet = set
                             })
@@ -249,7 +249,7 @@ private struct TodayContentView: View {
 
         return Button {
             closeInlineEditor()
-            quickAddSet(for: exercise, basedOn: lastSet)
+            quickAddSet(for: exercise, basedOn: lastSet, todaySetsForExercise: sets)
         } label: {
             HStack {
                 Image(systemName: "plus.circle.fill")
@@ -278,13 +278,8 @@ private struct TodayContentView: View {
     }
 
     /// Directly add a new set without showing modal.
-    private func quickAddSet(for exercise: Exercise, basedOn referenceSet: WorkoutSet?) {
-        let calendar = Calendar.current
-        let todayExerciseSets = exercise.workoutSets.filter {
-            $0.exercise?.id == exercise.id &&
-            calendar.startOfDay(for: $0.date) == todayAnchor
-        }
-        let nextSetNumber = (todayExerciseSets.map { $0.setNumber }.max() ?? 0) + 1
+    private func quickAddSet(for exercise: Exercise, basedOn referenceSet: WorkoutSet?, todaySetsForExercise: [WorkoutSet]) {
+        let nextSetNumber = (todaySetsForExercise.map { $0.setNumber }.max() ?? 0) + 1
 
         // Determine values from reference set or previous day
         var weight: Double = exercise.isWeightReps ? 20.0 : 0
@@ -330,10 +325,15 @@ private struct TodayContentView: View {
     private func getPreviousDayStartingSet(for exercise: Exercise) -> WorkoutSet? {
         let calendar = Calendar.current
         let today = todayAnchor
+        let exerciseID = exercise.id
+        let descriptor = FetchDescriptor<WorkoutSet>(
+            predicate: #Predicate<WorkoutSet> { set in
+                set.date < today && set.exercise?.id == exerciseID
+            },
+            sortBy: [SortDescriptor(\WorkoutSet.date, order: .reverse)]
+        )
 
-        let previousSets = exercise.workoutSets
-            .filter { calendar.startOfDay(for: $0.date) < today }
-            .sorted { $0.date > $1.date }
+        let previousSets = (try? modelContext.fetch(descriptor)) ?? []
 
         guard let mostRecentDate = previousSets.first?.date else { return nil }
 

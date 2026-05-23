@@ -4,6 +4,7 @@ import SwiftData
 @main
 struct GPLiftApp: App {
     private let initialSeedCompletedKey = "hasCompletedInitialExerciseSeed"
+    private let setNumberNormalizationCompletedKey = "hasCompletedSetNumberNormalizationV1"
 
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
@@ -59,7 +60,10 @@ struct GPLiftApp: App {
                 try context.save()
             }
 
-            normalizeSetNumbersIfNeeded(context: context)
+            if !defaults.bool(forKey: setNumberNormalizationCompletedKey) {
+                normalizeSetNumbersIfNeeded(context: context)
+                defaults.set(true, forKey: setNumberNormalizationCompletedKey)
+            }
         } catch {
             print("Failed to seed exercises: \(error)")
         }

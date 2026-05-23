@@ -2,6 +2,121 @@ import SwiftUI
 import SwiftData
 import UIKit
 
+private struct HistorySetSnapshot: Sendable {
+    let date: Date
+    let exerciseID: UUID
+    let exerciseName: String
+    let volume: Double
+
+    init?(workoutSet: WorkoutSet) {
+        guard let exercise = workoutSet.exercise else { return nil }
+        date = workoutSet.date
+        exerciseID = exercise.id
+        exerciseName = exercise.displayName
+        volume = workoutSet.volume
+    }
+}
+
+private struct HistoryDaySnapshot: Identifiable, Sendable {
+    struct ExerciseSummary: Identifiable, Sendable {
+        let id: UUID
+        let name: String
+        let count: Int
+        let latestDate: Date
+    }
+
+    var id: TimeInterval { date.timeIntervalSinceReferenceDate }
+    let date: Date
+    let setCount: Int
+    let totalVolume: Double
+    let exerciseSummaries: [ExerciseSummary]
+
+    var exerciseSummaryText: String {
+        exerciseSummaries
+            .map { "\($0.name)x\($0.count)" }
+            .joined(separator: ", ")
+    }
+}
+
+private struct HistoryWeekSnapshot: Identifiable, Sendable {
+    var id: TimeInterval { weekStart.timeIntervalSinceReferenceDate }
+    let weekStart: Date
+    let days: [HistoryDaySnapshot]
+    let totalSets: Int
+    let totalVolume: Double
+}
+
+private struct HistorySnapshot: Sendable {
+    static let empty = HistorySnapshot(weeks: [], days: [], trainingDaysCount: 0, totalSets: 0, totalVolume: 0)
+
+    let weeks: [HistoryWeekSnapshot]
+    let days: [HistoryDaySnapshot]
+    let trainingDaysCount: Int
+    let totalSets: Int
+    let totalVolume: Double
+
+    static func build(from sets: [HistorySetSnapshot], startDate: Date) -> HistorySnapshot {
+        var calendar = Calendar.current
+        calendar.firstWeekday = 2
+        calendar.minimumDaysInFirstWeek = 4
+
+        let filteredSets = sets.filter { $0.date >= startDate }
+        let groupedDays = Dictionary(grouping: filteredSets) { set in
+            calendar.startOfDay(for: set.date)
+        }
+
+        let days = groupedDays.map { day, sets in
+            let groupedExercises = Dictionary(grouping: sets) { $0.exerciseID }
+            let exerciseSummaries = groupedExercises.compactMap { exerciseID, exerciseSets -> HistoryDaySnapshot.ExerciseSummary? in
+                guard let first = exerciseSets.first else { return nil }
+                let latest = exerciseSets.map(\.date).max() ?? .distantPast
+                return HistoryDaySnapshot.ExerciseSummary(
+                    id: exerciseID,
+                    name: first.exerciseName,
+                    count: exerciseSets.count,
+                    latestDate: latest
+                )
+            }
+            .sorted {
+                if $0.latestDate != $1.latestDate { return $0.latestDate > $1.latestDate }
+                return $0.name < $1.name
+            }
+
+            return HistoryDaySnapshot(
+                date: day,
+                setCount: sets.count,
+                totalVolume: sets.reduce(0) { $0 + $1.volume },
+                exerciseSummaries: exerciseSummaries
+            )
+        }
+        .sorted { $0.date > $1.date }
+
+        let groupedWeeks = Dictionary(grouping: days) { day in
+            let components = calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: day.date)
+            return calendar.startOfDay(for: calendar.date(from: components) ?? day.date)
+        }
+
+        let weeks = groupedWeeks.map { weekStart, days in
+            let orderedDays = days.sorted { $0.date > $1.date }
+            return HistoryWeekSnapshot(
+                weekStart: weekStart,
+                days: orderedDays,
+                totalSets: orderedDays.reduce(0) { $0 + $1.setCount },
+                totalVolume: orderedDays.reduce(0) { $0 + $1.totalVolume }
+            )
+        }
+        .sorted { $0.weekStart > $1.weekStart }
+
+        return HistorySnapshot(
+            weeks: weeks,
+            days: days,
+            trainingDaysCount: days.count,
+            totalSets: filteredSets.count,
+            totalVolume: filteredSets.reduce(0) { $0 + $1.volume }
+        )
+    }
+}
+
 struct HistoryView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Query(sort: \WorkoutSet.date, order: .reverse) private var allSets: [WorkoutSet]
@@ -11,6 +126,9 @@ struct HistoryView: View {
     @State private var selectedDay: Date?
     @State private var showingExportSheet = false
     @State private var now = Date()
+    @State private var snapshot = HistorySnapshot.empty
+    @State private var snapshotSignature = ""
+    @State private var rebuildTask: Task<Void, Never>?
 
     enum TimePeriod: String, CaseIterable {
         case week = "Week"
@@ -38,43 +156,37 @@ struct HistoryView: View {
         }
     }
 
-    private var filteredSets: [WorkoutSet] {
-        allSets.filter { $0.date >= startDate && $0.exercise != nil }
-    }
-
-    private var groupedByDay: [(Date, [WorkoutSet])] {
-        let calendar = Calendar.current
-        let grouped = Dictionary(grouping: filteredSets) { set in
-            calendar.startOfDay(for: set.date)
-        }
-        return grouped.sorted { $0.key > $1.key }
-    }
-
-    private var groupedByWeek: [(weekStart: Date, days: [(Date, [WorkoutSet])])] {
-        let grouped = Dictionary(grouping: groupedByDay) { day, _ in
-            weekStart(for: day)
-        }
-
-        return grouped
-            .map { weekStart, days in
-                (
-                    weekStart: weekStart,
-                    days: days.sorted { $0.0 > $1.0 }
-                )
-            }
-            .sorted { $0.weekStart > $1.weekStart }
-    }
-
     private var trainingDaysCount: Int {
-        groupedByDay.count
+        snapshot.trainingDaysCount
     }
 
     private var totalVolume: Double {
-        filteredSets.reduce(0) { $0 + $1.volume }
+        snapshot.totalVolume
     }
 
     private var totalSets: Int {
-        filteredSets.count
+        snapshot.totalSets
+    }
+
+    private var allSetsSignature: String {
+        [
+            selectedPeriod.rawValue,
+            "\(now.startOfWeek.timeIntervalSinceReferenceDate)",
+            "\(Calendar.current.startOfDay(for: now).timeIntervalSinceReferenceDate)",
+            "\(allSets.count)",
+            allSets.map { set in
+                [
+                    set.id.uuidString,
+                    set.exercise?.id.uuidString ?? "",
+                    "\(set.date.timeIntervalSinceReferenceDate)",
+                    "\(set.weightKg)",
+                    "\(set.reps)",
+                    "\(set.durationSeconds)",
+                    "\(set.setNumber)"
+                ].joined(separator: ":")
+            }
+            .joined(separator: "|")
+        ].joined(separator: "|")
     }
 
     var body: some View {
@@ -82,7 +194,7 @@ struct HistoryView: View {
             VStack(spacing: 0) {
                 periodPicker
 
-                if groupedByDay.isEmpty {
+                if snapshot.days.isEmpty {
                     emptyState
                 } else {
                     historyList
@@ -114,6 +226,12 @@ struct HistoryView: View {
         .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
             refreshNow()
         }
+        .onAppear {
+            scheduleSnapshotRebuild(force: true)
+        }
+        .onChange(of: allSetsSignature) { _, _ in
+            scheduleSnapshotRebuild()
+        }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
                 refreshNow()
@@ -126,17 +244,22 @@ struct HistoryView: View {
         now = Date()
     }
 
-    private func mondayCalendar() -> Calendar {
-        var calendar = Calendar.current
-        calendar.firstWeekday = 2
-        calendar.minimumDaysInFirstWeek = 4
-        return calendar
-    }
+    private func scheduleSnapshotRebuild(force: Bool = false) {
+        let signature = allSetsSignature
+        guard force || signature != snapshotSignature else { return }
+        snapshotSignature = signature
+        rebuildTask?.cancel()
 
-    private func weekStart(for date: Date) -> Date {
-        let calendar = mondayCalendar()
-        let components = calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: date)
-        return calendar.startOfDay(for: calendar.date(from: components) ?? date)
+        let startDate = startDate
+        let setSnapshots = allSets.compactMap(HistorySetSnapshot.init(workoutSet:))
+
+        rebuildTask = Task {
+            let built = await Task.detached(priority: .userInitiated) {
+                HistorySnapshot.build(from: setSnapshots, startDate: startDate)
+            }.value
+            guard !Task.isCancelled else { return }
+            snapshot = built
+        }
     }
 
     private var periodPicker: some View {
@@ -185,17 +308,17 @@ struct HistoryView: View {
 
     private var historyList: some View {
         List {
-            ForEach(groupedByWeek, id: \.weekStart) { week in
+            ForEach(snapshot.weeks) { week in
                 Section {
-                    ForEach(week.days, id: \.0) { date, sets in
-                        DayRowView(date: date, sets: sets)
+                    ForEach(week.days) { day in
+                        DayRowView(day: day)
                             .contentShape(Rectangle())
                             .onTapGesture {
-                                selectedDay = date
+                                selectedDay = day.date
                             }
                     }
                 } header: {
-                    WeekSummaryHeaderView(weekStart: week.weekStart, groupedDays: week.days)
+                    WeekSummaryHeaderView(week: week)
                 }
             }
         }
@@ -422,35 +545,30 @@ private struct HistoryExportView: View {
 }
 
 private struct WeekSummaryHeaderView: View {
-    let weekStart: Date
-    let groupedDays: [(Date, [WorkoutSet])]
-
-    private var allSets: [WorkoutSet] {
-        groupedDays.flatMap(\.1)
-    }
+    let week: HistoryWeekSnapshot
 
     private var weekEnd: Date {
         var calendar = Calendar.current
         calendar.firstWeekday = 2
-        return calendar.date(byAdding: .day, value: 6, to: weekStart) ?? weekStart
+        return calendar.date(byAdding: .day, value: 6, to: week.weekStart) ?? week.weekStart
     }
 
     private var totalSets: Int {
-        allSets.count
+        week.totalSets
     }
 
     private var totalVolume: Double {
-        allSets.reduce(0) { $0 + $1.volume }
+        week.totalVolume
     }
 
     private var totalTrainingDays: Int {
-        groupedDays.count
+        week.days.count
     }
 
     private var weekRangeText: String {
         let locale = LanguageManager.shared.currentLanguage.locale ?? Locale.current
         return "history.weekRange".localized(
-            with: DateFormatters.monthDayLabel(for: weekStart, locale: locale),
+            with: DateFormatters.monthDayLabel(for: week.weekStart, locale: locale),
             DateFormatters.monthDayLabel(for: weekEnd, locale: locale)
         )
     }
@@ -480,31 +598,16 @@ private struct WeekSummaryHeaderView: View {
     }
 }
 
-struct DayRowView: View {
-    let date: Date
-    let sets: [WorkoutSet]
-
-    private var exerciseNames: [String] {
-        let grouped = Dictionary(grouping: sets) { $0.exercise?.id }
-        let ordered = grouped.compactMap { (_, groupedSets) -> (String, Date)? in
-            guard let name = groupedSets.first?.exercise?.displayName else { return nil }
-            let latest = groupedSets.map(\.date).max() ?? .distantPast
-            return (name, latest)
-        }
-        return ordered.sorted { $0.1 > $1.1 }.map(\.0)
-    }
-
-    private var totalVolume: Double {
-        sets.reduce(0) { $0 + $1.volume }
-    }
+private struct DayRowView: View {
+    let day: HistoryDaySnapshot
 
     private var isToday: Bool {
-        Calendar.current.isDateInToday(date)
+        Calendar.current.isDateInToday(day.date)
     }
 
     private var formattedDayLabel: String {
         let locale = LanguageManager.shared.currentLanguage.locale ?? Locale.current
-        return DateFormatters.historyDayLabel(for: date, locale: locale)
+        return DateFormatters.historyDayLabel(for: day.date, locale: locale)
     }
 
     var body: some View {
@@ -525,19 +628,19 @@ struct DayRowView: View {
                     }
                 }
 
-                Text(exerciseNames.joined(separator: ", "))
+                Text(day.exerciseSummaryText)
                     .font(AppTextStyle.caption)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .lineLimit(nil)
             }
 
             Spacer()
 
             VStack(alignment: .trailing, spacing: 4) {
-                Text("history.sets".localized(with: sets.count))
+                Text("history.sets".localized(with: day.setCount))
                     .font(AppTextStyle.body)
 
-                Text("\(Int(totalVolume)) kg")
+                Text("\(Int(day.totalVolume)) kg")
                     .font(AppTextStyle.caption)
                     .foregroundStyle(.secondary)
             }

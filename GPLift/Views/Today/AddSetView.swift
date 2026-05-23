@@ -11,6 +11,8 @@ struct AddSetView: View {
     var prefilledReps: Int?
 
     @State private var exercises: [Exercise] = []
+    @State private var lastTrainedDates: [UUID: Date] = [:]
+    @State private var lastWeights: [UUID: Double] = [:]
     @State private var selectedExercise: Exercise?
     @State private var selectedDate: Date = Date()
     @State private var weight: Double = 20.0
@@ -77,7 +79,7 @@ struct AddSetView: View {
             ExerciseGroupSection(
                 muscleGroup: muscleGroup,
                 exercises: exercises.sorted(by: compareExercises(lhs:rhs:)),
-                sortDate: exercises.compactMap(\.lastTrainedDate).max()
+                sortDate: exercises.compactMap { lastTrainedDates[$0.id] }.max()
             )
         }
         .sorted(by: compareExerciseGroups(lhs:rhs:))
@@ -88,7 +90,7 @@ struct AddSetView: View {
     }
 
     private func compareExercises(lhs: Exercise, rhs: Exercise) -> Bool {
-        switch (lhs.lastTrainedDate, rhs.lastTrainedDate) {
+        switch (lastTrainedDates[lhs.id], lastTrainedDates[rhs.id]) {
         case let (l?, r?):
             if l != r { return l < r }
             return lhs.displayName < rhs.displayName
@@ -116,7 +118,7 @@ struct AddSetView: View {
     }
 
     private func lastTrainedLabel(for exercise: Exercise) -> String {
-        guard let lastTrained = exercise.lastTrainedDate else {
+        guard let lastTrained = lastTrainedDates[exercise.id] else {
             return "addSet.neverTrained".localized
         }
 
@@ -147,7 +149,7 @@ struct AddSetView: View {
     }
 
     private var neverTrainedCount: Int {
-        filteredExercises.filter { $0.lastTrainedDate == nil }.count
+        filteredExercises.filter { lastTrainedDates[$0.id] == nil }.count
     }
 
     private var trainedCount: Int {
@@ -587,7 +589,7 @@ struct AddSetView: View {
             return
         }
 
-        if let lastWeight = exercise.lastWeight {
+        if let lastWeight = lastWeights[exercise.id] {
             weight = lastWeight
         }
         rirSelection = -1
@@ -720,9 +722,15 @@ struct AddSetView: View {
     private func targetDaySets(for exercise: Exercise, on date: Date) -> [WorkoutSet] {
         let calendar = Calendar.current
         let targetDay = calendar.startOfDay(for: date)
-        return exercise.workoutSets.filter {
-            $0.exercise?.id == exercise.id && calendar.startOfDay(for: $0.date) == targetDay
-        }
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: targetDay) ?? targetDay
+        let exerciseID = exercise.id
+        let descriptor = FetchDescriptor<WorkoutSet>(
+            predicate: #Predicate<WorkoutSet> { set in
+                set.date >= targetDay && set.date < dayEnd && set.exercise?.id == exerciseID
+            },
+            sortBy: [SortDescriptor(\WorkoutSet.setNumber), SortDescriptor(\WorkoutSet.date)]
+        )
+        return (try? modelContext.fetch(descriptor)) ?? []
     }
 
     private func nextSetNumber(from sets: [WorkoutSet]) -> Int {
@@ -732,9 +740,14 @@ struct AddSetView: View {
     private func previousDayStartingSet(for exercise: Exercise, before date: Date) -> WorkoutSet? {
         let calendar = Calendar.current
         let targetDay = calendar.startOfDay(for: date)
-        let previousSets = exercise.workoutSets
-            .filter { calendar.startOfDay(for: $0.date) < targetDay }
-            .sorted { $0.date > $1.date }
+        let exerciseID = exercise.id
+        let descriptor = FetchDescriptor<WorkoutSet>(
+            predicate: #Predicate<WorkoutSet> { set in
+                set.date < targetDay && set.exercise?.id == exerciseID
+            },
+            sortBy: [SortDescriptor(\WorkoutSet.date, order: .reverse)]
+        )
+        let previousSets = (try? modelContext.fetch(descriptor)) ?? []
 
         guard let recentPrevious = previousSets.first else { return nil }
         let previousDay = calendar.startOfDay(for: recentPrevious.date)
@@ -808,6 +821,23 @@ struct AddSetView: View {
         do {
             let descriptor = FetchDescriptor<Exercise>(sortBy: [SortDescriptor(\Exercise.name)])
             exercises = try modelContext.fetch(descriptor)
+            let sets = try modelContext.fetch(FetchDescriptor<WorkoutSet>())
+
+            var latestDates: [UUID: Date] = [:]
+            var latestWeights: [UUID: (createdAt: Date, weight: Double)] = [:]
+            for set in sets {
+                guard let exercise = set.exercise else { continue }
+                let exerciseID = exercise.id
+                if set.date > (latestDates[exerciseID] ?? .distantPast) {
+                    latestDates[exerciseID] = set.date
+                }
+                if set.createdAt > (latestWeights[exerciseID]?.createdAt ?? .distantPast) {
+                    latestWeights[exerciseID] = (set.createdAt, set.weightKg)
+                }
+            }
+
+            lastTrainedDates = latestDates
+            lastWeights = latestWeights.mapValues(\.weight)
         } catch {
             assertionFailure("Failed to load exercises for logging: \(error)")
         }
