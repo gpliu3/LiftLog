@@ -666,17 +666,22 @@ private struct DayRowView: View {
 
                 if !day.dayNote.isEmpty {
                     HStack(alignment: .top, spacing: 4) {
-                        Image(systemName: "note.text")
-                            .font(AppTextStyle.caption2)
+                        Image(systemName: "exclamationmark.bubble.fill")
+                            .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(.orange)
-                            .padding(.top, 1)
+                            .padding(.top, 2)
 
                         Text(day.dayNote)
-                            .font(AppTextStyle.caption)
-                            .foregroundStyle(.secondary)
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color.orange.opacity(0.95))
                             .lineLimit(3)
                             .multilineTextAlignment(.leading)
                     }
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 4)
+                    .background(Color.orange.opacity(0.10))
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .padding(.top, 1)
                 }
             }
 
