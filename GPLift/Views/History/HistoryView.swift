@@ -3,17 +3,25 @@ import SwiftData
 import UIKit
 
 private struct HistorySetSnapshot: Sendable {
+    let id: UUID
     let date: Date
     let exerciseID: UUID
     let exerciseName: String
     let volume: Double
+    let setNumber: Int
+    let createdAt: Date
+    let dayNote: String
 
     init?(workoutSet: WorkoutSet) {
         guard let exercise = workoutSet.exercise else { return nil }
+        id = workoutSet.id
         date = workoutSet.date
         exerciseID = exercise.id
         exerciseName = exercise.displayName
         volume = workoutSet.volume
+        setNumber = workoutSet.setNumber
+        createdAt = workoutSet.createdAt
+        dayNote = workoutSet.dayNote?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     }
 }
 
@@ -30,6 +38,7 @@ private struct HistoryDaySnapshot: Identifiable, Sendable {
     let setCount: Int
     let totalVolume: Double
     let exerciseSummaries: [ExerciseSummary]
+    let dayNote: String
 
     var exerciseSummaryText: String {
         exerciseSummaries
@@ -86,7 +95,8 @@ private struct HistorySnapshot: Sendable {
                 date: day,
                 setCount: sets.count,
                 totalVolume: sets.reduce(0) { $0 + $1.volume },
-                exerciseSummaries: exerciseSummaries
+                exerciseSummaries: exerciseSummaries,
+                dayNote: HistorySnapshot.dayNote(from: sets)
             )
         }
         .sorted { $0.date > $1.date }
@@ -114,6 +124,26 @@ private struct HistorySnapshot: Sendable {
             totalSets: filteredSets.count,
             totalVolume: filteredSets.reduce(0) { $0 + $1.volume }
         )
+    }
+
+    private static func dayNote(from sets: [HistorySetSnapshot]) -> String {
+        sets
+            .filter { !$0.dayNote.isEmpty }
+            .sorted(by: trainingOrder(lhs:rhs:))
+            .last?
+            .dayNote ?? ""
+    }
+
+    private static func trainingOrder(lhs: HistorySetSnapshot, rhs: HistorySetSnapshot) -> Bool {
+        var calendar = Calendar.current
+        calendar.firstWeekday = 2
+        let lhsDay = calendar.startOfDay(for: lhs.date)
+        let rhsDay = calendar.startOfDay(for: rhs.date)
+        if lhsDay != rhsDay { return lhsDay < rhsDay }
+        if lhs.setNumber != rhs.setNumber { return lhs.setNumber < rhs.setNumber }
+        if lhs.date != rhs.date { return lhs.date < rhs.date }
+        if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+        return lhs.id.uuidString < rhs.id.uuidString
     }
 }
 
@@ -182,7 +212,8 @@ struct HistoryView: View {
                     "\(set.weightKg)",
                     "\(set.reps)",
                     "\(set.durationSeconds)",
-                    "\(set.setNumber)"
+                    "\(set.setNumber)",
+                    set.dayNote ?? ""
                 ].joined(separator: ":")
             }
             .joined(separator: "|")
@@ -632,6 +663,21 @@ private struct DayRowView: View {
                     .font(AppTextStyle.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(nil)
+
+                if !day.dayNote.isEmpty {
+                    HStack(alignment: .top, spacing: 4) {
+                        Image(systemName: "note.text")
+                            .font(AppTextStyle.caption2)
+                            .foregroundStyle(.orange)
+                            .padding(.top, 1)
+
+                        Text(day.dayNote)
+                            .font(AppTextStyle.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(3)
+                            .multilineTextAlignment(.leading)
+                    }
+                }
             }
 
             Spacer()
