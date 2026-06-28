@@ -4,6 +4,7 @@ import SwiftData
 struct AddSetView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    private static let topAnchorID = "add-set-top-anchor"
 
     // Pre-selected exercise (for quick add)
     var preselectedExercise: Exercise?
@@ -221,99 +222,118 @@ struct AddSetView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                // Success banner after saving
-                if justSaved {
-                    Section {
-                        HStack {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(.green)
-                            Text("addSet.savedSet".localized(with: savedSetNumber))
-                                .foregroundStyle(.secondary)
-                            Spacer()
+            ScrollViewReader { proxy in
+                Form {
+                    // Success banner after saving
+                    if justSaved {
+                        Section {
+                            HStack {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(.green)
+                                Text("addSet.savedSet".localized(with: savedSetNumber))
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                            }
+                            .padding(.vertical, 4)
                         }
-                        .padding(.vertical, 4)
+                        .listRowBackground(Color.green.opacity(0.1))
                     }
-                    .listRowBackground(Color.green.opacity(0.1))
-                }
 
-                exerciseSection
-                if selectedExercise != nil {
-                    if exerciseType == "weightReps" {
-                        weightSection
-                    }
-                    if exerciseType == "weightReps" || exerciseType == "repsOnly" {
-                        repsSection
-                    }
-                    if exerciseType == "timeOnly" {
-                        durationSection
-                    }
-                    rirSection
-                    dateSection
-                    notesSection
-                    summarySection
-                }
-            }
-            .navigationTitle("addSet.title".localized)
-            .navigationBarTitleDisplayMode(.inline)
-            .font(AppTextStyle.body)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("addSet.cancel".localized) {
-                        dismiss()
-                    }
-                }
-            }
-            .safeAreaInset(edge: .bottom) {
-                if selectedExercise != nil {
-                    HStack(spacing: 10) {
-                        Button {
-                            saveSet(andContinue: true)
-                        } label: {
-                            Label("addSet.saveAndAddAnother".localized, systemImage: "plus.circle")
-                                .font(AppTextStyle.captionStrong)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.72)
-                                .frame(maxWidth: .infinity)
+                    exerciseSection
+                        .id(Self.topAnchorID)
+                    if selectedExercise != nil {
+                        if exerciseType == "weightReps" {
+                            weightSection
                         }
-                        .buttonStyle(.bordered)
+                        if exerciseType == "weightReps" || exerciseType == "repsOnly" {
+                            repsSection
+                        }
+                        if exerciseType == "timeOnly" {
+                            durationSection
+                        }
+                        rirSection
+                        dateSection
+                        notesSection
+                        summarySection
+                    }
+                }
+                .navigationTitle("addSet.title".localized)
+                .navigationBarTitleDisplayMode(.inline)
+                .font(AppTextStyle.body)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("addSet.cancel".localized) {
+                            dismiss()
+                        }
+                    }
+                }
+                .safeAreaInset(edge: .bottom) {
+                    if selectedExercise != nil {
+                        HStack(spacing: 10) {
+                            Button {
+                                saveSet(andContinue: true)
+                            } label: {
+                                Label("addSet.saveAndAddAnother".localized, systemImage: "plus.circle")
+                                    .font(AppTextStyle.captionStrong)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.72)
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.bordered)
 
-                        Button {
-                            saveSet(andContinue: false)
-                        } label: {
-                            Label("addSet.saveAndClose".localized, systemImage: "checkmark.circle")
-                                .font(AppTextStyle.captionStrong)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.72)
-                                .frame(maxWidth: .infinity)
+                            Button {
+                                saveSet(andContinue: false)
+                            } label: {
+                                Label("addSet.saveAndClose".localized, systemImage: "checkmark.circle")
+                                    .font(AppTextStyle.captionStrong)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.72)
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.borderedProminent)
                         }
-                        .buttonStyle(.borderedProminent)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 6)
+                        .padding(.bottom, 10)
+                        .background(.thinMaterial)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 6)
-                    .padding(.bottom, 10)
-                    .background(.thinMaterial)
+                }
+                .onAppear {
+                    refreshExerciseSnapshot()
+                    setupInitialValues()
+                    scrollToTop(with: proxy, animated: false)
+                }
+                .onChange(of: selectedExercise?.id) { _, _ in
+                    scrollToTop(with: proxy, animated: true)
+                }
+                .onChange(of: selectedDate) { _, _ in
+                    if let exercise = selectedExercise {
+                        applySuggestedDefaults(for: exercise)
+                    }
+                }
+                .onChange(of: weightKgText) { _, newValue in
+                    handleWeightTextChange(from: .kg, newValue: newValue)
+                }
+                .onChange(of: weightLbText) { _, newValue in
+                    handleWeightTextChange(from: .lb, newValue: newValue)
+                }
+                .onChange(of: focusedWeightField) { oldValue, newValue in
+                    if oldValue != nil && oldValue != newValue {
+                        syncWeightFields(fromKilograms: weight)
+                    }
                 }
             }
-            .onAppear {
-                refreshExerciseSnapshot()
-                setupInitialValues()
-            }
-            .onChange(of: selectedDate) { _, _ in
-                if let exercise = selectedExercise {
-                    applySuggestedDefaults(for: exercise)
+        }
+    }
+
+    private func scrollToTop(with proxy: ScrollViewProxy, animated: Bool) {
+        DispatchQueue.main.async {
+            if animated {
+                withAnimation(.snappy(duration: 0.2)) {
+                    proxy.scrollTo(Self.topAnchorID, anchor: .top)
                 }
-            }
-            .onChange(of: weightKgText) { _, newValue in
-                handleWeightTextChange(from: .kg, newValue: newValue)
-            }
-            .onChange(of: weightLbText) { _, newValue in
-                handleWeightTextChange(from: .lb, newValue: newValue)
-            }
-            .onChange(of: focusedWeightField) { oldValue, newValue in
-                if oldValue != nil && oldValue != newValue {
-                    syncWeightFields(fromKilograms: weight)
-                }
+            } else {
+                proxy.scrollTo(Self.topAnchorID, anchor: .top)
             }
         }
     }
