@@ -79,6 +79,13 @@ enum DateFormatters {
         weekdayMonthDayLabel(for: date, locale: locale, abbreviatedWeekday: false)
     }
 
+    static func yearMonthDayLabel(for date: Date, locale: Locale) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = locale
+        formatter.setLocalizedDateFormatFromTemplate("yMMMd")
+        return formatter.string(from: date)
+    }
+
     static func historyWeekRange(startingAt weekStart: Date, locale: Locale, calendar: Calendar = .current) -> String {
         let weekEnd = calendar.date(byAdding: .day, value: 6, to: weekStart) ?? weekStart
         let start = monthDayLabel(for: weekStart, locale: locale)

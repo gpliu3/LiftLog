@@ -13,6 +13,14 @@ struct ExerciseListView: View {
     @State private var selectedExercise: Exercise?
     @State private var quickAddExercise: Exercise?
 
+    private struct ExerciseGroupSection: Identifiable {
+        let muscleGroup: String
+        let exercises: [Exercise]
+        let latestTrainingDate: Date?
+
+        var id: String { muscleGroup }
+    }
+
     private var filteredExercises: [Exercise] {
         if searchText.isEmpty {
             return exercises
@@ -25,11 +33,33 @@ struct ExerciseListView: View {
         }
     }
 
-    private var groupedExercises: [(String, [Exercise])] {
+    private var groupedExercises: [ExerciseGroupSection] {
         let grouped = Dictionary(grouping: filteredExercises) { exercise in
-            exercise.muscleGroup.isEmpty ? "Other" : exercise.muscleGroup
+            normalizedMuscleGroup(for: exercise)
         }
-        return grouped.sorted { $0.key < $1.key }
+        let allExercisesByGroup = Dictionary(grouping: exercises) { exercise in
+            normalizedMuscleGroup(for: exercise)
+        }
+
+        return grouped.map { muscleGroup, filteredGroupExercises in
+            ExerciseGroupSection(
+                muscleGroup: muscleGroup,
+                exercises: filteredGroupExercises,
+                latestTrainingDate: allExercisesByGroup[muscleGroup]?
+                    .compactMap(\.lastTrainedDate)
+                    .max()
+            )
+        }
+        .sorted { $0.muscleGroup < $1.muscleGroup }
+    }
+
+    private func normalizedMuscleGroup(for exercise: Exercise) -> String {
+        exercise.muscleGroup.isEmpty ? "Other" : exercise.muscleGroup
+    }
+
+    private func groupDateLabel(for date: Date) -> String {
+        let locale = LanguageManager.shared.currentLanguage.locale ?? Locale.current
+        return DateFormatters.yearMonthDayLabel(for: date, locale: locale)
     }
 
     var body: some View {
@@ -86,9 +116,9 @@ struct ExerciseListView: View {
 
     private var exerciseList: some View {
         List {
-            ForEach(groupedExercises, id: \.0) { muscleGroup, exercises in
-                Section(Exercise.localizedMuscleGroupName(for: muscleGroup)) {
-                    ForEach(exercises) { exercise in
+            ForEach(groupedExercises) { group in
+                Section {
+                    ForEach(group.exercises) { exercise in
                         ExerciseRowView(
                             exercise: exercise,
                             onOpenDetails: { selectedExercise = exercise },
@@ -96,7 +126,18 @@ struct ExerciseListView: View {
                         )
                     }
                     .onDelete { indexSet in
-                        deleteExercises(at: indexSet, from: exercises)
+                        deleteExercises(at: indexSet, from: group.exercises)
+                    }
+                } header: {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(Exercise.localizedMuscleGroupName(for: group.muscleGroup))
+                        Spacer(minLength: 8)
+                        if let latestTrainingDate = group.latestTrainingDate {
+                            Text(groupDateLabel(for: latestTrainingDate))
+                                .font(AppTextStyle.caption2)
+                                .foregroundStyle(.secondary)
+                                .textCase(nil)
+                        }
                     }
                 }
             }

@@ -75,12 +75,17 @@ struct AddSetView: View {
         let grouped = Dictionary(grouping: filteredExercises) { exercise in
             normalizedMuscleGroup(for: exercise)
         }
+        let allVisibleExercisesByGroup = Dictionary(grouping: visibleExercises) { exercise in
+            normalizedMuscleGroup(for: exercise)
+        }
 
         return grouped.map { muscleGroup, exercises in
             ExerciseGroupSection(
                 muscleGroup: muscleGroup,
                 exercises: exercises.sorted(by: compareExercises(lhs:rhs:)),
-                sortDate: exercises.compactMap { lastTrainedDates[$0.id] }.max()
+                sortDate: allVisibleExercisesByGroup[muscleGroup]?
+                    .compactMap { lastTrainedDates[$0.id] }
+                    .max()
             )
         }
         .sorted(by: compareExerciseGroups(lhs:rhs:))
@@ -149,6 +154,11 @@ struct AddSetView: View {
         return "addSet.daysAgo.other".localized(with: days)
     }
 
+    private func groupDateLabel(for date: Date) -> String {
+        let locale = LanguageManager.shared.currentLanguage.locale ?? Locale.current
+        return DateFormatters.yearMonthDayLabel(for: date, locale: locale)
+    }
+
     private var neverTrainedCount: Int {
         filteredExercises.filter { lastTrainedDates[$0.id] == nil }.count
     }
@@ -208,9 +218,20 @@ struct AddSetView: View {
         }
 
         ForEach(groupedExercises) { group in
-            Section(group.localizedTitle) {
+            Section {
                 ForEach(group.exercises) { exercise in
                     exerciseRow(for: exercise)
+                }
+            } header: {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(group.localizedTitle)
+                    Spacer(minLength: 8)
+                    if let sortDate = group.sortDate {
+                        Text(groupDateLabel(for: sortDate))
+                            .font(AppTextStyle.caption2)
+                            .foregroundStyle(.secondary)
+                            .textCase(nil)
+                    }
                 }
             }
         }

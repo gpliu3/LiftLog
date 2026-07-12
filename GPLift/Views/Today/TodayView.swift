@@ -429,9 +429,15 @@ private struct TodayContentView: View {
     }
 
     private var dayNoteCard: some View {
-        Section("dayNote.title".localized) {
+        Section {
             DayNoteEditor(day: todayAnchor, sets: sortedTodaySets)
                 .id(todayAnchor)
+        } header: {
+            Text("dayNote.title".localized)
+                .font(AppTextStyle.sectionTitle)
+                .fontWeight(.bold)
+                .foregroundStyle(.orange)
+                .textCase(nil)
         }
     }
 
