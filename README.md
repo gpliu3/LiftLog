@@ -111,7 +111,7 @@ GPLift/
 
 ## Release
 
-- Current App Store/TestFlight version prepared in this repo: `1.7 (69)`
+- Current App Store/TestFlight version prepared in this repo: `1.8 (69)`
 - Bundle identifier: `com.gengpuliu.LiftLog`
 - Export compliance: `ITSAppUsesNonExemptEncryption = NO`
 - Build/version values are managed from `GPLift.xcodeproj/project.pbxproj`
