@@ -11,6 +11,10 @@ struct ProgressChartView: View {
     @State private var selectedTimeRange: TimeRange = .threeMonths
     @State private var now = Date()
 
+    private var strengthExercises: [Exercise] {
+        exercises.filter(\.isStrength)
+    }
+
     enum TimeRange: String, CaseIterable {
         case oneMonth = "1M"
         case threeMonths = "3M"
@@ -149,7 +153,7 @@ struct ProgressChartView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                if exercises.isEmpty {
+                if strengthExercises.isEmpty {
                     ContentUnavailableView(
                         "progress.noExercises".localized,
                         systemImage: "chart.line.uptrend.xyaxis",
@@ -179,7 +183,7 @@ struct ProgressChartView: View {
             .navigationTitle("progress.title".localized)
             .onAppear {
                 if selectedExercise == nil {
-                    selectedExercise = exercises.first
+                selectedExercise = strengthExercises.first
                 }
             }
         }
@@ -201,7 +205,7 @@ struct ProgressChartView: View {
     private var exercisePicker: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(exercises) { exercise in
+                ForEach(strengthExercises) { exercise in
                     Button {
                         selectedExercise = exercise
                     } label: {

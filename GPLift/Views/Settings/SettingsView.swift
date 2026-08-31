@@ -107,10 +107,11 @@ struct SettingsView: View {
     }
 
     private func restoreDefaultExercises() {
-        let existingNames = Set(exercises.map(\.name))
+        let existingKeys = Set(exercises.map { "\($0.resolvedCategory.rawValue)|\($0.name)" })
         var inserted = 0
 
-        for exercise in Exercise.sampleExercises() where !existingNames.contains(exercise.name) {
+        let defaults = Exercise.sampleExercises() + Exercise.sampleCardioExercises()
+        for exercise in defaults where !existingKeys.contains("\(exercise.resolvedCategory.rawValue)|\(exercise.name)") {
             modelContext.insert(exercise)
             inserted += 1
         }

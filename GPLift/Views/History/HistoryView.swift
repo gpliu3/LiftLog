@@ -7,6 +7,8 @@ private struct HistorySetSnapshot: Sendable {
     let date: Date
     let exerciseID: UUID
     let exerciseName: String
+    let category: ExerciseCategory
+    let durationMinutes: Int
     let volume: Double
     let setNumber: Int
     let createdAt: Date
@@ -18,6 +20,8 @@ private struct HistorySetSnapshot: Sendable {
         date = workoutSet.date
         exerciseID = exercise.id
         exerciseName = exercise.displayName
+        category = exercise.resolvedCategory
+        durationMinutes = workoutSet.cardioMinutes
         volume = workoutSet.volume
         setNumber = workoutSet.setNumber
         createdAt = workoutSet.createdAt
@@ -30,6 +34,8 @@ private struct HistoryDaySnapshot: Identifiable, Sendable {
         let id: UUID
         let name: String
         let count: Int
+        let category: ExerciseCategory
+        let totalMinutes: Int
         let latestDate: Date
     }
 
@@ -40,11 +46,22 @@ private struct HistoryDaySnapshot: Identifiable, Sendable {
     let exerciseSummaries: [ExerciseSummary]
     let dayNote: String
 
-    var exerciseSummaryText: String {
+    var strengthSummaryText: String {
         exerciseSummaries
+            .filter { $0.category == .strength }
             .map { "\($0.name)x\($0.count)" }
             .joined(separator: ", ")
     }
+
+    var cardioSummaryText: String {
+        exerciseSummaries
+            .filter { $0.category == .cardio }
+            .map { "\($0.name)x\($0.totalMinutes)m" }
+            .joined(separator: ", ")
+    }
+
+    let cardioSessions: Int
+    let cardioMinutes: Int
 }
 
 private struct HistoryWeekSnapshot: Identifiable, Sendable {
@@ -53,16 +70,20 @@ private struct HistoryWeekSnapshot: Identifiable, Sendable {
     let days: [HistoryDaySnapshot]
     let totalSets: Int
     let totalVolume: Double
+    let cardioSessions: Int
+    let cardioMinutes: Int
 }
 
 private struct HistorySnapshot: Sendable {
-    static let empty = HistorySnapshot(weeks: [], days: [], trainingDaysCount: 0, totalSets: 0, totalVolume: 0)
+    static let empty = HistorySnapshot(weeks: [], days: [], trainingDaysCount: 0, totalSets: 0, totalVolume: 0, cardioSessions: 0, cardioMinutes: 0)
 
     let weeks: [HistoryWeekSnapshot]
     let days: [HistoryDaySnapshot]
     let trainingDaysCount: Int
     let totalSets: Int
     let totalVolume: Double
+    let cardioSessions: Int
+    let cardioMinutes: Int
 
     static func build(from sets: [HistorySetSnapshot], startDate: Date) -> HistorySnapshot {
         var calendar = Calendar.current
@@ -83,6 +104,8 @@ private struct HistorySnapshot: Sendable {
                     id: exerciseID,
                     name: first.exerciseName,
                     count: exerciseSets.count,
+                    category: first.category,
+                    totalMinutes: exerciseSets.reduce(0) { $0 + $1.durationMinutes },
                     latestDate: latest
                 )
             }
@@ -93,10 +116,12 @@ private struct HistorySnapshot: Sendable {
 
             return HistoryDaySnapshot(
                 date: day,
-                setCount: sets.count,
-                totalVolume: sets.reduce(0) { $0 + $1.volume },
+                setCount: sets.filter { $0.category == .strength }.count,
+                totalVolume: sets.filter { $0.category == .strength }.reduce(0) { $0 + $1.volume },
                 exerciseSummaries: exerciseSummaries,
-                dayNote: HistorySnapshot.dayNote(from: sets)
+                dayNote: HistorySnapshot.dayNote(from: sets),
+                cardioSessions: sets.filter { $0.category == .cardio }.count,
+                cardioMinutes: sets.filter { $0.category == .cardio }.reduce(0) { $0 + $1.durationMinutes }
             )
         }
         .sorted { $0.date > $1.date }
@@ -112,7 +137,9 @@ private struct HistorySnapshot: Sendable {
                 weekStart: weekStart,
                 days: orderedDays,
                 totalSets: orderedDays.reduce(0) { $0 + $1.setCount },
-                totalVolume: orderedDays.reduce(0) { $0 + $1.totalVolume }
+                totalVolume: orderedDays.reduce(0) { $0 + $1.totalVolume },
+                cardioSessions: orderedDays.reduce(0) { $0 + $1.cardioSessions },
+                cardioMinutes: orderedDays.reduce(0) { $0 + $1.cardioMinutes }
             )
         }
         .sorted { $0.weekStart > $1.weekStart }
@@ -121,8 +148,10 @@ private struct HistorySnapshot: Sendable {
             weeks: weeks,
             days: days,
             trainingDaysCount: days.count,
-            totalSets: filteredSets.count,
-            totalVolume: filteredSets.reduce(0) { $0 + $1.volume }
+            totalSets: filteredSets.filter { $0.category == .strength }.count,
+            totalVolume: filteredSets.filter { $0.category == .strength }.reduce(0) { $0 + $1.volume },
+            cardioSessions: filteredSets.filter { $0.category == .cardio }.count,
+            cardioMinutes: filteredSets.filter { $0.category == .cardio }.reduce(0) { $0 + $1.durationMinutes }
         )
     }
 
@@ -198,6 +227,9 @@ struct HistoryView: View {
         snapshot.totalSets
     }
 
+    private var cardioSessions: Int { snapshot.cardioSessions }
+    private var cardioMinutes: Int { snapshot.cardioMinutes }
+
     private var allSetsSignature: String {
         [
             selectedPeriod.rawValue,
@@ -212,6 +244,9 @@ struct HistoryView: View {
                     "\(set.weightKg)",
                     "\(set.reps)",
                     "\(set.durationSeconds)",
+                    set.exercise?.resolvedCategory.rawValue ?? ExerciseCategory.strength.rawValue,
+                    "\(set.averageHeartRate ?? 0)",
+                    "\(set.maxHeartRate ?? 0)",
                     "\(set.setNumber)",
                     set.dayNote ?? ""
                 ].joined(separator: ":")
@@ -324,6 +359,22 @@ struct HistoryView: View {
             }
             .padding(.horizontal, 14)
             .padding(.bottom, 2)
+
+            if cardioSessions > 0 {
+                Label(
+                    WorkoutSet.localizedCardioSummary(
+                        sessions: cardioSessions,
+                        minutes: cardioMinutes,
+                        includesCategory: true
+                    ),
+                    systemImage: "heart.fill"
+                )
+                .font(AppTextStyle.captionStrong)
+                .foregroundStyle(.teal)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 18)
+                .padding(.bottom, 4)
+            }
         }
         .padding(.top, 4)
         .background(Color(.systemGroupedBackground))
@@ -488,7 +539,15 @@ private struct HistoryExportView: View {
                 Label("history.export.sets".localized, systemImage: "number")
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text("\(filteredSets.count)")
+                Text("\(filteredSets.filter { $0.exercise?.isStrength == true }.count)")
+                    .fontWeight(.semibold)
+            }
+
+            HStack {
+                Label("history.cardioSessions".localized, systemImage: "heart.fill")
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text("\(filteredSets.filter { $0.exercise?.isCardio == true }.count)")
                     .fontWeight(.semibold)
             }
 
@@ -596,6 +655,9 @@ private struct WeekSummaryHeaderView: View {
         week.days.count
     }
 
+    private var cardioSessions: Int { week.cardioSessions }
+    private var cardioMinutes: Int { week.cardioMinutes }
+
     private var weekRangeText: String {
         let locale = LanguageManager.shared.currentLanguage.locale ?? Locale.current
         return "history.weekRange".localized(
@@ -622,6 +684,16 @@ private struct WeekSummaryHeaderView: View {
                 Text("history.weekVolume".localized(with: Int(totalVolume)))
                     .font(AppTextStyle.caption2)
                     .foregroundStyle(.secondary)
+            }
+
+            if cardioSessions > 0 {
+                Text(WorkoutSet.localizedCardioSummary(
+                    sessions: cardioSessions,
+                    minutes: cardioMinutes,
+                    includesCategory: true
+                ))
+                    .font(AppTextStyle.caption2)
+                    .foregroundStyle(.teal)
             }
         }
         .textCase(nil)
@@ -659,10 +731,19 @@ private struct DayRowView: View {
                     }
                 }
 
-                Text(day.exerciseSummaryText)
-                    .font(AppTextStyle.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(nil)
+                if !day.strengthSummaryText.isEmpty {
+                    Text(day.strengthSummaryText)
+                        .font(AppTextStyle.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(nil)
+                }
+
+                if !day.cardioSummaryText.isEmpty {
+                    Label(day.cardioSummaryText, systemImage: "heart.fill")
+                        .font(AppTextStyle.captionStrong)
+                        .foregroundStyle(.teal)
+                        .lineLimit(nil)
+                }
 
                 if !day.dayNote.isEmpty {
                     HStack(alignment: .top, spacing: 4) {
@@ -689,13 +770,15 @@ private struct DayRowView: View {
 
             Spacer()
 
-            VStack(alignment: .trailing, spacing: 4) {
-                Text("history.sets".localized(with: day.setCount))
-                    .font(AppTextStyle.body)
+            if day.setCount > 0 {
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("history.sets".localized(with: day.setCount))
+                        .font(AppTextStyle.body)
 
-                Text("\(Int(day.totalVolume)) kg")
-                    .font(AppTextStyle.caption)
-                    .foregroundStyle(.secondary)
+                    Text("\(Int(day.totalVolume)) kg")
+                        .font(AppTextStyle.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Image(systemName: "chevron.right")

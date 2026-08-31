@@ -13,6 +13,10 @@
 "today.exercises" = "Exercises";
 "today.addAnotherSet" = "Add another set";
 "today.duplicate" = "Duplicate";
+"today.cardio" = "Cardio";
+"today.cardioSummary.one" = "%d session • %d min";
+"today.cardioSummary.other" = "%d sessions • %d min";
+"today.addAnotherCardio" = "Add another session";
 
 /* Add Set View */
 "addSet.title" = "Log Set";
@@ -44,6 +48,14 @@
 "addSet.daysAgo.other" = "%d days ago";
 "addSet.neverTrained" = "Never trained";
 "addSet.orderingHint" = "Sorted by due: %d trained first, %d never-trained at bottom.";
+"addSet.cardioOrderingHint" = "Cardio activities are sorted from longest due to most recent.";
+"addSet.durationMinutes" = "Duration (minutes)";
+"addSet.averageHeartRate" = "Average Heart Rate";
+"addSet.maxHeartRate" = "Maximum Heart Rate";
+"addSet.heartRateOptional" = "Optional";
+"addSet.heartRateUnit" = "bpm";
+"addSet.invalidHeartRate" = "Maximum heart rate cannot be lower than average heart rate.";
+"addSet.savedCardio" = "Cardio session saved!";
 
 /* Edit Set View */
 "editSet.title" = "Edit Set";
@@ -58,6 +70,9 @@
 "exercises.export" = "Export CSV";
 "exercises.export.title" = "Export Exercises CSV";
 "exercises.export.notes" = "Exercises with Notes";
+"exercises.category" = "Category";
+"exerciseCategory.strength" = "Strength";
+"exerciseCategory.cardio" = "Cardio";
 
 /* Exercise Edit View */
 "exerciseEdit.newTitle" = "New Exercise";
@@ -79,6 +94,7 @@
 "exerciseEdit.deleteMessage" = "This will also delete all workout sets for this exercise. This action cannot be undone.";
 "exerciseEdit.cancel" = "Cancel";
 "exerciseEdit.save" = "Save";
+"exerciseEdit.categoryLocked" = "Category cannot be changed after training records exist.";
 
 /* Exercise Detail View */
 "exerciseDetail.done" = "Done";
@@ -93,6 +109,8 @@
 "exerciseDetail.totalVolume" = "Total Volume";
 "exerciseDetail.totalSets" = "Total Sets";
 "exerciseDetail.recentActivity" = "Recent Activity";
+"exerciseDetail.totalMinutes" = "Total Minutes";
+"exerciseDetail.totalSessions" = "Total Sessions";
 
 /* History View */
 "history.title" = "History";
@@ -109,6 +127,10 @@
 "history.weekRange" = "%@ - %@";
 "history.weekTrainingDays" = "%d training days";
 "history.weekVolume" = "%d kg";
+"history.cardioSummary.one" = "Cardio %d session • %dm";
+"history.cardioSummary.other" = "Cardio %d sessions • %dm";
+"history.cardioSessions" = "Cardio Sessions";
+"history.cardioMinutes" = "Cardio Minutes";
 "history.export" = "Export";
 "history.export.title" = "Export CSV";
 "history.export.range" = "Date Range";
@@ -137,6 +159,9 @@
 "dayDetail.volume" = "Volume (kg)";
 "dayDetail.subtotal" = "Subtotal";
 "dayDetail.setsVolume" = "%d sets • %d kg";
+"dayDetail.cardio" = "Cardio";
+"dayDetail.cardioSessions" = "Sessions";
+"dayDetail.cardioMinutes" = "Minutes";
 "dayNote.title" = "Today's Note";
 "dayNote.placeholder" = "Write how you felt, pain/recovery notes, or anything to remember for this training day...";
 
@@ -186,6 +211,10 @@
 "exercise.lateralRaise" = "Lateral Raise";
 "exercise.barbellCurl" = "Barbell Curl";
 "exercise.plank" = "Plank";
+"exercise.swimming" = "Swimming";
+"exercise.crossTrainer" = "Cross Trainer";
+"exercise.rowingMachine" = "Rowing Machine";
+"exercise.indoorBike" = "Indoor Bike";
 
 /* Exercise Notes */
 "exercise.benchPress.notes" = "Keep shoulder blades retracted, feet flat on floor";
@@ -247,11 +276,17 @@
 "exerciseType.weightReps" = "Weight × Reps";
 "exerciseType.repsOnly" = "Reps Only";
 "exerciseType.timeOnly" = "Time Only";
+"exerciseType.cardio" = "Duration + Heart Rate";
 "exerciseEdit.exerciseType" = "Exercise Type";
 
 /* Duration */
 "common.seconds" = "seconds";
 "common.duration" = "Duration";
+"common.minutesShort" = "%dm";
+"common.minutesUnit" = "min";
+"common.averageHeartRateShort" = "Avg %d";
+"common.maxHeartRateShort" = "Max %d";
+"common.session" = "Session %d";
 
 /* Today View - Exercise Types */
 "today.totalReps" = "Total Reps";
@@ -275,7 +310,6 @@
 "common.delete" = "Delete";
 "common.done" = "Done";
 "common.edit" = "Edit";
-"common.confirm" = "Confirm";
 "common.kg" = "kg";
 "common.lb" = "lb";
 "common.reps" = "reps";

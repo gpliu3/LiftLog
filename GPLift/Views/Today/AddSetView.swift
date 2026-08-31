@@ -12,6 +12,7 @@ struct AddSetView: View {
     var prefilledReps: Int?
 
     @State private var exercises: [Exercise] = []
+    @State private var selectedCategory: ExerciseCategory = .strength
     @State private var lastTrainedDates: [UUID: Date] = [:]
     @State private var lastWeights: [UUID: Double] = [:]
     @State private var selectedExercise: Exercise?
@@ -21,6 +22,9 @@ struct AddSetView: View {
     @State private var weightLbText: String = "44"
     @State private var reps: Int = 10
     @State private var durationSeconds: Int = 30
+    @State private var cardioMinutes: Int = 30
+    @State private var averageHeartRateText: String = ""
+    @State private var maxHeartRateText: String = ""
     @State private var rirSelection: Int = -1
     @State private var setNotes: String = ""
     @State private var showExerciseNotes: Bool = false
@@ -53,7 +57,7 @@ struct AddSetView: View {
     }
 
     private var visibleExercises: [Exercise] {
-        exercises.filter(\.isActiveResolved)
+        exercises.filter { $0.isActiveResolved && $0.resolvedCategory == selectedCategory }
     }
 
     private var filteredExercises: [Exercise] {
@@ -89,6 +93,10 @@ struct AddSetView: View {
             )
         }
         .sorted(by: compareExerciseGroups(lhs:rhs:))
+    }
+
+    private var orderedCardioExercises: [Exercise] {
+        filteredExercises.sorted(by: compareExercises(lhs:rhs:))
     }
 
     private func normalizedMuscleGroup(for exercise: Exercise) -> String {
@@ -169,6 +177,7 @@ struct AddSetView: View {
 
     private var exerciseOrderingHint: String {
         if filteredExercises.isEmpty { return "" }
+        if selectedCategory == .cardio { return "addSet.cardioOrderingHint".localized }
         return "addSet.orderingHint".localized(with: trainedCount, neverTrainedCount)
     }
 
@@ -206,6 +215,15 @@ struct AddSetView: View {
 
     @ViewBuilder
     private var exercisePickerSections: some View {
+        Section("exercises.category".localized) {
+            Picker("exercises.category".localized, selection: $selectedCategory) {
+                ForEach(ExerciseCategory.allCases) { category in
+                    Text(category.localizedName).tag(category)
+                }
+            }
+            .pickerStyle(.segmented)
+        }
+
         Section {
             TextField("addSet.searchExercises".localized, text: $searchText)
                 .textFieldStyle(.plain)
@@ -217,24 +235,52 @@ struct AddSetView: View {
             }
         }
 
-        ForEach(groupedExercises) { group in
-            Section {
-                ForEach(group.exercises) { exercise in
-                    exerciseRow(for: exercise)
-                }
-            } header: {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(group.localizedTitle)
-                    Spacer(minLength: 8)
-                    if let sortDate = group.sortDate {
-                        Text(groupDateLabel(for: sortDate))
-                            .font(AppTextStyle.caption2)
-                            .foregroundStyle(.secondary)
-                            .textCase(nil)
+        if selectedCategory == .strength {
+            ForEach(groupedExercises) { group in
+                Section {
+                    ForEach(group.exercises) { exercise in
+                        exerciseRow(for: exercise)
+                    }
+                } header: {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(group.localizedTitle)
+                        Spacer(minLength: 8)
+                        if let sortDate = group.sortDate {
+                            Text(groupDateLabel(for: sortDate))
+                                .font(AppTextStyle.caption2)
+                                .foregroundStyle(.secondary)
+                                .textCase(nil)
+                        }
                     }
                 }
             }
+        } else {
+            Section(ExerciseCategory.cardio.localizedName) {
+                ForEach(orderedCardioExercises) { exercise in
+                    exerciseRow(for: exercise)
+                }
+            }
         }
+    }
+
+    private var parsedAverageHeartRate: Int? {
+        Int(averageHeartRateText.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+
+    private var parsedMaxHeartRate: Int? {
+        Int(maxHeartRateText.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+
+    private var isHeartRateValid: Bool {
+        WorkoutSet.hasValidCardioHeartRates(
+            average: parsedAverageHeartRate,
+            maximum: parsedMaxHeartRate
+        )
+    }
+
+    private var canSave: Bool {
+        guard let exercise = selectedExercise else { return false }
+        return !exercise.isCardio || (cardioMinutes > 0 && isHeartRateValid)
     }
 
     private var nextSetNumber: Int {
@@ -251,7 +297,9 @@ struct AddSetView: View {
                             HStack {
                                 Image(systemName: "checkmark.circle.fill")
                                     .foregroundStyle(.green)
-                                Text("addSet.savedSet".localized(with: savedSetNumber))
+                                Text(selectedExercise?.isCardio == true
+                                     ? "addSet.savedCardio".localized
+                                     : "addSet.savedSet".localized(with: savedSetNumber))
                                     .foregroundStyle(.secondary)
                                 Spacer()
                             }
@@ -263,16 +311,21 @@ struct AddSetView: View {
                     exerciseSection
                         .id(Self.topAnchorID)
                     if selectedExercise != nil {
-                        if exerciseType == "weightReps" {
+                        if selectedExercise?.isCardio == true {
+                            cardioDurationSection
+                            heartRateSection
+                        } else if exerciseType == "weightReps" {
                             weightSection
                         }
                         if exerciseType == "weightReps" || exerciseType == "repsOnly" {
                             repsSection
                         }
-                        if exerciseType == "timeOnly" {
+                        if selectedExercise?.isCardio != true && exerciseType == "timeOnly" {
                             durationSection
                         }
-                        rirSection
+                        if selectedExercise?.isCardio != true {
+                            rirSection
+                        }
                         dateSection
                         notesSection
                         summarySection
@@ -301,6 +354,7 @@ struct AddSetView: View {
                                     .frame(maxWidth: .infinity)
                             }
                             .buttonStyle(.bordered)
+                            .disabled(!canSave)
 
                             Button {
                                 saveSet(andContinue: false)
@@ -312,6 +366,7 @@ struct AddSetView: View {
                                     .frame(maxWidth: .infinity)
                             }
                             .buttonStyle(.borderedProminent)
+                            .disabled(!canSave)
                         }
                         .padding(.horizontal, 16)
                         .padding(.top, 6)
@@ -326,6 +381,9 @@ struct AddSetView: View {
                 }
                 .onChange(of: selectedExercise?.id) { _, _ in
                     scrollToTop(with: proxy, animated: true)
+                }
+                .onChange(of: selectedCategory) { _, _ in
+                    searchText = ""
                 }
                 .onChange(of: selectedDate) { _, _ in
                     if let exercise = selectedExercise {
@@ -373,6 +431,7 @@ struct AddSetView: View {
 
     private func setupInitialValues() {
         if let exercise = preselectedExercise {
+            selectedCategory = exercise.resolvedCategory
             selectedExercise = exercise
             applySuggestedDefaults(for: exercise)
             if let w = prefilledWeight {
@@ -423,6 +482,12 @@ struct AddSetView: View {
                     Text(exercise.localizedMuscleGroup)
                         .font(AppTextStyle.caption)
                         .foregroundStyle(.secondary)
+                }
+
+                if exercise.isCardio {
+                    Text(ExerciseCategory.cardio.localizedName)
+                        .font(AppTextStyle.caption)
+                        .foregroundStyle(.teal)
                 }
 
                 if showExerciseNotes, !exercise.displayNotes.isEmpty {
@@ -565,14 +630,87 @@ struct AddSetView: View {
         }
     }
 
+    private var cardioDurationSection: some View {
+        Section("addSet.durationMinutes".localized) {
+            HStack {
+                Button {
+                    cardioMinutes = max(1, cardioMinutes - 1)
+                } label: {
+                    Image(systemName: "minus.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(.teal)
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                TextField("0", value: $cardioMinutes, format: .number)
+                    .font(AppTextStyle.metric)
+                    .keyboardType(.numberPad)
+                    .multilineTextAlignment(.center)
+                    .frame(width: 84)
+
+                Text("common.minutesUnit".localized)
+                    .foregroundStyle(.secondary)
+
+                Spacer()
+
+                Button {
+                    cardioMinutes += 1
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(.teal)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.vertical, 4)
+        }
+    }
+
+    private var heartRateSection: some View {
+        Section {
+            heartRateField("addSet.averageHeartRate".localized, text: $averageHeartRateText)
+            heartRateField("addSet.maxHeartRate".localized, text: $maxHeartRateText)
+
+            if !isHeartRateValid {
+                Text("addSet.invalidHeartRate".localized)
+                    .font(AppTextStyle.caption)
+                    .foregroundStyle(.red)
+            }
+        } header: {
+            Text("today.cardio".localized)
+        } footer: {
+            Text("addSet.heartRateOptional".localized)
+        }
+    }
+
+    private func heartRateField(_ label: String, text: Binding<String>) -> some View {
+        HStack {
+            Text(label)
+            Spacer()
+            TextField("—", text: text)
+                .keyboardType(.numberPad)
+                .multilineTextAlignment(.trailing)
+                .frame(width: 72)
+            Text("addSet.heartRateUnit".localized)
+                .foregroundStyle(.secondary)
+        }
+    }
+
     @ViewBuilder
     private var summarySection: some View {
         if selectedExercise != nil {
             Section {
                 HStack {
-                    Text("addSet.setNumber".localized(with: nextSetNumber))
+                    Text(selectedExercise?.isCardio == true
+                         ? "common.session".localized(with: nextSetNumber)
+                         : "addSet.setNumber".localized(with: nextSetNumber))
                     Spacer()
-                    if exerciseType == "timeOnly" {
+                    if selectedExercise?.isCardio == true {
+                        Text("common.minutesShort".localized(with: cardioMinutes))
+                            .foregroundStyle(.secondary)
+                    } else if exerciseType == "timeOnly" {
                         Text(WorkoutSet.formatDuration(durationSeconds))
                             .foregroundStyle(.secondary)
                     } else if exerciseType == "repsOnly" {
@@ -584,7 +722,16 @@ struct AddSetView: View {
                     }
                 }
 
-                if exerciseType == "weightReps" {
+                if selectedExercise?.isCardio == true {
+                    if let average = parsedAverageHeartRate {
+                        LabeledContent("addSet.averageHeartRate".localized, value: "\(average) \("addSet.heartRateUnit".localized)")
+                    }
+                    if let maximum = parsedMaxHeartRate {
+                        LabeledContent("addSet.maxHeartRate".localized, value: "\(maximum) \("addSet.heartRateUnit".localized)")
+                    }
+                }
+
+                if selectedExercise?.isCardio != true && exerciseType == "weightReps" {
                     HStack {
                         Text("addSet.est1RM".localized)
                         Spacer()
@@ -594,7 +741,7 @@ struct AddSetView: View {
                     }
                 }
 
-                if rirSelection >= 0 {
+                if selectedExercise?.isCardio != true && rirSelection >= 0 {
                     HStack {
                         Text("addSet.rir".localized)
                         Spacer()
@@ -613,6 +760,12 @@ struct AddSetView: View {
         cachedNextSetNumber = nextSetNumber(from: currentDaySets)
 
         if let latestTodaySet = currentDaySets.sorted(by: WorkoutSet.trainingOrder(lhs:rhs:)).last {
+            if exercise.isCardio {
+                cardioMinutes = max(1, latestTodaySet.cardioMinutes)
+                averageHeartRateText = latestTodaySet.averageHeartRate.map(String.init) ?? ""
+                maxHeartRateText = latestTodaySet.maxHeartRate.map(String.init) ?? ""
+                return
+            }
             weight = latestTodaySet.weightKg
             reps = latestTodaySet.reps > 0 ? latestTodaySet.reps : reps
             durationSeconds = latestTodaySet.durationSeconds > 0 ? latestTodaySet.durationSeconds : durationSeconds
@@ -622,6 +775,12 @@ struct AddSetView: View {
         }
 
         if let previousStartSet = previousDayStartingSet(for: exercise, before: selectedDate) {
+            if exercise.isCardio {
+                cardioMinutes = max(1, previousStartSet.cardioMinutes)
+                averageHeartRateText = previousStartSet.averageHeartRate.map(String.init) ?? ""
+                maxHeartRateText = previousStartSet.maxHeartRate.map(String.init) ?? ""
+                return
+            }
             weight = previousStartSet.weightKg
             reps = previousStartSet.reps > 0 ? previousStartSet.reps : reps
             durationSeconds = previousStartSet.durationSeconds > 0 ? previousStartSet.durationSeconds : durationSeconds
@@ -634,6 +793,11 @@ struct AddSetView: View {
             weight = lastWeight
         }
         rirSelection = -1
+        if exercise.isCardio {
+            cardioMinutes = 30
+            averageHeartRateText = ""
+            maxHeartRateText = ""
+        }
         syncWeightFields(fromKilograms: weight)
     }
 
@@ -800,12 +964,13 @@ struct AddSetView: View {
 
     private func saveSet(andContinue: Bool) {
         guard let exercise = selectedExercise else { return }
+        guard canSave else { return }
 
         let setNumber = nextSetNumber
 
         let saveWeight: Double = exercise.isWeightReps ? weight : 0
-        let saveReps: Int = exercise.isTimeOnly ? 0 : reps
-        let saveDuration: Int = exercise.isTimeOnly ? durationSeconds : 0
+        let saveReps: Int = exercise.isCardio || exercise.isTimeOnly ? 0 : reps
+        let saveDuration: Int = exercise.isCardio ? cardioMinutes * 60 : (exercise.isTimeOnly ? durationSeconds : 0)
         let saveDate = combinedDateWithCurrentTime(selectedDate)
 
         let workoutSet = WorkoutSet(
@@ -815,8 +980,10 @@ struct AddSetView: View {
             reps: saveReps,
             durationSeconds: saveDuration,
             setNumber: setNumber,
-            rir: rirSelection < 0 ? nil : rirSelection,
-            notes: setNotes.trimmingCharacters(in: .whitespacesAndNewlines)
+            rir: exercise.isCardio || rirSelection < 0 ? nil : rirSelection,
+            notes: setNotes.trimmingCharacters(in: .whitespacesAndNewlines),
+            averageHeartRate: exercise.isCardio ? parsedAverageHeartRate : nil,
+            maxHeartRate: exercise.isCardio ? parsedMaxHeartRate : nil
         )
 
         modelContext.insert(workoutSet)

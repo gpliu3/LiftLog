@@ -30,6 +30,7 @@ private struct TodayContentView: View {
     @Query private var daySets: [WorkoutSet]
 
     @State private var showingAddSet = false
+    @State private var quickAddExercise: Exercise?
     @State private var editingSet: WorkoutSet?
     @State private var editingExercise: Exercise?
     @State private var expandedNotes: Set<UUID> = []
@@ -63,6 +64,9 @@ private struct TodayContentView: View {
             guard let exercise = exercise else { return nil }
             return (exercise, sets.sorted { $0.setNumber < $1.setNumber })
         }.sorted { lhs, rhs in
+            if lhs.0.resolvedCategory != rhs.0.resolvedCategory {
+                return lhs.0.isStrength
+            }
             let lhsLatest = lhs.1.map(\.date).max() ?? .distantPast
             let rhsLatest = rhs.1.map(\.date).max() ?? .distantPast
             if lhsLatest != rhsLatest { return lhsLatest > rhsLatest }
@@ -86,6 +90,8 @@ private struct TodayContentView: View {
                     "\(set.weightKg)",
                     "\(set.reps)",
                     "\(set.durationSeconds)",
+                    "\(set.averageHeartRate ?? 0)",
+                    "\(set.maxHeartRate ?? 0)",
                     "\(set.rir ?? -1)"
                 ].joined(separator: ":")
             }
@@ -94,6 +100,18 @@ private struct TodayContentView: View {
 
     private var totalVolume: Double {
         todaySets.reduce(0) { $0 + $1.volume }
+    }
+
+    private var strengthSetCount: Int {
+        todaySets.filter { $0.exercise?.isStrength == true }.count
+    }
+
+    private var cardioSessions: Int {
+        todaySets.filter { $0.exercise?.isCardio == true }.count
+    }
+
+    private var cardioMinutes: Int {
+        todaySets.filter { $0.exercise?.isCardio == true }.reduce(0) { $0 + $1.cardioMinutes }
     }
 
     private var uniqueExercises: Int {
@@ -119,6 +137,9 @@ private struct TodayContentView: View {
             .font(AppTextStyle.body)
             .sheet(isPresented: $showingAddSet) {
                 AddSetView()
+            }
+            .sheet(item: $quickAddExercise) { exercise in
+                AddSetView(preselectedExercise: exercise)
             }
             .sheet(item: $editingSet) { set in
                 EditSetView(workoutSet: set)
@@ -149,6 +170,10 @@ private struct TodayContentView: View {
         return List {
             statsCard
 
+            if cardioSessions > 0 {
+                cardioSummaryCard
+            }
+
             ForEach(groups, id: \.0.id) { exercise, sets in
                 Section {
                     if expandedNotes.contains(exercise.id) {
@@ -166,18 +191,26 @@ private struct TodayContentView: View {
 
                     ForEach(sets) { set in
                         if inlineEditingSetID == set.id {
-                            InlineSetEditorRow(
-                                workoutSet: set,
-                                isPersonalBest: cachedPersonalBestSetIDs.contains(set.id),
-                                initialTarget: inlineEditingInitialTarget,
-                                onStartEditingWeight: {
-                                    scrollToSet(set.id, with: proxy)
-                                },
-                                onDone: {
-                                    inlineEditingSetID = nil
-                                }
-                            )
-                            .id(set.id)
+                            if exercise.isCardio {
+                                InlineCardioEditorRow(
+                                    workoutSet: set,
+                                    onDone: { inlineEditingSetID = nil }
+                                )
+                                .id(set.id)
+                            } else {
+                                InlineSetEditorRow(
+                                    workoutSet: set,
+                                    isPersonalBest: cachedPersonalBestSetIDs.contains(set.id),
+                                    initialTarget: inlineEditingInitialTarget,
+                                    onStartEditingWeight: {
+                                        scrollToSet(set.id, with: proxy)
+                                    },
+                                    onDone: {
+                                        inlineEditingSetID = nil
+                                    }
+                                )
+                                .id(set.id)
+                            }
                         } else {
                             SetRowView(workoutSet: set, isPersonalBest: cachedPersonalBestSetIDs.contains(set.id), onTap: { target in
                                 dismissKeyboard()
@@ -187,7 +220,11 @@ private struct TodayContentView: View {
                                     scrollToSet(set.id, with: proxy)
                                 }
                             }, onDuplicate: {
-                                quickAddSet(for: exercise, basedOn: set, todaySetsForExercise: sets)
+                                if exercise.isCardio {
+                                    quickAddExercise = exercise
+                                } else {
+                                    quickAddSet(for: exercise, basedOn: set, todaySetsForExercise: sets)
+                                }
                             }, onEdit: {
                                 editingSet = set
                             })
@@ -249,16 +286,24 @@ private struct TodayContentView: View {
 
         return Button {
             closeInlineEditor()
-            quickAddSet(for: exercise, basedOn: lastSet, todaySetsForExercise: sets)
+            if exercise.isCardio {
+                quickAddExercise = exercise
+            } else {
+                quickAddSet(for: exercise, basedOn: lastSet, todaySetsForExercise: sets)
+            }
         } label: {
             HStack {
                 Image(systemName: "plus.circle.fill")
                     .foregroundStyle(.orange)
-                Text("today.addAnotherSet".localized)
+                Text(exercise.isCardio ? "today.addAnotherCardio".localized : "today.addAnotherSet".localized)
                     .foregroundStyle(.orange)
                 Spacer()
                 if let lastSet = lastSet {
-                    if exercise.isTimeOnly {
+                    if exercise.isCardio {
+                        Text(lastSet.formattedCardioDuration)
+                            .font(AppTextStyle.caption)
+                            .foregroundStyle(.secondary)
+                    } else if exercise.isTimeOnly {
                         Text(lastSet.formattedDuration)
                             .font(AppTextStyle.caption)
                             .foregroundStyle(.secondary)
@@ -403,7 +448,7 @@ private struct TodayContentView: View {
         Section {
             HStack(spacing: 12) {
                 StatItemView(
-                    value: "\(todaySets.count)",
+                    value: "\(strengthSetCount)",
                     label: "today.sets".localized,
                     icon: "number"
                 )
@@ -423,6 +468,26 @@ private struct TodayContentView: View {
                     label: "today.exercises".localized,
                     icon: "dumbbell"
                 )
+            }
+            .padding(.vertical, 2)
+        }
+    }
+
+    private var cardioSummaryCard: some View {
+        Section {
+            HStack(spacing: 8) {
+                Image(systemName: "heart.fill")
+                    .foregroundStyle(.teal)
+                Text("today.cardio".localized)
+                    .font(AppTextStyle.bodyStrong)
+                Spacer()
+                Text(WorkoutSet.localizedCardioSummary(
+                    sessions: cardioSessions,
+                    minutes: cardioMinutes,
+                    includesCategory: false
+                ))
+                    .font(AppTextStyle.captionStrong)
+                    .foregroundStyle(.teal)
             }
             .padding(.vertical, 2)
         }
@@ -591,7 +656,9 @@ struct SetRowView: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Text("common.set".localized(with: workoutSet.setNumber))
+            Text(workoutSet.exercise?.isCardio == true
+                 ? "common.session".localized(with: workoutSet.setNumber)
+                 : "common.set".localized(with: workoutSet.setNumber))
                 .foregroundStyle(.secondary)
                 .font(AppTextStyle.caption)
                 .lineLimit(1)
@@ -603,7 +670,24 @@ struct SetRowView: View {
                     onTap?(.automatic)
                 })
 
-            if exerciseType == "timeOnly" {
+            if workoutSet.exercise?.isCardio == true {
+                HStack(spacing: 6) {
+                    Text(workoutSet.formattedCardioDuration)
+                        .font(AppTextStyle.bodyStrong)
+                        .lineLimit(1)
+
+                    if let average = workoutSet.averageHeartRate {
+                        Text("common.averageHeartRateShort".localized(with: average))
+                            .font(AppTextStyle.caption2Strong)
+                            .foregroundStyle(.teal)
+                    }
+                    if let maximum = workoutSet.maxHeartRate {
+                        Text("common.maxHeartRateShort".localized(with: maximum))
+                            .font(AppTextStyle.caption2Strong)
+                            .foregroundStyle(.pink)
+                    }
+                }
+            } else if exerciseType == "timeOnly" {
                 HStack(spacing: 6) {
                     Text(workoutSet.formattedDuration)
                         .font(AppTextStyle.bodyStrong)
@@ -732,6 +816,180 @@ struct SetRowView: View {
                         onTap?(.automatic)
                     })
             }
+        }
+    }
+}
+
+struct InlineCardioEditorRow: View {
+    @Environment(\.modelContext) private var modelContext
+    let workoutSet: WorkoutSet
+    var onDone: (() -> Void)?
+
+    @State private var durationMinutes: Int
+    @State private var averageHeartRateText: String
+    @State private var maxHeartRateText: String
+    @State private var initialDurationMinutes: Int
+    @State private var initialAverageHeartRate: Int?
+    @State private var initialMaxHeartRate: Int?
+    @State private var hasPendingChanges = false
+
+    init(workoutSet: WorkoutSet, onDone: (() -> Void)? = nil) {
+        self.workoutSet = workoutSet
+        self.onDone = onDone
+        let minutes = max(1, workoutSet.cardioMinutes)
+        _durationMinutes = State(initialValue: minutes)
+        _averageHeartRateText = State(initialValue: workoutSet.averageHeartRate.map(String.init) ?? "")
+        _maxHeartRateText = State(initialValue: workoutSet.maxHeartRate.map(String.init) ?? "")
+        _initialDurationMinutes = State(initialValue: minutes)
+        _initialAverageHeartRate = State(initialValue: workoutSet.averageHeartRate)
+        _initialMaxHeartRate = State(initialValue: workoutSet.maxHeartRate)
+    }
+
+    private var averageHeartRate: Int? {
+        Int(averageHeartRateText.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+
+    private var maxHeartRate: Int? {
+        Int(maxHeartRateText.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+
+    private var isValid: Bool {
+        durationMinutes > 0 && WorkoutSet.hasValidCardioHeartRates(
+            average: averageHeartRate,
+            maximum: maxHeartRate
+        )
+    }
+
+    var body: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Text("common.session".localized(with: workoutSet.setNumber))
+                    .font(AppTextStyle.caption)
+                    .foregroundStyle(.secondary)
+
+                Button {
+                    durationMinutes = max(1, durationMinutes - 1)
+                } label: {
+                    Image(systemName: "minus")
+                }
+                .buttonStyle(.borderless)
+
+                TextField("0", value: $durationMinutes, format: .number)
+                    .keyboardType(.numberPad)
+                    .font(AppTextStyle.bodyStrong)
+                    .multilineTextAlignment(.center)
+                    .frame(width: 52)
+
+                Text("common.minutesUnit".localized)
+                    .font(AppTextStyle.caption)
+                    .foregroundStyle(.secondary)
+
+                Button {
+                    durationMinutes += 1
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .buttonStyle(.borderless)
+
+                Spacer(minLength: 0)
+            }
+
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) {
+                    cardioHeartRateField("addSet.averageHeartRate".localized, text: $averageHeartRateText)
+                    cardioHeartRateField("addSet.maxHeartRate".localized, text: $maxHeartRateText)
+                }
+
+                VStack(spacing: 8) {
+                    cardioHeartRateField("addSet.averageHeartRate".localized, text: $averageHeartRateText)
+                    cardioHeartRateField("addSet.maxHeartRate".localized, text: $maxHeartRateText)
+                }
+            }
+
+            if !isValid {
+                Text("addSet.invalidHeartRate".localized)
+                    .font(AppTextStyle.caption2)
+                    .foregroundStyle(.red)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            HStack {
+                Button("common.cancel".localized) {
+                    cancelEditing()
+                }
+                .font(AppTextStyle.caption)
+                .buttonStyle(.borderless)
+
+                Spacer()
+
+                Button("common.confirm".localized) {
+                    saveChangesIfNeeded()
+                    onDone?()
+                }
+                .font(AppTextStyle.captionStrong)
+                .buttonStyle(.borderless)
+                .foregroundStyle(.teal)
+                .disabled(!isValid)
+            }
+        }
+        .padding(8)
+        .background(Color.teal.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .onChange(of: durationMinutes) { _, _ in hasPendingChanges = true }
+        .onChange(of: averageHeartRateText) { _, _ in hasPendingChanges = true }
+        .onChange(of: maxHeartRateText) { _, _ in hasPendingChanges = true }
+        .onDisappear {
+            if isValid { saveChangesIfNeeded() }
+        }
+    }
+
+    private func cardioHeartRateField(_ label: String, text: Binding<String>) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(label)
+                .font(AppTextStyle.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+            HStack(spacing: 3) {
+                TextField("—", text: text)
+                    .keyboardType(.numberPad)
+                    .font(AppTextStyle.bodyStrong)
+                    .frame(maxWidth: .infinity)
+                Text("addSet.heartRateUnit".localized)
+                    .font(AppTextStyle.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(7)
+        .background(Color(.secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    private func cancelEditing() {
+        durationMinutes = initialDurationMinutes
+        averageHeartRateText = initialAverageHeartRate.map(String.init) ?? ""
+        maxHeartRateText = initialMaxHeartRate.map(String.init) ?? ""
+        hasPendingChanges = false
+        onDone?()
+    }
+
+    private func saveChangesIfNeeded() {
+        guard hasPendingChanges, isValid else { return }
+        workoutSet.durationSeconds = durationMinutes * 60
+        workoutSet.averageHeartRate = averageHeartRate
+        workoutSet.maxHeartRate = maxHeartRate
+        workoutSet.weightKg = 0
+        workoutSet.reps = 0
+        workoutSet.rir = nil
+
+        do {
+            try modelContext.save()
+            initialDurationMinutes = durationMinutes
+            initialAverageHeartRate = averageHeartRate
+            initialMaxHeartRate = maxHeartRate
+            hasPendingChanges = false
+        } catch {
+            assertionFailure("Failed to save inline cardio edit: \(error)")
         }
     }
 }
@@ -1260,7 +1518,14 @@ struct ExerciseHeaderView: View {
     }
 
     private var subtitle: String {
-        if exercise.isTimeOnly {
+        if exercise.isCardio {
+            let minutes = sets.reduce(0) { $0 + $1.cardioMinutes }
+            return WorkoutSet.localizedCardioSummary(
+                sessions: sets.count,
+                minutes: minutes,
+                includesCategory: false
+            )
+        } else if exercise.isTimeOnly {
             let totalSeconds = sets.reduce(0) { $0 + $1.durationSeconds }
             return "\(sets.count) \("today.sets".localized) • \(WorkoutSet.formatDuration(totalSeconds))"
         } else if exercise.isRepsOnly {
@@ -1362,14 +1627,32 @@ struct PreviousDaySetsRow: View {
             } else {
                 ForEach(orderedSets) { set in
                     HStack(spacing: 8) {
-                        Text("common.set".localized(with: set.setNumber))
+                        Text(exercise.isCardio
+                             ? "common.session".localized(with: set.setNumber)
+                             : "common.set".localized(with: set.setNumber))
                             .font(AppTextStyle.caption2)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                             .minimumScaleFactor(0.78)
                             .frame(width: 50, alignment: .leading)
 
-                        if exercise.isTimeOnly {
+                        if exercise.isCardio {
+                            HStack(spacing: 6) {
+                                Text(set.formattedCardioDuration)
+                                    .font(AppTextStyle.captionStrong)
+                                    .lineLimit(1)
+                                if let average = set.averageHeartRate {
+                                    Text("common.averageHeartRateShort".localized(with: average))
+                                        .font(AppTextStyle.caption2Strong)
+                                        .foregroundStyle(.teal)
+                                }
+                                if let maximum = set.maxHeartRate {
+                                    Text("common.maxHeartRateShort".localized(with: maximum))
+                                        .font(AppTextStyle.caption2Strong)
+                                        .foregroundStyle(.pink)
+                                }
+                            }
+                        } else if exercise.isTimeOnly {
                             HStack(spacing: 6) {
                                 Text(set.formattedDuration)
                                     .font(AppTextStyle.captionStrong)

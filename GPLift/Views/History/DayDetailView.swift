@@ -28,7 +28,13 @@ struct DayDetailView: View {
     }
 
     private var totalVolume: Double {
-        daySets.reduce(0) { $0 + $1.volume }
+        daySets.filter { $0.exercise?.isStrength == true }.reduce(0) { $0 + $1.volume }
+    }
+
+    private var strengthSetCount: Int { daySets.filter { $0.exercise?.isStrength == true }.count }
+    private var cardioSessions: Int { daySets.filter { $0.exercise?.isCardio == true }.count }
+    private var cardioMinutes: Int {
+        daySets.filter { $0.exercise?.isCardio == true }.reduce(0) { $0 + $1.cardioMinutes }
     }
 
     private var uniqueExercises: Int {
@@ -60,7 +66,12 @@ struct DayDetailView: View {
                     } header: {
                         HStack {
                             Text(exercise.displayName)
-                            if !exercise.muscleGroup.isEmpty {
+                            if exercise.isCardio {
+                                Spacer()
+                                Text(ExerciseCategory.cardio.localizedName)
+                                    .font(AppTextStyle.caption2)
+                                    .foregroundStyle(.teal)
+                            } else if !exercise.muscleGroup.isEmpty {
                                 Spacer()
                                 Text(exercise.localizedMuscleGroup)
                                     .font(AppTextStyle.caption2)
@@ -88,7 +99,7 @@ struct DayDetailView: View {
         Section {
             HStack {
                 VStack {
-                    Text("\(daySets.count)")
+                    Text("\(strengthSetCount)")
                         .font(AppTextStyle.metric)
                     Text("dayDetail.sets".localized)
                         .font(AppTextStyle.caption)
@@ -119,6 +130,23 @@ struct DayDetailView: View {
                 .frame(maxWidth: .infinity)
             }
             .padding(.vertical, 2)
+
+            if cardioSessions > 0 {
+                HStack {
+                    Label(
+                        WorkoutSet.localizedCardioSummary(
+                            sessions: cardioSessions,
+                            minutes: cardioMinutes,
+                            includesCategory: true
+                        ),
+                        systemImage: "heart.fill"
+                    )
+                        .font(AppTextStyle.captionStrong)
+                        .foregroundStyle(.teal)
+                    Spacer()
+                }
+                .padding(.horizontal, 4)
+            }
         }
     }
 
@@ -128,7 +156,16 @@ struct DayDetailView: View {
             Text("dayDetail.subtotal".localized)
                 .foregroundStyle(.secondary)
             Spacer()
-            if exerciseType == "timeOnly" {
+            if sets.first?.exercise?.isCardio == true {
+                let minutes = sets.reduce(0) { $0 + $1.cardioMinutes }
+                Text(WorkoutSet.localizedCardioSummary(
+                    sessions: sets.count,
+                    minutes: minutes,
+                    includesCategory: false
+                ))
+                    .font(AppTextStyle.body)
+                    .foregroundStyle(.teal)
+            } else if exerciseType == "timeOnly" {
                 let totalSeconds = sets.reduce(0) { $0 + $1.durationSeconds }
                 Text("dayDetail.setsDuration".localized(with: sets.count, WorkoutSet.formatDuration(totalSeconds)))
                     .font(AppTextStyle.body)
@@ -182,7 +219,9 @@ struct DaySetRowView: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Text("common.set".localized(with: workoutSet.setNumber))
+            Text(workoutSet.exercise?.isCardio == true
+                 ? "common.session".localized(with: workoutSet.setNumber)
+                 : "common.set".localized(with: workoutSet.setNumber))
                 .foregroundStyle(.secondary)
                 .font(AppTextStyle.caption)
                 .lineLimit(1)
@@ -190,7 +229,24 @@ struct DaySetRowView: View {
                 .fixedSize(horizontal: true, vertical: false)
                 .frame(width: 50, alignment: .leading)
 
-            if exerciseType == "timeOnly" {
+            if workoutSet.exercise?.isCardio == true {
+                HStack(spacing: 6) {
+                    Text(workoutSet.formattedCardioDuration)
+                        .font(AppTextStyle.bodyStrong)
+                        .lineLimit(1)
+
+                    if let average = workoutSet.averageHeartRate {
+                        Text("common.averageHeartRateShort".localized(with: average))
+                            .font(AppTextStyle.caption2Strong)
+                            .foregroundStyle(.teal)
+                    }
+                    if let maximum = workoutSet.maxHeartRate {
+                        Text("common.maxHeartRateShort".localized(with: maximum))
+                            .font(AppTextStyle.caption2Strong)
+                            .foregroundStyle(.pink)
+                    }
+                }
+            } else if exerciseType == "timeOnly" {
                 HStack(spacing: 6) {
                     Text(workoutSet.formattedDuration)
                         .font(AppTextStyle.bodyStrong)

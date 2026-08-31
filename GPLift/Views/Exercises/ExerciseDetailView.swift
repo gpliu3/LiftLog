@@ -55,6 +55,10 @@ struct ExerciseDetailView: View {
         exercise.workoutSets.reduce(0) { $0 + $1.reps }
     }
 
+    private var totalCardioMinutes: Int {
+        exercise.workoutSets.reduce(0) { $0 + $1.cardioMinutes }
+    }
+
     var body: some View {
         NavigationStack {
             List {
@@ -89,11 +93,13 @@ struct ExerciseDetailView: View {
 
     private var detailsSection: some View {
         Section {
+            LabeledContent("exercises.category".localized, value: exercise.resolvedCategory.localizedName)
+
             if !exercise.muscleGroup.isEmpty {
                 LabeledContent("exerciseDetail.muscleGroup".localized, value: exercise.localizedMuscleGroup)
             }
 
-            if !exercise.isWeightReps {
+            if exercise.isStrength && !exercise.isWeightReps {
                 LabeledContent("exerciseEdit.exerciseType".localized, value: exercise.localizedExerciseType)
             }
 
@@ -116,9 +122,14 @@ struct ExerciseDetailView: View {
 
     private var statsSection: some View {
         Section("exerciseDetail.statistics".localized) {
-            LabeledContent("exerciseDetail.timesPerformed".localized, value: "exerciseDetail.sessionsUnit".localized(with: exercise.timesPerformed))
+            LabeledContent(
+                exercise.isCardio ? "exerciseDetail.totalSessions".localized : "exerciseDetail.timesPerformed".localized,
+                value: "exerciseDetail.sessionsUnit".localized(with: exercise.timesPerformed)
+            )
 
-            if exercise.isWeightReps {
+            if exercise.isCardio {
+                LabeledContent("exerciseDetail.totalMinutes".localized, value: "common.minutesShort".localized(with: totalCardioMinutes))
+            } else if exercise.isWeightReps {
                 if let pr = personalRecord {
                     LabeledContent("exerciseDetail.personalRecord".localized) {
                         Text("\(String(format: "%.1f", pr)) kg")
@@ -142,7 +153,9 @@ struct ExerciseDetailView: View {
                 LabeledContent("progress.totalReps".localized, value: "\(totalReps)")
             }
 
-            LabeledContent("exerciseDetail.totalSets".localized, value: "\(exercise.workoutSets.count)")
+            if exercise.isStrength {
+                LabeledContent("exerciseDetail.totalSets".localized, value: "\(exercise.workoutSets.count)")
+            }
         }
     }
 
@@ -157,13 +170,28 @@ struct ExerciseDetailView: View {
 
                     Spacer()
 
-                    Text("common.set".localized(with: set.setNumber))
+                    Text(exercise.isCardio
+                         ? "common.session".localized(with: set.setNumber)
+                         : "common.set".localized(with: set.setNumber))
                         .font(AppTextStyle.caption)
                         .lineLimit(1)
                         .minimumScaleFactor(0.78)
                         .foregroundStyle(.secondary)
 
-                    if exercise.isTimeOnly {
+                    if exercise.isCardio {
+                        Text(set.formattedCardioDuration)
+                            .font(AppTextStyle.bodyStrong)
+                        if let average = set.averageHeartRate {
+                            Text("common.averageHeartRateShort".localized(with: average))
+                                .font(AppTextStyle.caption2Strong)
+                                .foregroundStyle(.teal)
+                        }
+                        if let maximum = set.maxHeartRate {
+                            Text("common.maxHeartRateShort".localized(with: maximum))
+                                .font(AppTextStyle.caption2Strong)
+                                .foregroundStyle(.pink)
+                        }
+                    } else if exercise.isTimeOnly {
                         Text(set.formattedDuration)
                             .font(AppTextStyle.bodyStrong)
                     } else if exercise.isRepsOnly {

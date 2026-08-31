@@ -8,6 +8,7 @@ struct ExerciseListView: View {
     @State private var languageManager = LanguageManager.shared
 
     @State private var searchText = ""
+    @State private var selectedCategory: ExerciseCategory = .strength
     @State private var showingAddExercise = false
     @State private var showingExportSheet = false
     @State private var selectedExercise: Exercise?
@@ -22,10 +23,9 @@ struct ExerciseListView: View {
     }
 
     private var filteredExercises: [Exercise] {
-        if searchText.isEmpty {
-            return exercises
-        }
-        return exercises.filter {
+        let categoryExercises = exercises.filter { $0.resolvedCategory == selectedCategory }
+        if searchText.isEmpty { return categoryExercises }
+        return categoryExercises.filter {
             $0.name.localizedCaseInsensitiveContains(searchText) ||
             $0.displayName.localizedCaseInsensitiveContains(searchText) ||
             $0.muscleGroup.localizedCaseInsensitiveContains(searchText) ||
@@ -37,7 +37,7 @@ struct ExerciseListView: View {
         let grouped = Dictionary(grouping: filteredExercises) { exercise in
             normalizedMuscleGroup(for: exercise)
         }
-        let allExercisesByGroup = Dictionary(grouping: exercises) { exercise in
+        let allExercisesByGroup = Dictionary(grouping: exercises.filter(\.isStrength)) { exercise in
             normalizedMuscleGroup(for: exercise)
         }
 
@@ -64,8 +64,9 @@ struct ExerciseListView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if exercises.isEmpty {
+            VStack(spacing: 0) {
+                categoryPicker
+                if filteredExercises.isEmpty {
                     emptyState
                 } else {
                     exerciseList
@@ -91,7 +92,7 @@ struct ExerciseListView: View {
                 }
             }
             .sheet(isPresented: $showingAddExercise) {
-                ExerciseEditView(exercise: nil)
+                ExerciseEditView(exercise: nil, initialCategory: selectedCategory)
             }
             .sheet(item: $selectedExercise) { exercise in
                 ExerciseDetailView(exercise: exercise)
@@ -101,6 +102,9 @@ struct ExerciseListView: View {
             }
             .sheet(isPresented: $showingExportSheet) {
                 ExerciseExportView(exercises: exercises)
+            }
+            .onChange(of: selectedCategory) { _, _ in
+                searchText = ""
             }
         }
         .id(languageManager.currentLanguage)
@@ -114,35 +118,67 @@ struct ExerciseListView: View {
         )
     }
 
+    private var categoryPicker: some View {
+        Picker("exercises.category".localized, selection: $selectedCategory) {
+            ForEach(ExerciseCategory.allCases) { category in
+                Text(category.localizedName).tag(category)
+            }
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(Color(.systemGroupedBackground))
+    }
+
+    @ViewBuilder
     private var exerciseList: some View {
-        List {
-            ForEach(groupedExercises) { group in
-                Section {
-                    ForEach(group.exercises) { exercise in
-                        ExerciseRowView(
-                            exercise: exercise,
-                            onOpenDetails: { selectedExercise = exercise },
-                            onQuickAdd: { quickAddExercise = exercise }
-                        )
-                    }
-                    .onDelete { indexSet in
-                        deleteExercises(at: indexSet, from: group.exercises)
-                    }
-                } header: {
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(Exercise.localizedMuscleGroupName(for: group.muscleGroup))
-                        Spacer(minLength: 8)
-                        if let latestTrainingDate = group.latestTrainingDate {
-                            Text(groupDateLabel(for: latestTrainingDate))
-                                .font(AppTextStyle.caption2)
-                                .foregroundStyle(.secondary)
-                                .textCase(nil)
+        if selectedCategory == .strength {
+            List {
+                ForEach(groupedExercises) { group in
+                    Section {
+                        ForEach(group.exercises) { exercise in
+                            exerciseRow(exercise)
+                        }
+                        .onDelete { indexSet in
+                            deleteExercises(at: indexSet, from: group.exercises)
+                        }
+                    } header: {
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Text(Exercise.localizedMuscleGroupName(for: group.muscleGroup))
+                            Spacer(minLength: 8)
+                            if let latestTrainingDate = group.latestTrainingDate {
+                                Text(groupDateLabel(for: latestTrainingDate))
+                                    .font(AppTextStyle.caption2)
+                                    .foregroundStyle(.secondary)
+                                    .textCase(nil)
+                            }
                         }
                     }
                 }
             }
+            .environment(\.defaultMinListRowHeight, 24)
+        } else {
+            List {
+                Section(ExerciseCategory.cardio.localizedName) {
+                    ForEach(filteredExercises.sorted { $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending }) { exercise in
+                        exerciseRow(exercise)
+                    }
+                    .onDelete { indexSet in
+                        let ordered = filteredExercises.sorted { $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending }
+                        deleteExercises(at: indexSet, from: ordered)
+                    }
+                }
+            }
+            .environment(\.defaultMinListRowHeight, 24)
         }
-        .environment(\.defaultMinListRowHeight, 24)
+    }
+
+    private func exerciseRow(_ exercise: Exercise) -> some View {
+        ExerciseRowView(
+            exercise: exercise,
+            onOpenDetails: { selectedExercise = exercise },
+            onQuickAdd: { quickAddExercise = exercise }
+        )
     }
 
     private func deleteExercises(at offsets: IndexSet, from exercises: [Exercise]) {

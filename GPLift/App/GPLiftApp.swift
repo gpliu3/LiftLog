@@ -4,6 +4,7 @@ import SwiftData
 @main
 struct GPLiftApp: App {
     private let initialSeedCompletedKey = "hasCompletedInitialExerciseSeed"
+    private let initialCardioSeedCompletedKey = "hasCompletedInitialCardioExerciseSeedV1"
     private let setNumberNormalizationCompletedKey = "hasCompletedSetNumberNormalizationV1"
 
     var sharedModelContainer: ModelContainer = {
@@ -43,6 +44,7 @@ struct GPLiftApp: App {
             let existingExercises = try context.fetch(descriptor)
             let hasCompletedInitialSeed = defaults.bool(forKey: initialSeedCompletedKey)
             var changed = false
+            var shouldMarkCardioSeedCompleted = false
 
             // Seed defaults only once for an empty library.
             // Existing users are marked as seeded and their exercise changes are respected.
@@ -56,8 +58,26 @@ struct GPLiftApp: App {
                 defaults.set(true, forKey: initialSeedCompletedKey)
             }
 
+            // Introduce cardio defaults exactly once. Removing one later remains respected.
+            if !defaults.bool(forKey: initialCardioSeedCompletedKey) {
+                let existingCardioNames = Set(
+                    existingExercises
+                        .filter(\.isCardio)
+                        .map(\.name)
+                )
+                for exercise in Exercise.sampleCardioExercises() where !existingCardioNames.contains(exercise.name) {
+                    context.insert(exercise)
+                    changed = true
+                }
+                shouldMarkCardioSeedCompleted = true
+            }
+
             if changed {
                 try context.save()
+            }
+
+            if shouldMarkCardioSeedCompleted {
+                defaults.set(true, forKey: initialCardioSeedCompletedKey)
             }
 
             if !defaults.bool(forKey: setNumberNormalizationCompletedKey) {

@@ -1,6 +1,20 @@
 import Foundation
 import SwiftData
 
+enum ExerciseCategory: String, CaseIterable, Identifiable, Sendable {
+    case strength
+    case cardio
+
+    var id: String { rawValue }
+
+    var localizedName: String {
+        switch self {
+        case .strength: return "exerciseCategory.strength".localized
+        case .cardio: return "exerciseCategory.cardio".localized
+        }
+    }
+}
+
 @Model
 final class Exercise {
     var id: UUID
@@ -8,6 +22,8 @@ final class Exercise {
     var notes: String
     var muscleGroup: String
     var exerciseType: String
+    // Optional so every pre-cardio exercise resolves to Strength after migration.
+    var category: String?
     var isActive: Bool?
     var createdAt: Date
 
@@ -20,6 +36,7 @@ final class Exercise {
         notes: String = "",
         muscleGroup: String = "",
         exerciseType: String = "weightReps",
+        category: ExerciseCategory = .strength,
         isActive: Bool = true,
         createdAt: Date = Date()
     ) {
@@ -28,13 +45,20 @@ final class Exercise {
         self.notes = notes
         self.muscleGroup = muscleGroup
         self.exerciseType = exerciseType
+        self.category = category.rawValue
         self.isActive = isActive
         self.createdAt = createdAt
     }
 
-    var isWeightReps: Bool { exerciseType == "weightReps" }
-    var isRepsOnly: Bool { exerciseType == "repsOnly" }
-    var isTimeOnly: Bool { exerciseType == "timeOnly" }
+    var resolvedCategory: ExerciseCategory {
+        ExerciseCategory(rawValue: category ?? "") ?? .strength
+    }
+
+    var isStrength: Bool { resolvedCategory == .strength }
+    var isCardio: Bool { resolvedCategory == .cardio }
+    var isWeightReps: Bool { isStrength && exerciseType == "weightReps" }
+    var isRepsOnly: Bool { isStrength && exerciseType == "repsOnly" }
+    var isTimeOnly: Bool { isStrength && exerciseType == "timeOnly" }
     var isActiveResolved: Bool { isActive ?? true }
 
     var localizedExerciseType: String {
@@ -42,6 +66,7 @@ final class Exercise {
     }
 
     var timesPerformed: Int {
+        if isCardio { return workoutSets.count }
         let uniqueDates = Set(workoutSets.map { Calendar.current.startOfDay(for: $0.date) })
         return uniqueDates.count
     }
@@ -109,6 +134,10 @@ extension Exercise {
         "Lateral Raise": "exercise.lateralRaise",
         "Barbell Curl": "exercise.barbellCurl",
         "Plank": "exercise.plank",
+        "Swimming": "exercise.swimming",
+        "Cross Trainer": "exercise.crossTrainer",
+        "Rowing Machine": "exercise.rowingMachine",
+        "Indoor Bike": "exercise.indoorBike",
     ]
 
     static let exerciseTypes = ["weightReps", "repsOnly", "timeOnly"]
@@ -118,6 +147,7 @@ extension Exercise {
         case "weightReps": return "exerciseType.weightReps".localized
         case "repsOnly": return "exerciseType.repsOnly".localized
         case "timeOnly": return "exerciseType.timeOnly".localized
+        case "cardio": return "exerciseType.cardio".localized
         default: return type
         }
     }
@@ -175,6 +205,15 @@ extension Exercise {
             Exercise(name: "Lateral Raise", muscleGroup: "Shoulders"),
             Exercise(name: "Barbell Curl", muscleGroup: "Arms"),
             Exercise(name: "Plank", muscleGroup: "Core", exerciseType: "timeOnly"),
+        ]
+    }
+
+    static func sampleCardioExercises() -> [Exercise] {
+        [
+            Exercise(name: "Swimming", exerciseType: "cardio", category: .cardio),
+            Exercise(name: "Cross Trainer", exerciseType: "cardio", category: .cardio),
+            Exercise(name: "Rowing Machine", exerciseType: "cardio", category: .cardio),
+            Exercise(name: "Indoor Bike", exerciseType: "cardio", category: .cardio),
         ]
     }
 }

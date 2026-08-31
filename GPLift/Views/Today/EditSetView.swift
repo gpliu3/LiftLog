@@ -10,6 +10,9 @@ struct EditSetView: View {
     @State private var weight: Double
     @State private var reps: Int
     @State private var durationSeconds: Int
+    @State private var cardioMinutes: Int
+    @State private var averageHeartRateText: String
+    @State private var maxHeartRateText: String
     @State private var rirSelection: Int
     @State private var notes: String
     @State private var showExerciseNotes: Bool = false
@@ -23,6 +26,9 @@ struct EditSetView: View {
         _weight = State(initialValue: workoutSet.weightKg)
         _reps = State(initialValue: workoutSet.reps)
         _durationSeconds = State(initialValue: workoutSet.durationSeconds)
+        _cardioMinutes = State(initialValue: max(1, workoutSet.cardioMinutes))
+        _averageHeartRateText = State(initialValue: workoutSet.averageHeartRate.map(String.init) ?? "")
+        _maxHeartRateText = State(initialValue: workoutSet.maxHeartRate.map(String.init) ?? "")
         _rirSelection = State(initialValue: workoutSet.rir ?? -1)
         _notes = State(initialValue: workoutSet.notes)
     }
@@ -31,7 +37,10 @@ struct EditSetView: View {
         NavigationStack {
             Form {
                 exerciseInfo
-                if exerciseType == "weightReps" {
+                if workoutSet.exercise?.isCardio == true {
+                    cardioDurationSection
+                    heartRateSection
+                } else if exerciseType == "weightReps" {
                     weightSection
                 }
                 if exerciseType == "weightReps" || exerciseType == "repsOnly" {
@@ -40,7 +49,9 @@ struct EditSetView: View {
                 if exerciseType == "timeOnly" {
                     durationSection
                 }
-                rirSection
+                if workoutSet.exercise?.isCardio != true {
+                    rirSection
+                }
                 notesSection
                 summarySection
             }
@@ -57,10 +68,28 @@ struct EditSetView: View {
                     Button("common.save".localized) {
                         saveChanges()
                     }
+                    .disabled(!canSave)
                     .fontWeight(.semibold)
                 }
             }
         }
+    }
+
+    private var averageHeartRate: Int? {
+        Int(averageHeartRateText.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+
+    private var maxHeartRate: Int? {
+        Int(maxHeartRateText.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+
+    private var canSave: Bool {
+        guard workoutSet.exercise?.isCardio == true else { return true }
+        guard cardioMinutes > 0 else { return false }
+        return WorkoutSet.hasValidCardioHeartRates(
+            average: averageHeartRate,
+            maximum: maxHeartRate
+        )
     }
 
     private var exerciseInfo: some View {
@@ -85,7 +114,9 @@ struct EditSetView: View {
 
                     Spacer()
 
-                    Text("common.set".localized(with: workoutSet.setNumber))
+                    Text(exercise.isCardio
+                         ? "common.session".localized(with: workoutSet.setNumber)
+                         : "common.set".localized(with: workoutSet.setNumber))
                         .foregroundStyle(.secondary)
                 }
 
@@ -242,9 +273,61 @@ struct EditSetView: View {
         }
     }
 
+    private var cardioDurationSection: some View {
+        Section("addSet.durationMinutes".localized) {
+            Stepper(value: $cardioMinutes, in: 1...1440) {
+                HStack {
+                    TextField("0", value: $cardioMinutes, format: .number)
+                        .keyboardType(.numberPad)
+                        .font(AppTextStyle.metric)
+                    Spacer()
+                    Text("common.minutesUnit".localized)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private var heartRateSection: some View {
+        Section {
+            heartRateField("addSet.averageHeartRate".localized, text: $averageHeartRateText)
+            heartRateField("addSet.maxHeartRate".localized, text: $maxHeartRateText)
+            if !canSave {
+                Text("addSet.invalidHeartRate".localized)
+                    .font(AppTextStyle.caption)
+                    .foregroundStyle(.red)
+            }
+        } header: {
+            Text("today.cardio".localized)
+        } footer: {
+            Text("addSet.heartRateOptional".localized)
+        }
+    }
+
+    private func heartRateField(_ label: String, text: Binding<String>) -> some View {
+        HStack {
+            Text(label)
+            Spacer()
+            TextField("—", text: text)
+                .keyboardType(.numberPad)
+                .multilineTextAlignment(.trailing)
+                .frame(width: 72)
+            Text("addSet.heartRateUnit".localized)
+                .foregroundStyle(.secondary)
+        }
+    }
+
     private var summarySection: some View {
         Section("addSet.summary".localized) {
-            if exerciseType == "timeOnly" {
+            if workoutSet.exercise?.isCardio == true {
+                LabeledContent("common.duration".localized, value: "common.minutesShort".localized(with: cardioMinutes))
+                if let averageHeartRate {
+                    LabeledContent("addSet.averageHeartRate".localized, value: "\(averageHeartRate) \("addSet.heartRateUnit".localized)")
+                }
+                if let maxHeartRate {
+                    LabeledContent("addSet.maxHeartRate".localized, value: "\(maxHeartRate) \("addSet.heartRateUnit".localized)")
+                }
+            } else if exerciseType == "timeOnly" {
                 HStack {
                     Text("common.duration".localized)
                     Spacer()
@@ -274,11 +357,22 @@ struct EditSetView: View {
     }
 
     private func saveChanges() {
-        workoutSet.weightKg = exerciseType == "weightReps" ? weight : 0
-        workoutSet.reps = exerciseType == "timeOnly" ? 0 : reps
-        workoutSet.durationSeconds = exerciseType == "timeOnly" ? durationSeconds : 0
-        workoutSet.rir = rirSelection < 0 ? nil : rirSelection
+        guard canSave else { return }
+        let isCardio = workoutSet.exercise?.isCardio == true
+        workoutSet.weightKg = !isCardio && exerciseType == "weightReps" ? weight : 0
+        workoutSet.reps = isCardio || exerciseType == "timeOnly" ? 0 : reps
+        workoutSet.durationSeconds = isCardio ? cardioMinutes * 60 : (exerciseType == "timeOnly" ? durationSeconds : 0)
+        workoutSet.rir = isCardio || rirSelection < 0 ? nil : rirSelection
+        workoutSet.averageHeartRate = isCardio ? averageHeartRate : nil
+        workoutSet.maxHeartRate = isCardio ? maxHeartRate : nil
         workoutSet.notes = notes
+
+        do {
+            try modelContext.save()
+        } catch {
+            assertionFailure("Failed to save set edit: \(error)")
+            return
+        }
 
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.success)

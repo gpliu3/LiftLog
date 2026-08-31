@@ -7,12 +7,18 @@ struct ExerciseEditView: View {
 
     let exercise: Exercise?
 
+    @State private var category: ExerciseCategory
     @State private var name: String = ""
     @State private var exerciseType: String = "weightReps"
     @State private var muscleGroup: String = ""
     @State private var notes: String = ""
     @State private var isActive = true
     @State private var showingDeleteAlert = false
+
+    init(exercise: Exercise?, initialCategory: ExerciseCategory = .strength) {
+        self.exercise = exercise
+        _category = State(initialValue: exercise?.resolvedCategory ?? initialCategory)
+    }
 
     private var isEditing: Bool {
         exercise != nil
@@ -25,41 +31,59 @@ struct ExerciseEditView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section("exercises.category".localized) {
+                    Picker("exercises.category".localized, selection: $category) {
+                        ForEach(ExerciseCategory.allCases) { category in
+                            Text(category.localizedName).tag(category)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .disabled(exercise?.workoutSets.isEmpty == false)
+
+                    if exercise?.workoutSets.isEmpty == false {
+                        Text("exerciseEdit.categoryLocked".localized)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
                 Section("exerciseEdit.name".localized) {
                     TextField("exerciseEdit.namePlaceholder".localized, text: $name)
                         .textInputAutocapitalization(.words)
                 }
 
-                Section("exerciseEdit.exerciseType".localized) {
-                    Picker("exerciseEdit.exerciseType".localized, selection: $exerciseType) {
-                        ForEach(Exercise.localizedExerciseTypes, id: \.key) { type in
-                            Text(type.display).tag(type.key)
+                if category == .strength {
+                    Section("exerciseEdit.exerciseType".localized) {
+                        Picker("exerciseEdit.exerciseType".localized, selection: $exerciseType) {
+                            ForEach(Exercise.localizedExerciseTypes, id: \.key) { type in
+                                Text(type.display).tag(type.key)
+                            }
                         }
+                        .pickerStyle(.segmented)
                     }
-                    .pickerStyle(.segmented)
-                }
 
-                Section("exerciseEdit.muscleGroup".localized) {
-                    Picker("exerciseEdit.muscleGroup".localized, selection: $muscleGroup) {
-                        Text("exerciseEdit.muscleGroupNone".localized).tag("")
-                        ForEach(Exercise.localizedMuscleGroups, id: \.key) { group in
-                            Text(group.display).tag(group.key)
+                    Section("exerciseEdit.muscleGroup".localized) {
+                        Picker("exerciseEdit.muscleGroup".localized, selection: $muscleGroup) {
+                            Text("exerciseEdit.muscleGroupNone".localized).tag("")
+                            ForEach(Exercise.localizedMuscleGroups, id: \.key) { group in
+                                Text(group.display).tag(group.key)
+                            }
                         }
+                        .pickerStyle(.menu)
                     }
-                    .pickerStyle(.menu)
-                }
 
-                Section("exerciseEdit.notes".localized) {
-                    let defaultNotes = exercise?.displayNotes ?? ""
-                    let placeholder = !defaultNotes.isEmpty && notes.isEmpty
-                        ? defaultNotes
-                        : "exerciseEdit.notesPlaceholder".localized
-                    TextField(placeholder, text: $notes, axis: .vertical)
-                        .lineLimit(3...6)
-                    if !defaultNotes.isEmpty && notes.isEmpty {
-                        Text("exerciseEdit.defaultNotesHint".localized)
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
+                    Section("exerciseEdit.notes".localized) {
+                        let defaultNotes = exercise?.displayNotes ?? ""
+                        let placeholder = !defaultNotes.isEmpty && notes.isEmpty
+                            ? defaultNotes
+                            : "exerciseEdit.notesPlaceholder".localized
+                        TextField(placeholder, text: $notes, axis: .vertical)
+                            .lineLimit(3...6)
+                        if !defaultNotes.isEmpty && notes.isEmpty {
+                            Text("exerciseEdit.defaultNotesHint".localized)
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
                     }
                 }
 
@@ -106,6 +130,7 @@ struct ExerciseEditView: View {
             .onAppear {
                 if let exercise = exercise {
                     name = exercise.name
+                    category = exercise.resolvedCategory
                     exerciseType = exercise.exerciseType
                     muscleGroup = exercise.muscleGroup
                     notes = exercise.notes
@@ -119,17 +144,27 @@ struct ExerciseEditView: View {
         if let exercise = exercise {
             // Update existing
             exercise.name = name.trimmingCharacters(in: .whitespaces)
-            exercise.exerciseType = exerciseType
-            exercise.muscleGroup = muscleGroup
-            exercise.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+            if exercise.workoutSets.isEmpty {
+                exercise.category = category.rawValue
+            }
+            if category == .cardio {
+                exercise.exerciseType = "cardio"
+                exercise.muscleGroup = ""
+                exercise.notes = ""
+            } else {
+                exercise.exerciseType = exerciseType == "cardio" ? "weightReps" : exerciseType
+                exercise.muscleGroup = muscleGroup
+                exercise.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
             exercise.isActive = isActive
         } else {
             // Create new
             let newExercise = Exercise(
                 name: name.trimmingCharacters(in: .whitespaces),
-                notes: notes.trimmingCharacters(in: .whitespacesAndNewlines),
-                muscleGroup: muscleGroup,
-                exerciseType: exerciseType,
+                notes: category == .strength ? notes.trimmingCharacters(in: .whitespacesAndNewlines) : "",
+                muscleGroup: category == .strength ? muscleGroup : "",
+                exerciseType: category == .strength ? exerciseType : "cardio",
+                category: category,
                 isActive: isActive
             )
             modelContext.insert(newExercise)

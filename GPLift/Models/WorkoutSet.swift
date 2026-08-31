@@ -13,6 +13,9 @@ final class WorkoutSet {
     var rir: Int?
     var notes: String
     var dayNote: String?
+    // Optional fields keep stores created before cardio support compatible.
+    var averageHeartRate: Int?
+    var maxHeartRate: Int?
     var createdAt: Date
 
     init(
@@ -26,6 +29,8 @@ final class WorkoutSet {
         rir: Int? = nil,
         notes: String = "",
         dayNote: String? = nil,
+        averageHeartRate: Int? = nil,
+        maxHeartRate: Int? = nil,
         createdAt: Date = Date()
     ) {
         self.id = id
@@ -38,16 +43,20 @@ final class WorkoutSet {
         self.rir = rir
         self.notes = notes
         self.dayNote = dayNote
+        self.averageHeartRate = averageHeartRate
+        self.maxHeartRate = maxHeartRate
         self.createdAt = createdAt
     }
 
     var volume: Double {
-        weightKg * Double(reps)
+        guard exercise?.isCardio != true else { return 0 }
+        return weightKg * Double(reps)
     }
 
     var estimatedOneRepMax: Double {
+        guard exercise?.isCardio != true else { return 0 }
         // Epley Formula: weight × (1 + reps / 30)
-        weightKg * (1 + Double(reps) / 30)
+        return weightKg * (1 + Double(reps) / 30)
     }
 
     static func formatDuration(_ seconds: Int) -> String {
@@ -62,6 +71,25 @@ final class WorkoutSet {
     var formattedDuration: String {
         WorkoutSet.formatDuration(durationSeconds)
     }
+
+    var cardioMinutes: Int {
+        max(0, durationSeconds / 60)
+    }
+
+    var formattedCardioDuration: String {
+        "common.minutesShort".localized(with: cardioMinutes)
+    }
+
+    static func hasValidCardioHeartRates(average: Int?, maximum: Int?) -> Bool {
+        guard let average, let maximum else { return true }
+        return maximum >= average
+    }
+
+    static func localizedCardioSummary(sessions: Int, minutes: Int, includesCategory: Bool) -> String {
+        let prefix = includesCategory ? "history.cardioSummary" : "today.cardioSummary"
+        let key = "\(prefix).\(sessions == 1 ? "one" : "other")"
+        return key.localized(with: sessions, minutes)
+    }
 }
 
 extension WorkoutSet {
@@ -70,10 +98,10 @@ extension WorkoutSet {
         if let exerciseIDs {
             relevantSets = sets.filter { set in
                 guard let exerciseID = set.exercise?.id else { return false }
-                return exerciseIDs.contains(exerciseID)
+                return exerciseIDs.contains(exerciseID) && set.exercise?.isCardio != true
             }
         } else {
-            relevantSets = sets.filter { $0.exercise != nil }
+            relevantSets = sets.filter { $0.exercise != nil && $0.exercise?.isCardio != true }
         }
 
         let grouped = Dictionary(grouping: relevantSets) { set in
@@ -115,7 +143,7 @@ extension WorkoutSet {
     /// Whether this set is a personal best reached for the first time.
     /// Repeated ties do not count as PB again.
     func isPersonalBest(in exerciseSets: [WorkoutSet]) -> Bool {
-        guard exercise != nil else { return false }
+        guard exercise != nil, exercise?.isCardio != true else { return false }
         let comparable = exerciseSets.filter { $0.exercise?.id == exercise?.id }
         let ordered = comparable.sorted(by: WorkoutSet.trainingOrder(lhs:rhs:))
 

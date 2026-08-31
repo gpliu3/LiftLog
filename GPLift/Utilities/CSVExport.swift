@@ -46,7 +46,11 @@ enum WorkoutHistoryCSVExporter {
         "duration_seconds",
         "rir",
         "notes",
-        "volume_kg"
+        "volume_kg",
+        "category",
+        "duration_minutes",
+        "average_heart_rate_bpm",
+        "max_heart_rate_bpm"
     ].joined(separator: ",")
 
     static func makeCSV(from sets: [WorkoutSet]) -> String {
@@ -62,6 +66,7 @@ enum WorkoutHistoryCSVExporter {
 
         for set in sets.sorted(by: WorkoutSet.trainingOrder(lhs:rhs:)) {
             let exercise = set.exercise
+            let isCardio = exercise?.isCardio == true
             let row: [String] = [
                 dateFormatter.string(from: set.date),
                 timeFormatter.string(from: set.date),
@@ -74,7 +79,11 @@ enum WorkoutHistoryCSVExporter {
                 "\(set.durationSeconds)",
                 set.rir.map(String.init) ?? "",
                 CSVDocumentWriter.csvEscape(set.notes),
-                String(format: "%.2f", set.volume)
+                String(format: "%.2f", set.volume),
+                CSVDocumentWriter.csvEscape(exercise?.resolvedCategory.rawValue ?? ExerciseCategory.strength.rawValue),
+                isCardio ? "\(set.cardioMinutes)" : "",
+                isCardio ? set.averageHeartRate.map(String.init) ?? "" : "",
+                isCardio ? set.maxHeartRate.map(String.init) ?? "" : ""
             ]
             lines.append(row.joined(separator: ","))
         }
@@ -97,7 +106,9 @@ enum ExerciseLibraryCSVExporter {
         "created_at",
         "last_trained_date",
         "times_performed",
-        "total_sets"
+        "total_sets",
+        "category",
+        "total_cardio_minutes"
     ].joined(separator: ",")
 
     static func makeCSV(from exercises: [Exercise]) -> String {
@@ -120,7 +131,11 @@ enum ExerciseLibraryCSVExporter {
                 dateFormatter.string(from: exercise.createdAt),
                 exercise.lastTrainedDate.map(dateFormatter.string(from:)) ?? "",
                 "\(exercise.timesPerformed)",
-                "\(exercise.workoutSets.count)"
+                "\(exercise.workoutSets.count)",
+                CSVDocumentWriter.csvEscape(exercise.resolvedCategory.rawValue),
+                exercise.isCardio
+                    ? "\(exercise.workoutSets.reduce(0) { $0 + $1.cardioMinutes })"
+                    : ""
             ]
             lines.append(row.joined(separator: ","))
         }
@@ -129,6 +144,9 @@ enum ExerciseLibraryCSVExporter {
     }
 
     private static func sortExercises(lhs: Exercise, rhs: Exercise) -> Bool {
+        if lhs.resolvedCategory != rhs.resolvedCategory {
+            return lhs.resolvedCategory.rawValue < rhs.resolvedCategory.rawValue
+        }
         if lhs.muscleGroup != rhs.muscleGroup {
             return lhs.muscleGroup.localizedStandardCompare(rhs.muscleGroup) == .orderedAscending
         }
