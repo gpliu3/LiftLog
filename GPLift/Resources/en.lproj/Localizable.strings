@@ -131,6 +131,13 @@
 "history.cardioSummary.other" = "Cardio %d sessions • %dm";
 "history.cardioSessions" = "Cardio Sessions";
 "history.cardioMinutes" = "Cardio Minutes";
+"history.cardioGoal" = "Cardio Goal";
+"history.cardioProgress" = "%dm / %dm";
+"history.cardioSessionsCount.one" = "%d session";
+"history.cardioSessionsCount.other" = "%d sessions";
+"history.cardioRemaining" = "%dm remaining";
+"history.cardioGoalReached" = "Goal reached";
+"history.cardioAverageHeartRate" = "Avg HR %d bpm";
 "history.export" = "Export";
 "history.export.title" = "Export CSV";
 "history.export.range" = "Date Range";
@@ -261,6 +268,10 @@
 "settings.defaultSet.firstDesc" = "Use previous day's first set weight and reps";
 "settings.defaultSet.lastDesc" = "Use previous day's last set weight and reps";
 "settings.defaultSetFooter" = "When starting a new day, use this set from the previous session as the default";
+"settings.cardioGoal" = "Weekly Cardio Goal";
+"settings.cardioGoalDescription" = "Track weekly Cardio progress in History";
+"settings.cardioGoalMinutes" = "%d min";
+"settings.cardioGoalFooter" = "Set the Cardio minutes you aim to complete each Monday-Sunday week.";
 "settings.exerciseLibrary" = "Exercise Library";
 "settings.restoreDefaults" = "Restore Default Exercises";
 "settings.restoreDefaultsDescription" = "Add any built-in exercises that are currently missing.";

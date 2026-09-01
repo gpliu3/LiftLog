@@ -31,11 +31,23 @@ final class SettingsManager {
     static let shared = SettingsManager()
 
     private let defaultSetKey = "defaultSetPreference"
+    private let weeklyCardioGoalKey = "weeklyCardioGoalMinutes"
+    private static let defaultWeeklyCardioGoalMinutes = 60
 
     var defaultSetPreference: DefaultSetPreference {
         didSet {
             UserDefaults.standard.set(defaultSetPreference.rawValue, forKey: defaultSetKey)
         }
+    }
+
+    private(set) var weeklyCardioGoalMinutes: Int {
+        didSet {
+            UserDefaults.standard.set(weeklyCardioGoalMinutes, forKey: weeklyCardioGoalKey)
+        }
+    }
+
+    func updateWeeklyCardioGoal(minutes: Int) {
+        weeklyCardioGoalMinutes = max(5, minutes)
     }
 
     private init() {
@@ -45,5 +57,10 @@ final class SettingsManager {
         } else {
             self.defaultSetPreference = .lastSet
         }
+
+        let savedCardioGoal = UserDefaults.standard.integer(forKey: weeklyCardioGoalKey)
+        self.weeklyCardioGoalMinutes = savedCardioGoal > 0
+            ? savedCardioGoal
+            : Self.defaultWeeklyCardioGoalMinutes
     }
 }

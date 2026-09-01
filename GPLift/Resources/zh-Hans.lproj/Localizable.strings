@@ -131,6 +131,13 @@
 "history.cardioSummary.other" = "有氧%d次，%dm";
 "history.cardioSessions" = "有氧次数";
 "history.cardioMinutes" = "有氧分钟";
+"history.cardioGoal" = "有氧目标";
+"history.cardioProgress" = "%dm / %dm";
+"history.cardioSessionsCount.one" = "%d次";
+"history.cardioSessionsCount.other" = "%d次";
+"history.cardioRemaining" = "还差%d分钟";
+"history.cardioGoalReached" = "目标已完成";
+"history.cardioAverageHeartRate" = "平均心率 %d";
 "history.export" = "导出";
 "history.export.title" = "导出 CSV";
 "history.export.range" = "日期范围";
@@ -261,6 +268,10 @@
 "settings.defaultSet.firstDesc" = "使用上次训练的第一组重量和次数";
 "settings.defaultSet.lastDesc" = "使用上次训练的最后一组重量和次数";
 "settings.defaultSetFooter" = "新的一天开始训练时，使用上次训练的这组数据作为默认值";
+"settings.cardioGoal" = "每周有氧目标";
+"settings.cardioGoalDescription" = "用于历史页的每周有氧进度";
+"settings.cardioGoalMinutes" = "%d 分钟";
+"settings.cardioGoalFooter" = "设置每周一至周日计划完成的有氧分钟数。";
 "settings.exerciseLibrary" = "动作库";
 "settings.restoreDefaults" = "恢复默认动作";
 "settings.restoreDefaultsDescription" = "补回当前缺失的内置动作。";

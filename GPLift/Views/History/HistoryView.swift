@@ -9,6 +9,7 @@ private struct HistorySetSnapshot: Sendable {
     let exerciseName: String
     let category: ExerciseCategory
     let durationMinutes: Int
+    let averageHeartRate: Int?
     let volume: Double
     let setNumber: Int
     let createdAt: Date
@@ -22,6 +23,7 @@ private struct HistorySetSnapshot: Sendable {
         exerciseName = exercise.displayName
         category = exercise.resolvedCategory
         durationMinutes = workoutSet.cardioMinutes
+        averageHeartRate = workoutSet.averageHeartRate
         volume = workoutSet.volume
         setNumber = workoutSet.setNumber
         createdAt = workoutSet.createdAt
@@ -62,6 +64,8 @@ private struct HistoryDaySnapshot: Identifiable, Sendable {
 
     let cardioSessions: Int
     let cardioMinutes: Int
+    let cardioHeartRateWeightedTotal: Int
+    let cardioHeartRateRecordedMinutes: Int
 }
 
 private struct HistoryWeekSnapshot: Identifiable, Sendable {
@@ -72,6 +76,7 @@ private struct HistoryWeekSnapshot: Identifiable, Sendable {
     let totalVolume: Double
     let cardioSessions: Int
     let cardioMinutes: Int
+    let averageCardioHeartRate: Int?
 }
 
 private struct HistorySnapshot: Sendable {
@@ -114,6 +119,15 @@ private struct HistorySnapshot: Sendable {
                 return $0.name < $1.name
             }
 
+            let cardioHeartRate = sets.reduce(into: (weightedTotal: 0, recordedMinutes: 0)) { result, set in
+                guard set.category == .cardio,
+                      set.durationMinutes > 0,
+                      let averageHeartRate = set.averageHeartRate,
+                      averageHeartRate > 0 else { return }
+                result.weightedTotal += averageHeartRate * set.durationMinutes
+                result.recordedMinutes += set.durationMinutes
+            }
+
             return HistoryDaySnapshot(
                 date: day,
                 setCount: sets.filter { $0.category == .strength }.count,
@@ -121,7 +135,9 @@ private struct HistorySnapshot: Sendable {
                 exerciseSummaries: exerciseSummaries,
                 dayNote: HistorySnapshot.dayNote(from: sets),
                 cardioSessions: sets.filter { $0.category == .cardio }.count,
-                cardioMinutes: sets.filter { $0.category == .cardio }.reduce(0) { $0 + $1.durationMinutes }
+                cardioMinutes: sets.filter { $0.category == .cardio }.reduce(0) { $0 + $1.durationMinutes },
+                cardioHeartRateWeightedTotal: cardioHeartRate.weightedTotal,
+                cardioHeartRateRecordedMinutes: cardioHeartRate.recordedMinutes
             )
         }
         .sorted { $0.date > $1.date }
@@ -133,13 +149,19 @@ private struct HistorySnapshot: Sendable {
 
         let weeks = groupedWeeks.map { weekStart, days in
             let orderedDays = days.sorted { $0.date > $1.date }
+            let heartRateWeightedTotal = orderedDays.reduce(0) { $0 + $1.cardioHeartRateWeightedTotal }
+            let heartRateRecordedMinutes = orderedDays.reduce(0) { $0 + $1.cardioHeartRateRecordedMinutes }
+            let averageCardioHeartRate = heartRateRecordedMinutes > 0
+                ? Int((Double(heartRateWeightedTotal) / Double(heartRateRecordedMinutes)).rounded())
+                : nil
             return HistoryWeekSnapshot(
                 weekStart: weekStart,
                 days: orderedDays,
                 totalSets: orderedDays.reduce(0) { $0 + $1.setCount },
                 totalVolume: orderedDays.reduce(0) { $0 + $1.totalVolume },
                 cardioSessions: orderedDays.reduce(0) { $0 + $1.cardioSessions },
-                cardioMinutes: orderedDays.reduce(0) { $0 + $1.cardioMinutes }
+                cardioMinutes: orderedDays.reduce(0) { $0 + $1.cardioMinutes },
+                averageCardioHeartRate: averageCardioHeartRate
             )
         }
         .sorted { $0.weekStart > $1.weekStart }
@@ -180,6 +202,7 @@ struct HistoryView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Query(sort: \WorkoutSet.date, order: .reverse) private var allSets: [WorkoutSet]
     @State private var languageManager = LanguageManager.shared
+    @State private var settingsManager = SettingsManager.shared
 
     @State private var selectedPeriod: TimePeriod = .all
     @State private var selectedDay: Date?
@@ -400,7 +423,10 @@ struct HistoryView: View {
                             }
                     }
                 } header: {
-                    WeekSummaryHeaderView(week: week)
+                    WeekSummaryHeaderView(
+                        week: week,
+                        cardioGoalMinutes: settingsManager.weeklyCardioGoalMinutes
+                    )
                 }
             }
         }
@@ -636,6 +662,7 @@ private struct HistoryExportView: View {
 
 private struct WeekSummaryHeaderView: View {
     let week: HistoryWeekSnapshot
+    let cardioGoalMinutes: Int
 
     private var weekEnd: Date {
         var calendar = Calendar.current
@@ -657,6 +684,19 @@ private struct WeekSummaryHeaderView: View {
 
     private var cardioSessions: Int { week.cardioSessions }
     private var cardioMinutes: Int { week.cardioMinutes }
+    private var goalMinutes: Int { max(1, cardioGoalMinutes) }
+    private var progress: Double {
+        min(Double(cardioMinutes) / Double(goalMinutes), 1)
+    }
+    private var remainingMinutes: Int { max(goalMinutes - cardioMinutes, 0) }
+    private var isGoalReached: Bool { cardioMinutes >= goalMinutes }
+
+    private var cardioSessionCountText: String {
+        let key = cardioSessions == 1
+            ? "history.cardioSessionsCount.one"
+            : "history.cardioSessionsCount.other"
+        return key.localized(with: cardioSessions)
+    }
 
     private var weekRangeText: String {
         let locale = LanguageManager.shared.currentLanguage.locale ?? Locale.current
@@ -686,18 +726,59 @@ private struct WeekSummaryHeaderView: View {
                     .foregroundStyle(.secondary)
             }
 
-            if cardioSessions > 0 {
-                Text(WorkoutSet.localizedCardioSummary(
-                    sessions: cardioSessions,
-                    minutes: cardioMinutes,
-                    includesCategory: true
-                ))
-                    .font(AppTextStyle.caption2)
-                    .foregroundStyle(.teal)
-            }
+            cardioProgressCard
         }
         .textCase(nil)
         .padding(.top, 6)
+    }
+
+    private var cardioProgressCard: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 6) {
+                Label("history.cardioGoal".localized, systemImage: "heart.circle.fill")
+                    .font(AppTextStyle.captionStrong)
+                    .foregroundStyle(.teal)
+                    .lineLimit(1)
+
+                Text(cardioSessionCountText)
+                    .font(AppTextStyle.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+
+                Spacer(minLength: 6)
+
+                Text("history.cardioProgress".localized(with: cardioMinutes, goalMinutes))
+                    .font(AppTextStyle.captionStrong)
+                    .foregroundStyle(isGoalReached ? .green : .primary)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+
+            ProgressView(value: progress)
+                .tint(isGoalReached ? .green : .teal)
+
+            HStack(spacing: 8) {
+                Text(isGoalReached
+                     ? "history.cardioGoalReached".localized
+                     : "history.cardioRemaining".localized(with: remainingMinutes))
+                    .lineLimit(1)
+
+                Spacer(minLength: 8)
+
+                if let averageHeartRate = week.averageCardioHeartRate {
+                    Text("history.cardioAverageHeartRate".localized(with: averageHeartRate))
+                        .foregroundStyle(.pink)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                }
+            }
+            .font(AppTextStyle.caption2)
+            .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(Color.teal.opacity(0.08), in: RoundedRectangle(cornerRadius: 9))
     }
 }
 

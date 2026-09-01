@@ -11,6 +11,7 @@ GPLift is a compact iOS strength and cardio training log focused on fast daily l
 - **Strength and Cardio libraries**: manage both categories independently and switch between them while creating exercises or logging training.
 - **Fast training logging**: add a Strength set or Cardio session in one flow, or continue directly from Today.
 - **Cardio tracking**: record whole minutes with optional average and maximum heart rate for swimming, cross trainer, rowing machine, indoor bike, or custom activities.
+- **Weekly Cardio goal**: each History week shows minutes completed against a configurable target and a duration-weighted average heart rate when available.
 - **Inline editing**: tap a set to edit it in place, with shared `- / +` controls for the active field.
 - **Dual-unit entry**: weight entry supports both `kg` and `lb` in Log Set and inline editing, while all saved data stays standardized in `kg`.
 - **Smart defaults**: first set of a new day starts from the first set of the most recent previous day for that exercise.
@@ -32,6 +33,7 @@ GPLift is a compact iOS strength and cardio training log focused on fast daily l
 | Choose a Cardio activity | Browse active Cardio activities sorted from longest due to most recently trained |
 | Enter weight | Tap either `kg` or `lb`; both stay in sync |
 | Record Cardio | Enter whole minutes and, optionally, average and maximum heart rate |
+| Set a weekly Cardio target | Settings → Weekly Cardio Goal; the default is 60 minutes |
 | Save quickly | Use `Save & Add Another` or `Save & Close` |
 | Edit a set inline | Tap any Today set row |
 | Edit a set in full-screen | Long press a Today set row |
@@ -47,6 +49,8 @@ GPLift is a compact iOS strength and cardio training log focused on fast daily l
 - `lb` input is converted to `kg` before saving, so existing records remain compatible.
 - `Exercise.category` is optional in SwiftData. Missing or unknown values resolve to Strength, preserving every exercise created before Cardio support.
 - Cardio uses the existing `WorkoutSet.durationSeconds` field, storing whole minutes as `minutes * 60`; average and maximum heart rate are new optional fields.
+- The weekly Cardio target is stored in `UserDefaults` and defaults to 60 minutes, so it does not require a SwiftData migration.
+- Weekly average heart rate is weighted by each recorded session's duration; sessions without an average heart rate are excluded from that calculation but still count toward Cardio minutes.
 - Strength-only calculations (volume, estimated 1RM, PB markers, and Progress charts) explicitly exclude Cardio records.
 - `Exercise.isActive` is stored as an optional field for backward compatibility with older SwiftData stores.
 - Missing `isActive` values are treated as active, which preserves existing users' exercise visibility after upgrading.
@@ -101,6 +105,7 @@ GPLift/
 ## Settings
 
 - **Language**: follow system, English, or 简体中文
+- **Weekly Cardio Goal**: set the Monday-Sunday target shown for every week in History
 - **Restore Default Exercises**: restore missing built-in Strength and Cardio exercises without overwriting existing user-created data or preferences
 
 ## Requirements

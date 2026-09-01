@@ -75,6 +75,23 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+
+            NavigationLink {
+                CardioGoalSelectionView()
+            } label: {
+                HStack(spacing: 10) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("settings.cardioGoal".localized)
+                        Text("settings.cardioGoalDescription".localized)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 8)
+                    Text("settings.cardioGoalMinutes".localized(with: settingsManager.weeklyCardioGoalMinutes))
+                        .foregroundStyle(.teal)
+                        .monospacedDigit()
+                }
+            }
         } header: {
             Text("settings.workoutSection".localized)
         } footer: {
@@ -213,6 +230,38 @@ struct DefaultSetSelectionView: View {
             }
         }
         .navigationTitle("settings.defaultSet".localized)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+struct CardioGoalSelectionView: View {
+    @State private var settingsManager = SettingsManager.shared
+
+    private var weeklyGoalBinding: Binding<Int> {
+        Binding(
+            get: { settingsManager.weeklyCardioGoalMinutes },
+            set: { settingsManager.updateWeeklyCardioGoal(minutes: $0) }
+        )
+    }
+
+    var body: some View {
+        List {
+            Section {
+                Stepper(value: weeklyGoalBinding, in: 5...600, step: 5) {
+                    HStack {
+                        Text("settings.cardioGoal".localized)
+                        Spacer()
+                        Text("settings.cardioGoalMinutes".localized(with: settingsManager.weeklyCardioGoalMinutes))
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.teal)
+                            .monospacedDigit()
+                    }
+                }
+            } footer: {
+                Text("settings.cardioGoalFooter".localized)
+            }
+        }
+        .navigationTitle("settings.cardioGoal".localized)
         .navigationBarTitleDisplayMode(.inline)
     }
 }
