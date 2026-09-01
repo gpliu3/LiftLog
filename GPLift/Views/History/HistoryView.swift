@@ -80,7 +80,16 @@ private struct HistoryWeekSnapshot: Identifiable, Sendable {
 }
 
 private struct HistorySnapshot: Sendable {
-    static let empty = HistorySnapshot(weeks: [], days: [], trainingDaysCount: 0, totalSets: 0, totalVolume: 0, cardioSessions: 0, cardioMinutes: 0)
+    static let empty = HistorySnapshot(
+        weeks: [],
+        days: [],
+        trainingDaysCount: 0,
+        totalSets: 0,
+        totalVolume: 0,
+        cardioSessions: 0,
+        cardioMinutes: 0,
+        averageCardioHeartRate: nil
+    )
 
     let weeks: [HistoryWeekSnapshot]
     let days: [HistoryDaySnapshot]
@@ -89,6 +98,7 @@ private struct HistorySnapshot: Sendable {
     let totalVolume: Double
     let cardioSessions: Int
     let cardioMinutes: Int
+    let averageCardioHeartRate: Int?
 
     static func build(from sets: [HistorySetSnapshot], startDate: Date) -> HistorySnapshot {
         var calendar = Calendar.current
@@ -166,6 +176,9 @@ private struct HistorySnapshot: Sendable {
         }
         .sorted { $0.weekStart > $1.weekStart }
 
+        let heartRateWeightedTotal = days.reduce(0) { $0 + $1.cardioHeartRateWeightedTotal }
+        let heartRateRecordedMinutes = days.reduce(0) { $0 + $1.cardioHeartRateRecordedMinutes }
+
         return HistorySnapshot(
             weeks: weeks,
             days: days,
@@ -173,7 +186,10 @@ private struct HistorySnapshot: Sendable {
             totalSets: filteredSets.filter { $0.category == .strength }.count,
             totalVolume: filteredSets.filter { $0.category == .strength }.reduce(0) { $0 + $1.volume },
             cardioSessions: filteredSets.filter { $0.category == .cardio }.count,
-            cardioMinutes: filteredSets.filter { $0.category == .cardio }.reduce(0) { $0 + $1.durationMinutes }
+            cardioMinutes: filteredSets.filter { $0.category == .cardio }.reduce(0) { $0 + $1.durationMinutes },
+            averageCardioHeartRate: heartRateRecordedMinutes > 0
+                ? Int((Double(heartRateWeightedTotal) / Double(heartRateRecordedMinutes)).rounded())
+                : nil
         )
     }
 
@@ -252,6 +268,16 @@ struct HistoryView: View {
 
     private var cardioSessions: Int { snapshot.cardioSessions }
     private var cardioMinutes: Int { snapshot.cardioMinutes }
+    private var averageCardioHeartRate: Int? { snapshot.averageCardioHeartRate }
+
+    private var cardioSummaryText: String {
+        localizedCardioGoalSummary(
+            sessions: cardioSessions,
+            minutes: cardioMinutes,
+            goalMinutes: settingsManager.weeklyCardioGoalMinutes,
+            averageHeartRate: averageCardioHeartRate
+        )
+    }
 
     private var allSetsSignature: String {
         [
@@ -383,21 +409,20 @@ struct HistoryView: View {
             .padding(.horizontal, 14)
             .padding(.bottom, 2)
 
-            if cardioSessions > 0 {
-                Label(
-                    WorkoutSet.localizedCardioSummary(
-                        sessions: cardioSessions,
-                        minutes: cardioMinutes,
-                        includesCategory: true
-                    ),
-                    systemImage: "heart.fill"
-                )
-                .font(AppTextStyle.captionStrong)
-                .foregroundStyle(.teal)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 18)
-                .padding(.bottom, 4)
+            HStack(spacing: 8) {
+                Image(systemName: "heart.fill")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.orange)
+
+                Text(cardioSummaryText)
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 18)
+            .padding(.bottom, 4)
         }
         .padding(.top, 4)
         .background(Color(.systemGroupedBackground))
@@ -685,17 +710,14 @@ private struct WeekSummaryHeaderView: View {
     private var cardioSessions: Int { week.cardioSessions }
     private var cardioMinutes: Int { week.cardioMinutes }
     private var goalMinutes: Int { max(1, cardioGoalMinutes) }
-    private var progress: Double {
-        min(Double(cardioMinutes) / Double(goalMinutes), 1)
-    }
-    private var remainingMinutes: Int { max(goalMinutes - cardioMinutes, 0) }
-    private var isGoalReached: Bool { cardioMinutes >= goalMinutes }
 
-    private var cardioSessionCountText: String {
-        let key = cardioSessions == 1
-            ? "history.cardioSessionsCount.one"
-            : "history.cardioSessionsCount.other"
-        return key.localized(with: cardioSessions)
+    private var cardioSummaryText: String {
+        localizedCardioGoalSummary(
+            sessions: cardioSessions,
+            minutes: cardioMinutes,
+            goalMinutes: goalMinutes,
+            averageHeartRate: week.averageCardioHeartRate
+        )
     }
 
     private var weekRangeText: String {
@@ -726,60 +748,37 @@ private struct WeekSummaryHeaderView: View {
                     .foregroundStyle(.secondary)
             }
 
-            cardioProgressCard
+            Text(cardioSummaryText)
+                .font(AppTextStyle.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
         .textCase(nil)
         .padding(.top, 6)
     }
+}
 
-    private var cardioProgressCard: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack(spacing: 6) {
-                Label("history.cardioGoal".localized, systemImage: "heart.circle.fill")
-                    .font(AppTextStyle.captionStrong)
-                    .foregroundStyle(.teal)
-                    .lineLimit(1)
-
-                Text(cardioSessionCountText)
-                    .font(AppTextStyle.caption2)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-
-                Spacer(minLength: 6)
-
-                Text("history.cardioProgress".localized(with: cardioMinutes, goalMinutes))
-                    .font(AppTextStyle.captionStrong)
-                    .foregroundStyle(isGoalReached ? .green : .primary)
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-            }
-
-            ProgressView(value: progress)
-                .tint(isGoalReached ? .green : .teal)
-
-            HStack(spacing: 8) {
-                Text(isGoalReached
-                     ? "history.cardioGoalReached".localized
-                     : "history.cardioRemaining".localized(with: remainingMinutes))
-                    .lineLimit(1)
-
-                Spacer(minLength: 8)
-
-                if let averageHeartRate = week.averageCardioHeartRate {
-                    Text("history.cardioAverageHeartRate".localized(with: averageHeartRate))
-                        .foregroundStyle(.pink)
-                        .monospacedDigit()
-                        .lineLimit(1)
-                }
-            }
-            .font(AppTextStyle.caption2)
-            .foregroundStyle(.secondary)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
-        .background(Color.teal.opacity(0.08), in: RoundedRectangle(cornerRadius: 9))
+private func localizedCardioGoalSummary(
+    sessions: Int,
+    minutes: Int,
+    goalMinutes: Int,
+    averageHeartRate: Int?
+) -> String {
+    let suffix = sessions == 1 ? "one" : "other"
+    if let averageHeartRate {
+        return "history.cardioGoalSummaryWithHeartRate.\(suffix)".localized(
+            with: sessions,
+            minutes,
+            goalMinutes,
+            averageHeartRate
+        )
     }
+    return "history.cardioGoalSummary.\(suffix)".localized(
+        with: sessions,
+        minutes,
+        goalMinutes
+    )
 }
 
 private struct DayRowView: View {

@@ -131,13 +131,10 @@
 "history.cardioSummary.other" = "Cardio %d sessions • %dm";
 "history.cardioSessions" = "Cardio Sessions";
 "history.cardioMinutes" = "Cardio Minutes";
-"history.cardioGoal" = "Cardio Goal";
-"history.cardioProgress" = "%dm / %dm";
-"history.cardioSessionsCount.one" = "%d session";
-"history.cardioSessionsCount.other" = "%d sessions";
-"history.cardioRemaining" = "%dm remaining";
-"history.cardioGoalReached" = "Goal reached";
-"history.cardioAverageHeartRate" = "Avg HR %d bpm";
+"history.cardioGoalSummary.one" = "Cardio %d session, %dm/%dm";
+"history.cardioGoalSummary.other" = "Cardio %d sessions, %dm/%dm";
+"history.cardioGoalSummaryWithHeartRate.one" = "Cardio %d session, %dm/%dm, Avg HR %d";
+"history.cardioGoalSummaryWithHeartRate.other" = "Cardio %d sessions, %dm/%dm, Avg HR %d";
 "history.export" = "Export";
 "history.export.title" = "Export CSV";
 "history.export.range" = "Date Range";

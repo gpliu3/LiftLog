@@ -11,7 +11,7 @@ GPLift is a compact iOS strength and cardio training log focused on fast daily l
 - **Strength and Cardio libraries**: manage both categories independently and switch between them while creating exercises or logging training.
 - **Fast training logging**: add a Strength set or Cardio session in one flow, or continue directly from Today.
 - **Cardio tracking**: record whole minutes with optional average and maximum heart rate for swimming, cross trainer, rowing machine, indoor bike, or custom activities.
-- **Weekly Cardio goal**: each History week shows minutes completed against a configurable target and a duration-weighted average heart rate when available.
+- **Weekly Cardio goal**: the History overview and each week show Cardio sessions, minutes against a configurable target, and a duration-weighted average heart rate when available.
 - **Inline editing**: tap a set to edit it in place, with shared `- / +` controls for the active field.
 - **Dual-unit entry**: weight entry supports both `kg` and `lb` in Log Set and inline editing, while all saved data stays standardized in `kg`.
 - **Smart defaults**: first set of a new day starts from the first set of the most recent previous day for that exercise.

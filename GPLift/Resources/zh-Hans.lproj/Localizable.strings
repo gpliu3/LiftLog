@@ -131,13 +131,10 @@
 "history.cardioSummary.other" = "有氧%d次，%dm";
 "history.cardioSessions" = "有氧次数";
 "history.cardioMinutes" = "有氧分钟";
-"history.cardioGoal" = "有氧目标";
-"history.cardioProgress" = "%dm / %dm";
-"history.cardioSessionsCount.one" = "%d次";
-"history.cardioSessionsCount.other" = "%d次";
-"history.cardioRemaining" = "还差%d分钟";
-"history.cardioGoalReached" = "目标已完成";
-"history.cardioAverageHeartRate" = "平均心率 %d";
+"history.cardioGoalSummary.one" = "有氧 %d次，%dm/%dm";
+"history.cardioGoalSummary.other" = "有氧 %d次，%dm/%dm";
+"history.cardioGoalSummaryWithHeartRate.one" = "有氧 %d次，%dm/%dm，平均心率 %d";
+"history.cardioGoalSummaryWithHeartRate.other" = "有氧 %d次，%dm/%dm，平均心率 %d";
 "history.export" = "导出";
 "history.export.title" = "导出 CSV";
 "history.export.range" = "日期范围";
