@@ -1,6 +1,6 @@
 # GPLift
 
-GPLift is a compact iOS strength and cardio training log focused on fast daily logging, clear history, and on-device privacy.
+GPLift is a compact iOS strength, cardio, and rehabilitation training log focused on fast daily logging, clear history, and on-device privacy.
 
 ![Platform](https://img.shields.io/badge/Platform-iOS%2017%2B-blue)
 ![Language](https://img.shields.io/badge/Language-Swift-orange)
@@ -8,9 +8,10 @@ GPLift is a compact iOS strength and cardio training log focused on fast daily l
 
 ## Highlights
 
-- **Strength and Cardio libraries**: manage both categories independently and switch between them while creating exercises or logging training.
+- **Strength, Cardio, and Rehab libraries**: switch between three independent categories when creating exercises or logging training. Consistent dumbbell, heart, and flexibility icons identify categories using the same text styles and colors.
+- **Rehabilitation tracking**: record weight/reps, reps only, or timed sets, with notes and optional RIR. Today and History show Rehab separately; it never contributes to Strength set counts, volume totals, or Progress charts.
 - **Fast training logging**: add a Strength set or Cardio session in one flow, or continue directly from Today.
-- **Cardio tracking**: record whole minutes with optional average and maximum heart rate for swimming, cross trainer, rowing machine, indoor bike, or custom activities.
+- **Cardio tracking**: record whole minutes with optional average and maximum heart rate for swimming, cross trainer, rowing machine, indoor bike, or custom activities. Duration buttons adjust by five minutes in new-session, inline-edit, and full-edit views; direct input still accepts any whole minute. Today has no extra Add another session row.
 - **Weekly Cardio goal**: the History overview and each week show Cardio sessions, minutes against a configurable target, and a duration-weighted average heart rate when available.
 - **Inline editing**: tap a set to edit it in place, with shared `- / +` controls for the active field.
 - **Dual-unit entry**: weight entry supports both `kg` and `lb` in Log Set and inline editing, while all saved data stays standardized in `kg`.
@@ -20,7 +21,8 @@ GPLift is a compact iOS strength and cardio training log focused on fast daily l
 - **One-time PB markers**: sparkles appear only on the first set that establishes a new personal best.
 - **Optional RIR**: `0`, `1`, `2`, or blank, editable later.
 - **Exercise activity control**: exercises can be marked active or inactive; inactive exercises stay in history and the library but are hidden from the Log Set picker.
-- **History by week, month, or all**: the default History view is `All`, grouped by Monday-based weeks with separate Strength set/volume and Cardio session/minute totals.
+- **Exercise notes in every category**: editing a Cardio exercise preserves its existing notes, just like Strength and Rehab.
+- **History by week, month, or all**: the default History view is `All`, grouped by Monday-based weeks with separate Strength set/volume, Cardio session/minute, and Rehab set totals. Days containing only Cardio or Rehab remain visible with their full training notes.
 - **CSV export**: export workout history and exercises, including Cardio duration and heart-rate fields, to UTF-8 BOM CSV for better Excel compatibility with Chinese text.
 - **Bilingual UI**: English and Simplified Chinese, with in-app language switching.
 
@@ -28,8 +30,9 @@ GPLift is a compact iOS strength and cardio training log focused on fast daily l
 
 | Action | How |
 |---|---|
-| Log new training | Tap the floating `+` button in Today, then choose Strength or Cardio |
-| Choose a Strength exercise | Browse active exercises grouped by muscle group and sorted by the group training date |
+| Log new training | Tap the floating `+` button in Today, then choose Strength, Cardio, or Rehab |
+| Choose a Strength or Rehab exercise | Browse active exercises grouped by muscle group; the picker has no search field |
+| Choose sorting | Longest due is initially selected, with never-trained exercises/groups last; Default order uses fixed muscle groups and localized exercise names within each group |
 | Choose a Cardio activity | Browse active Cardio activities sorted from longest due to most recently trained |
 | Enter weight | Tap either `kg` or `lb`; both stay in sync |
 | Record Cardio | Enter whole minutes and, optionally, average and maximum heart rate |
@@ -47,11 +50,13 @@ GPLift is a compact iOS strength and cardio training log focused on fast daily l
 
 - `WorkoutSet.weightKg` is the single persisted weight field.
 - `lb` input is converted to `kg` before saving, so existing records remain compatible.
-- `Exercise.category` is optional in SwiftData. Missing or unknown values resolve to Strength, preserving every exercise created before Cardio support.
+- `Exercise.category` is optional in SwiftData. Missing or unknown values resolve to Strength, preserving every exercise created before Cardio support. Rehab adds the `rehabilitation` string value to the same field without changing the persisted schema.
+- Category editing remains locked after an exercise has training records, so historical records cannot be silently reclassified by changing its category.
+- The Glutes & Legs / 臀腿 muscle group retains the canonical stored value `Legs`. This is a localization change, not a data migration.
 - Cardio uses the existing `WorkoutSet.durationSeconds` field, storing whole minutes as `minutes * 60`; average and maximum heart rate are new optional fields.
 - The weekly Cardio target is stored in `UserDefaults` and defaults to 60 minutes, so it does not require a SwiftData migration.
 - Weekly average heart rate is weighted by each recorded session's duration; sessions without an average heart rate are excluded from that calculation but still count toward Cardio minutes.
-- Strength-only calculations (volume, estimated 1RM, PB markers, and Progress charts) explicitly exclude Cardio records.
+- Shared `TrainingTotals` calculations keep aggregate Strength counts/volume separate from Cardio and Rehab in Today, History, and day details. Rehab sets retain their own weight, reps, duration, volume, and per-exercise PB behavior; Progress charts continue to include only Strength exercises.
 - `Exercise.isActive` is stored as an optional field for backward compatibility with older SwiftData stores.
 - Missing `isActive` values are treated as active, which preserves existing users' exercise visibility after upgrading.
 - The four built-in Cardio activities are seeded once for existing users. If a user later removes one, it is not silently added back.
@@ -68,6 +73,7 @@ GPLift/
 │   └── WorkoutSet.swift
 ├── Views/
 │   ├── MainTabView.swift
+│   ├── TrainingPresentation.swift
 │   ├── Today/
 │   │   ├── TodayView.swift
 │   │   ├── AddSetView.swift
@@ -85,8 +91,11 @@ GPLift/
 ├── Utilities/
 │   ├── CSVExport.swift
 │   ├── DateFormatters.swift
+│   ├── ExerciseOrdering.swift
+│   ├── HistorySnapshot.swift
 │   ├── LanguageManager.swift
 │   ├── SettingsManager.swift
+│   ├── TrainingTotals.swift
 │   ├── VolumeCalculator.swift
 │   └── WeightUnit.swift
 └── Resources/
@@ -113,6 +122,14 @@ GPLift/
 - Xcode 15+
 - iOS 17+
 - No third-party dependencies
+
+## Verification
+
+Run `bash scripts/test_training_logic.sh` on macOS with Xcode installed. It compiles the released build 72 model definitions in a separate process, creates a disposable 611-record SwiftData store, and opens it with the current models. The test compares every stored field and relationship before and after saving/reopening, including Chinese notes, optional fields, and inactive exercises.
+
+The same suite verifies all three Rehab recording modes, mixed and Rehab-only days, Monday week boundaries, date-range totals, duration-weighted Cardio heart rate, CSV encoding, exercise ordering, and repeated five-minute adjustments. All stores and exports are temporary; no user app database is read or modified.
+
+To run the same database and logic tests on a booted iOS simulator, set `GPLIFT_TEST_SIMULATOR=<simulator-UUID>` before the command. The tests compile for that runtime and execute through `simctl`, without requiring screen interaction.
 
 ## Release
 

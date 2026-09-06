@@ -120,11 +120,7 @@ struct EditSetView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                if !exercise.muscleGroup.isEmpty {
-                    Text(exercise.localizedMuscleGroup)
-                        .font(AppTextStyle.caption)
-                        .foregroundStyle(.secondary)
-                }
+                ExerciseClassificationView(exercise: exercise)
 
                 if showExerciseNotes, !exercise.displayNotes.isEmpty {
                     HStack(alignment: .top, spacing: 10) {
@@ -275,7 +271,7 @@ struct EditSetView: View {
 
     private var cardioDurationSection: some View {
         Section("addSet.durationMinutes".localized) {
-            Stepper(value: $cardioMinutes, in: 1...1440) {
+            Stepper {
                 HStack {
                     TextField("0", value: $cardioMinutes, format: .number)
                         .keyboardType(.numberPad)
@@ -284,6 +280,10 @@ struct EditSetView: View {
                     Text("common.minutesUnit".localized)
                         .foregroundStyle(.secondary)
                 }
+            } onIncrement: {
+                cardioMinutes = CardioDuration.adjusted(cardioMinutes, increasing: true)
+            } onDecrement: {
+                cardioMinutes = CardioDuration.adjusted(cardioMinutes, increasing: false)
             }
         }
     }

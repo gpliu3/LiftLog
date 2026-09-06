@@ -52,7 +52,7 @@ struct ExerciseEditView: View {
                         .textInputAutocapitalization(.words)
                 }
 
-                if category == .strength {
+                if category.usesSets {
                     Section("exerciseEdit.exerciseType".localized) {
                         Picker("exerciseEdit.exerciseType".localized, selection: $exerciseType) {
                             ForEach(Exercise.localizedExerciseTypes, id: \.key) { type in
@@ -71,19 +71,19 @@ struct ExerciseEditView: View {
                         }
                         .pickerStyle(.menu)
                     }
+                }
 
-                    Section("exerciseEdit.notes".localized) {
-                        let defaultNotes = exercise?.displayNotes ?? ""
-                        let placeholder = !defaultNotes.isEmpty && notes.isEmpty
-                            ? defaultNotes
-                            : "exerciseEdit.notesPlaceholder".localized
-                        TextField(placeholder, text: $notes, axis: .vertical)
-                            .lineLimit(3...6)
-                        if !defaultNotes.isEmpty && notes.isEmpty {
-                            Text("exerciseEdit.defaultNotesHint".localized)
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                        }
+                Section("exerciseEdit.notes".localized) {
+                    let defaultNotes = exercise?.displayNotes ?? ""
+                    let placeholder = !defaultNotes.isEmpty && notes.isEmpty
+                        ? defaultNotes
+                        : "exerciseEdit.notesPlaceholder".localized
+                    TextField(placeholder, text: $notes, axis: .vertical)
+                        .lineLimit(3...6)
+                    if !defaultNotes.isEmpty && notes.isEmpty {
+                        Text("exerciseEdit.defaultNotesHint".localized)
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
                     }
                 }
 
@@ -137,6 +137,11 @@ struct ExerciseEditView: View {
                     isActive = exercise.isActiveResolved
                 }
             }
+            .onChange(of: category) { _, newCategory in
+                if newCategory.usesSets && !Exercise.exerciseTypes.contains(exerciseType) {
+                    exerciseType = "weightReps"
+                }
+            }
         }
     }
 
@@ -150,20 +155,19 @@ struct ExerciseEditView: View {
             if category == .cardio {
                 exercise.exerciseType = "cardio"
                 exercise.muscleGroup = ""
-                exercise.notes = ""
             } else {
                 exercise.exerciseType = exerciseType == "cardio" ? "weightReps" : exerciseType
                 exercise.muscleGroup = muscleGroup
-                exercise.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
             }
+            exercise.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
             exercise.isActive = isActive
         } else {
             // Create new
             let newExercise = Exercise(
                 name: name.trimmingCharacters(in: .whitespaces),
-                notes: category == .strength ? notes.trimmingCharacters(in: .whitespacesAndNewlines) : "",
-                muscleGroup: category == .strength ? muscleGroup : "",
-                exerciseType: category == .strength ? exerciseType : "cardio",
+                notes: notes.trimmingCharacters(in: .whitespacesAndNewlines),
+                muscleGroup: category.usesSets ? muscleGroup : "",
+                exerciseType: category.usesSets ? (exerciseType == "cardio" ? "weightReps" : exerciseType) : "cardio",
                 category: category,
                 isActive: isActive
             )

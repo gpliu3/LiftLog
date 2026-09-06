@@ -37,20 +37,22 @@ struct ExerciseListView: View {
         let grouped = Dictionary(grouping: filteredExercises) { exercise in
             normalizedMuscleGroup(for: exercise)
         }
-        let allExercisesByGroup = Dictionary(grouping: exercises.filter(\.isStrength)) { exercise in
+        let allExercisesByGroup = Dictionary(grouping: exercises.filter { $0.resolvedCategory == selectedCategory }) { exercise in
             normalizedMuscleGroup(for: exercise)
         }
 
         return grouped.map { muscleGroup, filteredGroupExercises in
             ExerciseGroupSection(
                 muscleGroup: muscleGroup,
-                exercises: filteredGroupExercises,
+                exercises: filteredGroupExercises.sorted {
+                    ExerciseOrdering.standard.precedes($0, $1, lastTrainedDates: [:])
+                },
                 latestTrainingDate: allExercisesByGroup[muscleGroup]?
                     .compactMap(\.lastTrainedDate)
                     .max()
             )
         }
-        .sorted { $0.muscleGroup < $1.muscleGroup }
+        .sorted { ExerciseOrdering.standardGroupPrecedes($0.muscleGroup, $1.muscleGroup) }
     }
 
     private func normalizedMuscleGroup(for exercise: Exercise) -> String {
@@ -132,7 +134,7 @@ struct ExerciseListView: View {
 
     @ViewBuilder
     private var exerciseList: some View {
-        if selectedCategory == .strength {
+        if selectedCategory.usesSets {
             List {
                 ForEach(groupedExercises) { group in
                     Section {
@@ -345,6 +347,9 @@ struct ExerciseRowView: View {
             Button(action: onOpenDetails) {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        TrainingCategoryIcon(category: exercise.resolvedCategory)
+                            .font(AppTextStyle.caption)
+                            .foregroundStyle(.primary)
                         Text(exercise.displayName)
                             .font(AppTextStyle.sectionTitle)
                             .foregroundStyle(.primary)

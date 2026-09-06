@@ -4,6 +4,7 @@ import SwiftData
 enum ExerciseCategory: String, CaseIterable, Identifiable, Sendable {
     case strength
     case cardio
+    case rehabilitation
 
     var id: String { rawValue }
 
@@ -11,6 +12,25 @@ enum ExerciseCategory: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .strength: return "exerciseCategory.strength".localized
         case .cardio: return "exerciseCategory.cardio".localized
+        case .rehabilitation: return "exerciseCategory.rehabilitation".localized
+        }
+    }
+
+    var usesSets: Bool { self != .cardio }
+
+    var sortOrder: Int {
+        switch self {
+        case .strength: return 0
+        case .cardio: return 1
+        case .rehabilitation: return 2
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .strength: return "dumbbell.fill"
+        case .cardio: return "heart.fill"
+        case .rehabilitation: return "figure.flexibility"
         }
     }
 }
@@ -56,9 +76,11 @@ final class Exercise {
 
     var isStrength: Bool { resolvedCategory == .strength }
     var isCardio: Bool { resolvedCategory == .cardio }
-    var isWeightReps: Bool { isStrength && exerciseType == "weightReps" }
-    var isRepsOnly: Bool { isStrength && exerciseType == "repsOnly" }
-    var isTimeOnly: Bool { isStrength && exerciseType == "timeOnly" }
+    var isRehabilitation: Bool { resolvedCategory == .rehabilitation }
+    var usesSets: Bool { resolvedCategory.usesSets }
+    var isWeightReps: Bool { usesSets && exerciseType == "weightReps" }
+    var isRepsOnly: Bool { usesSets && exerciseType == "repsOnly" }
+    var isTimeOnly: Bool { usesSets && exerciseType == "timeOnly" }
     var isActiveResolved: Bool { isActive ?? true }
 
     var localizedExerciseType: String {

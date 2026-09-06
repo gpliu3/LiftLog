@@ -2,218 +2,6 @@ import SwiftUI
 import SwiftData
 import UIKit
 
-private struct HistorySetSnapshot: Sendable {
-    let id: UUID
-    let date: Date
-    let exerciseID: UUID
-    let exerciseName: String
-    let category: ExerciseCategory
-    let durationMinutes: Int
-    let averageHeartRate: Int?
-    let volume: Double
-    let setNumber: Int
-    let createdAt: Date
-    let dayNote: String
-
-    init?(workoutSet: WorkoutSet) {
-        guard let exercise = workoutSet.exercise else { return nil }
-        id = workoutSet.id
-        date = workoutSet.date
-        exerciseID = exercise.id
-        exerciseName = exercise.displayName
-        category = exercise.resolvedCategory
-        durationMinutes = workoutSet.cardioMinutes
-        averageHeartRate = workoutSet.averageHeartRate
-        volume = workoutSet.volume
-        setNumber = workoutSet.setNumber
-        createdAt = workoutSet.createdAt
-        dayNote = workoutSet.dayNote?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-    }
-}
-
-private struct HistoryDaySnapshot: Identifiable, Sendable {
-    struct ExerciseSummary: Identifiable, Sendable {
-        let id: UUID
-        let name: String
-        let count: Int
-        let category: ExerciseCategory
-        let totalMinutes: Int
-        let latestDate: Date
-    }
-
-    var id: TimeInterval { date.timeIntervalSinceReferenceDate }
-    let date: Date
-    let setCount: Int
-    let totalVolume: Double
-    let exerciseSummaries: [ExerciseSummary]
-    let dayNote: String
-
-    var strengthSummaryText: String {
-        exerciseSummaries
-            .filter { $0.category == .strength }
-            .map { "\($0.name)x\($0.count)" }
-            .joined(separator: ", ")
-    }
-
-    var cardioSummaryText: String {
-        exerciseSummaries
-            .filter { $0.category == .cardio }
-            .map { "\($0.name)x\($0.totalMinutes)m" }
-            .joined(separator: ", ")
-    }
-
-    let cardioSessions: Int
-    let cardioMinutes: Int
-    let cardioHeartRateWeightedTotal: Int
-    let cardioHeartRateRecordedMinutes: Int
-}
-
-private struct HistoryWeekSnapshot: Identifiable, Sendable {
-    var id: TimeInterval { weekStart.timeIntervalSinceReferenceDate }
-    let weekStart: Date
-    let days: [HistoryDaySnapshot]
-    let totalSets: Int
-    let totalVolume: Double
-    let cardioSessions: Int
-    let cardioMinutes: Int
-    let averageCardioHeartRate: Int?
-}
-
-private struct HistorySnapshot: Sendable {
-    static let empty = HistorySnapshot(
-        weeks: [],
-        days: [],
-        trainingDaysCount: 0,
-        totalSets: 0,
-        totalVolume: 0,
-        cardioSessions: 0,
-        cardioMinutes: 0,
-        averageCardioHeartRate: nil
-    )
-
-    let weeks: [HistoryWeekSnapshot]
-    let days: [HistoryDaySnapshot]
-    let trainingDaysCount: Int
-    let totalSets: Int
-    let totalVolume: Double
-    let cardioSessions: Int
-    let cardioMinutes: Int
-    let averageCardioHeartRate: Int?
-
-    static func build(from sets: [HistorySetSnapshot], startDate: Date) -> HistorySnapshot {
-        var calendar = Calendar.current
-        calendar.firstWeekday = 2
-        calendar.minimumDaysInFirstWeek = 4
-
-        let filteredSets = sets.filter { $0.date >= startDate }
-        let groupedDays = Dictionary(grouping: filteredSets) { set in
-            calendar.startOfDay(for: set.date)
-        }
-
-        let days = groupedDays.map { day, sets in
-            let groupedExercises = Dictionary(grouping: sets) { $0.exerciseID }
-            let exerciseSummaries = groupedExercises.compactMap { exerciseID, exerciseSets -> HistoryDaySnapshot.ExerciseSummary? in
-                guard let first = exerciseSets.first else { return nil }
-                let latest = exerciseSets.map(\.date).max() ?? .distantPast
-                return HistoryDaySnapshot.ExerciseSummary(
-                    id: exerciseID,
-                    name: first.exerciseName,
-                    count: exerciseSets.count,
-                    category: first.category,
-                    totalMinutes: exerciseSets.reduce(0) { $0 + $1.durationMinutes },
-                    latestDate: latest
-                )
-            }
-            .sorted {
-                if $0.latestDate != $1.latestDate { return $0.latestDate > $1.latestDate }
-                return $0.name < $1.name
-            }
-
-            let cardioHeartRate = sets.reduce(into: (weightedTotal: 0, recordedMinutes: 0)) { result, set in
-                guard set.category == .cardio,
-                      set.durationMinutes > 0,
-                      let averageHeartRate = set.averageHeartRate,
-                      averageHeartRate > 0 else { return }
-                result.weightedTotal += averageHeartRate * set.durationMinutes
-                result.recordedMinutes += set.durationMinutes
-            }
-
-            return HistoryDaySnapshot(
-                date: day,
-                setCount: sets.filter { $0.category == .strength }.count,
-                totalVolume: sets.filter { $0.category == .strength }.reduce(0) { $0 + $1.volume },
-                exerciseSummaries: exerciseSummaries,
-                dayNote: HistorySnapshot.dayNote(from: sets),
-                cardioSessions: sets.filter { $0.category == .cardio }.count,
-                cardioMinutes: sets.filter { $0.category == .cardio }.reduce(0) { $0 + $1.durationMinutes },
-                cardioHeartRateWeightedTotal: cardioHeartRate.weightedTotal,
-                cardioHeartRateRecordedMinutes: cardioHeartRate.recordedMinutes
-            )
-        }
-        .sorted { $0.date > $1.date }
-
-        let groupedWeeks = Dictionary(grouping: days) { day in
-            let components = calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: day.date)
-            return calendar.startOfDay(for: calendar.date(from: components) ?? day.date)
-        }
-
-        let weeks = groupedWeeks.map { weekStart, days in
-            let orderedDays = days.sorted { $0.date > $1.date }
-            let heartRateWeightedTotal = orderedDays.reduce(0) { $0 + $1.cardioHeartRateWeightedTotal }
-            let heartRateRecordedMinutes = orderedDays.reduce(0) { $0 + $1.cardioHeartRateRecordedMinutes }
-            let averageCardioHeartRate = heartRateRecordedMinutes > 0
-                ? Int((Double(heartRateWeightedTotal) / Double(heartRateRecordedMinutes)).rounded())
-                : nil
-            return HistoryWeekSnapshot(
-                weekStart: weekStart,
-                days: orderedDays,
-                totalSets: orderedDays.reduce(0) { $0 + $1.setCount },
-                totalVolume: orderedDays.reduce(0) { $0 + $1.totalVolume },
-                cardioSessions: orderedDays.reduce(0) { $0 + $1.cardioSessions },
-                cardioMinutes: orderedDays.reduce(0) { $0 + $1.cardioMinutes },
-                averageCardioHeartRate: averageCardioHeartRate
-            )
-        }
-        .sorted { $0.weekStart > $1.weekStart }
-
-        let heartRateWeightedTotal = days.reduce(0) { $0 + $1.cardioHeartRateWeightedTotal }
-        let heartRateRecordedMinutes = days.reduce(0) { $0 + $1.cardioHeartRateRecordedMinutes }
-
-        return HistorySnapshot(
-            weeks: weeks,
-            days: days,
-            trainingDaysCount: days.count,
-            totalSets: filteredSets.filter { $0.category == .strength }.count,
-            totalVolume: filteredSets.filter { $0.category == .strength }.reduce(0) { $0 + $1.volume },
-            cardioSessions: filteredSets.filter { $0.category == .cardio }.count,
-            cardioMinutes: filteredSets.filter { $0.category == .cardio }.reduce(0) { $0 + $1.durationMinutes },
-            averageCardioHeartRate: heartRateRecordedMinutes > 0
-                ? Int((Double(heartRateWeightedTotal) / Double(heartRateRecordedMinutes)).rounded())
-                : nil
-        )
-    }
-
-    private static func dayNote(from sets: [HistorySetSnapshot]) -> String {
-        sets
-            .filter { !$0.dayNote.isEmpty }
-            .sorted(by: trainingOrder(lhs:rhs:))
-            .last?
-            .dayNote ?? ""
-    }
-
-    private static func trainingOrder(lhs: HistorySetSnapshot, rhs: HistorySetSnapshot) -> Bool {
-        var calendar = Calendar.current
-        calendar.firstWeekday = 2
-        let lhsDay = calendar.startOfDay(for: lhs.date)
-        let rhsDay = calendar.startOfDay(for: rhs.date)
-        if lhsDay != rhsDay { return lhsDay < rhsDay }
-        if lhs.setNumber != rhs.setNumber { return lhs.setNumber < rhs.setNumber }
-        if lhs.date != rhs.date { return lhs.date < rhs.date }
-        if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
-        return lhs.id.uuidString < rhs.id.uuidString
-    }
-}
-
 struct HistoryView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Query(sort: \WorkoutSet.date, order: .reverse) private var allSets: [WorkoutSet]
@@ -409,23 +197,31 @@ struct HistoryView: View {
             .padding(.horizontal, 14)
             .padding(.bottom, 2)
 
-            HStack(spacing: 8) {
-                Image(systemName: "heart.fill")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.orange)
+            categoryTotal(.cardio, text: cardioSummaryText)
 
-                Text(cardioSummaryText)
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
+            if snapshot.totals.rehabilitationSets > 0 {
+                categoryTotal(.rehabilitation,
+                              text: "training.rehabilitationSets".localized(with: snapshot.totals.rehabilitationSets))
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 18)
-            .padding(.bottom, 4)
         }
         .padding(.top, 4)
         .background(Color(.systemGroupedBackground))
+    }
+
+    private func categoryTotal(_ category: ExerciseCategory, text: String) -> some View {
+        HStack(spacing: 8) {
+            TrainingCategoryIcon(category: category)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(.orange)
+            Text(text)
+                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 18)
+        .padding(.bottom, 4)
     }
 
     private var emptyState: some View {
@@ -585,12 +381,13 @@ private struct HistoryExportView: View {
     }
 
     private var previewSection: some View {
-        Section("history.export.preview".localized) {
+        let totals = TrainingTotals(sets: filteredSets)
+        return Section("history.export.preview".localized) {
             HStack {
                 Label("history.export.sets".localized, systemImage: "number")
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text("\(filteredSets.filter { $0.exercise?.isStrength == true }.count)")
+                Text("\(totals.strengthSets)")
                     .fontWeight(.semibold)
             }
 
@@ -598,8 +395,18 @@ private struct HistoryExportView: View {
                 Label("history.cardioSessions".localized, systemImage: "heart.fill")
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text("\(filteredSets.filter { $0.exercise?.isCardio == true }.count)")
+                Text("\(totals.cardioSessions)")
                     .fontWeight(.semibold)
+            }
+
+            if totals.rehabilitationSets > 0 {
+                HStack {
+                    Label("exerciseCategory.rehabilitation".localized, systemImage: ExerciseCategory.rehabilitation.systemImage)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text("history.sets".localized(with: totals.rehabilitationSets))
+                        .fontWeight(.semibold)
+                }
             }
 
             HStack {
@@ -739,7 +546,7 @@ private struct WeekSummaryHeaderView: View {
                     .font(AppTextStyle.caption2)
                     .foregroundStyle(.secondary)
 
-                Text("history.sets".localized(with: totalSets))
+                Label("history.sets".localized(with: totalSets), systemImage: ExerciseCategory.strength.systemImage)
                     .font(AppTextStyle.caption2)
                     .foregroundStyle(.secondary)
 
@@ -748,11 +555,18 @@ private struct WeekSummaryHeaderView: View {
                     .foregroundStyle(.secondary)
             }
 
-            Text(cardioSummaryText)
+            Label(cardioSummaryText, systemImage: ExerciseCategory.cardio.systemImage)
                 .font(AppTextStyle.caption2)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
+
+            if week.totals.rehabilitationSets > 0 {
+                Label("training.rehabilitationSets".localized(with: week.totals.rehabilitationSets),
+                      systemImage: ExerciseCategory.rehabilitation.systemImage)
+                    .font(AppTextStyle.caption2)
+                    .foregroundStyle(.secondary)
+            }
         }
         .textCase(nil)
         .padding(.top, 6)
@@ -811,18 +625,11 @@ private struct DayRowView: View {
                     }
                 }
 
-                if !day.strengthSummaryText.isEmpty {
-                    Text(day.strengthSummaryText)
-                        .font(AppTextStyle.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(nil)
-                }
-
-                if !day.cardioSummaryText.isEmpty {
-                    Label(day.cardioSummaryText, systemImage: "heart.fill")
-                        .font(AppTextStyle.captionStrong)
-                        .foregroundStyle(.teal)
-                        .lineLimit(nil)
+                ForEach(ExerciseCategory.allCases) { category in
+                    let summary = day.summaryText(for: category)
+                    if !summary.isEmpty {
+                        TrainingCategorySummary(category: category, text: summary)
+                    }
                 }
 
                 if !day.dayNote.isEmpty {

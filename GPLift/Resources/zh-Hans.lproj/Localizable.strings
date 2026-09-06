@@ -16,12 +16,10 @@
 "today.cardio" = "有氧";
 "today.cardioSummary.one" = "%d 次 • %d 分钟";
 "today.cardioSummary.other" = "%d 次 • %d 分钟";
-"today.addAnotherCardio" = "再记录一次";
 
 /* Add Set View */
 "addSet.title" = "记录训练";
 "addSet.exercise" = "动作";
-"addSet.searchExercises" = "搜索动作...";
 "addSet.change" = "更换";
 "addSet.date" = "日期";
 "addSet.weight" = "重量";
@@ -247,7 +245,7 @@
 "muscle.back" = "背部";
 "muscle.shoulders" = "肩部";
 "muscle.arms" = "手臂";
-"muscle.legs" = "腿部";
+"muscle.legs" = "臀腿";
 "muscle.core" = "核心";
 "muscle.other" = "其他";
 
@@ -328,3 +326,10 @@
 "today.previousDay.title" = "前一次训练组";
 "today.previousDay.date" = "来自 %@";
 "today.previousDay.none" = "暂无前一次训练记录";
+"exerciseCategory.rehabilitation" = "复健";
+"training.rehabilitationSets" = "复健 %d 组";
+"addSet.sort" = "动作排序";
+"addSet.sort.due" = "逾期程度";
+"addSet.sort.standard" = "默认排序";
+"addSet.standardOrderingHint" = "按肌群固定顺序排列，组内按动作名称排序。";
+"addSet.noActiveExercises" = "此类别暂无启用的动作，请在动作库中创建或启用动作。";

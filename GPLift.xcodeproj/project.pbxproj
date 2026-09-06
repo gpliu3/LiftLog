@@ -29,6 +29,10 @@
 		E51000012B5A00000016 /* EditSetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51000002B5A00000016 /* EditSetView.swift */; };
 		E51000012B5A00000017 /* CSVExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51000002B5A00000017 /* CSVExport.swift */; };
 		E51000012B5A00000018 /* WeightUnit.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51000002B5A00000018 /* WeightUnit.swift */; };
+		E51000012B5A00000019 /* TrainingTotals.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51000002B5A00000019 /* TrainingTotals.swift */; };
+		E51000012B5A0000001A /* ExerciseOrdering.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51000002B5A0000001A /* ExerciseOrdering.swift */; };
+		E51000012B5A0000001B /* HistorySnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51000002B5A0000001B /* HistorySnapshot.swift */; };
+		E51000012B5A0000001C /* TrainingPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51000002B5A0000001C /* TrainingPresentation.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -56,6 +60,10 @@
 		E51000002B5A00000016 /* EditSetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditSetView.swift; sourceTree = "<group>"; };
 		E51000002B5A00000017 /* CSVExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVExport.swift; sourceTree = "<group>"; };
 		E51000002B5A00000018 /* WeightUnit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeightUnit.swift; sourceTree = "<group>"; };
+		E51000002B5A00000019 /* TrainingTotals.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingTotals.swift; sourceTree = "<group>"; };
+		E51000002B5A0000001A /* ExerciseOrdering.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseOrdering.swift; sourceTree = "<group>"; };
+		E51000002B5A0000001B /* HistorySnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistorySnapshot.swift; sourceTree = "<group>"; };
+		E51000002B5A0000001C /* TrainingPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingPresentation.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -109,6 +117,7 @@
 		E51000052B5A00000000 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				E51000002B5A0000001C /* TrainingPresentation.swift */,
 				E51000002B5A00000004 /* MainTabView.swift */,
 				E51000062B5A00000000 /* Today */,
 				E51000072B5A00000000 /* Exercises */,
@@ -167,6 +176,9 @@
 		E510000B2B5A00000000 /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
+				E51000002B5A0000001B /* HistorySnapshot.swift */,
+				E51000002B5A0000001A /* ExerciseOrdering.swift */,
+				E51000002B5A00000019 /* TrainingTotals.swift */,
 				E51000002B5A0000000D /* VolumeCalculator.swift */,
 				E51000002B5A0000000E /* DateFormatters.swift */,
 				E51000002B5A00000010 /* LanguageManager.swift */,
@@ -265,6 +277,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E51000012B5A0000001C /* TrainingPresentation.swift in Sources */,
+				E51000012B5A0000001B /* HistorySnapshot.swift in Sources */,
+				E51000012B5A0000001A /* ExerciseOrdering.swift in Sources */,
+				E51000012B5A00000019 /* TrainingTotals.swift in Sources */,
 				E51000012B5A00000001 /* GPLiftApp.swift in Sources */,
 				E51000012B5A00000002 /* Exercise.swift in Sources */,
 				E51000012B5A00000003 /* WorkoutSet.swift in Sources */,

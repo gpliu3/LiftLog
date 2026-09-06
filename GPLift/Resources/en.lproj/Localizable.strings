@@ -16,12 +16,10 @@
 "today.cardio" = "Cardio";
 "today.cardioSummary.one" = "%d session • %d min";
 "today.cardioSummary.other" = "%d sessions • %d min";
-"today.addAnotherCardio" = "Add another session";
 
 /* Add Set View */
 "addSet.title" = "Log Set";
 "addSet.exercise" = "Exercise";
-"addSet.searchExercises" = "Search exercises...";
 "addSet.change" = "Change";
 "addSet.date" = "Date";
 "addSet.weight" = "Weight";
@@ -247,7 +245,7 @@
 "muscle.back" = "Back";
 "muscle.shoulders" = "Shoulders";
 "muscle.arms" = "Arms";
-"muscle.legs" = "Legs";
+"muscle.legs" = "Glutes & Legs";
 "muscle.core" = "Core";
 "muscle.other" = "Other";
 
@@ -328,3 +326,10 @@
 "today.previousDay.title" = "Previous Day Sets";
 "today.previousDay.date" = "From %@";
 "today.previousDay.none" = "No previous day records";
+"exerciseCategory.rehabilitation" = "Rehab";
+"training.rehabilitationSets" = "Rehab %d sets";
+"addSet.sort" = "Sort exercises";
+"addSet.sort.due" = "Longest due";
+"addSet.sort.standard" = "Default order";
+"addSet.standardOrderingHint" = "Fixed muscle group order; exercises sorted by name.";
+"addSet.noActiveExercises" = "No active exercises in this category. Add or activate one in Exercises.";

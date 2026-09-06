@@ -28,7 +28,7 @@ struct AddSetView: View {
     @State private var rirSelection: Int = -1
     @State private var setNotes: String = ""
     @State private var showExerciseNotes: Bool = false
-    @State private var searchText: String = ""
+    @State private var exerciseOrdering: ExerciseOrdering = .due
     @State private var justSaved: Bool = false
     @State private var savedSetNumber: Int = 0
     @State private var cachedNextSetNumber: Int = 1
@@ -60,26 +60,8 @@ struct AddSetView: View {
         exercises.filter { $0.isActiveResolved && $0.resolvedCategory == selectedCategory }
     }
 
-    private var filteredExercises: [Exercise] {
-        let source: [Exercise]
-        if searchText.isEmpty {
-            source = visibleExercises
-        } else {
-            source = visibleExercises.filter {
-                $0.name.localizedCaseInsensitiveContains(searchText) ||
-                $0.displayName.localizedCaseInsensitiveContains(searchText) ||
-                $0.localizedMuscleGroup.localizedCaseInsensitiveContains(searchText)
-            }
-        }
-
-        return source
-    }
-
     private var groupedExercises: [ExerciseGroupSection] {
-        let grouped = Dictionary(grouping: filteredExercises) { exercise in
-            normalizedMuscleGroup(for: exercise)
-        }
-        let allVisibleExercisesByGroup = Dictionary(grouping: visibleExercises) { exercise in
+        let grouped = Dictionary(grouping: visibleExercises) { exercise in
             normalizedMuscleGroup(for: exercise)
         }
 
@@ -87,7 +69,7 @@ struct AddSetView: View {
             ExerciseGroupSection(
                 muscleGroup: muscleGroup,
                 exercises: exercises.sorted(by: compareExercises(lhs:rhs:)),
-                sortDate: allVisibleExercisesByGroup[muscleGroup]?
+                sortDate: exercises
                     .compactMap { lastTrainedDates[$0.id] }
                     .max()
             )
@@ -96,7 +78,7 @@ struct AddSetView: View {
     }
 
     private var orderedCardioExercises: [Exercise] {
-        filteredExercises.sorted(by: compareExercises(lhs:rhs:))
+        visibleExercises.sorted(by: compareExercises(lhs:rhs:))
     }
 
     private func normalizedMuscleGroup(for exercise: Exercise) -> String {
@@ -104,31 +86,12 @@ struct AddSetView: View {
     }
 
     private func compareExercises(lhs: Exercise, rhs: Exercise) -> Bool {
-        switch (lastTrainedDates[lhs.id], lastTrainedDates[rhs.id]) {
-        case let (l?, r?):
-            if l != r { return l < r }
-            return lhs.displayName < rhs.displayName
-        case (_?, nil):
-            return true
-        case (nil, _?):
-            return false
-        case (nil, nil):
-            return lhs.displayName < rhs.displayName
-        }
+        exerciseOrdering.precedes(lhs, rhs, lastTrainedDates: lastTrainedDates)
     }
 
     private func compareExerciseGroups(lhs: ExerciseGroupSection, rhs: ExerciseGroupSection) -> Bool {
-        switch (lhs.sortDate, rhs.sortDate) {
-        case let (l?, r?):
-            if l != r { return l < r }
-            return lhs.localizedTitle < rhs.localizedTitle
-        case (_?, nil):
-            return true
-        case (nil, _?):
-            return false
-        case (nil, nil):
-            return lhs.localizedTitle < rhs.localizedTitle
-        }
+        exerciseOrdering.groupPrecedes(lhs.muscleGroup, rhs.muscleGroup,
+                                      lhsDate: lhs.sortDate, rhsDate: rhs.sortDate)
     }
 
     private func lastTrainedLabel(for exercise: Exercise) -> String {
@@ -168,15 +131,16 @@ struct AddSetView: View {
     }
 
     private var neverTrainedCount: Int {
-        filteredExercises.filter { lastTrainedDates[$0.id] == nil }.count
+        visibleExercises.filter { lastTrainedDates[$0.id] == nil }.count
     }
 
     private var trainedCount: Int {
-        filteredExercises.count - neverTrainedCount
+        visibleExercises.count - neverTrainedCount
     }
 
     private var exerciseOrderingHint: String {
-        if filteredExercises.isEmpty { return "" }
+        if visibleExercises.isEmpty { return "" }
+        if exerciseOrdering == .standard { return "addSet.standardOrderingHint".localized }
         if selectedCategory == .cardio { return "addSet.cardioOrderingHint".localized }
         return "addSet.orderingHint".localized(with: trainedCount, neverTrainedCount)
     }
@@ -185,13 +149,16 @@ struct AddSetView: View {
         Button {
             selectedExercise = exercise
             showExerciseNotes = false
-            searchText = ""
             applySuggestedDefaults(for: exercise)
         } label: {
             HStack(alignment: .top, spacing: 8) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(exercise.displayName)
-                        .font(AppTextStyle.sectionTitle)
+                    Label {
+                        Text(exercise.displayName)
+                    } icon: {
+                        TrainingCategoryIcon(category: exercise.resolvedCategory)
+                    }
+                    .font(AppTextStyle.sectionTitle)
                     Text(lastTrainedLabel(for: exercise))
                         .font(AppTextStyle.caption2)
                         .foregroundStyle(.secondary)
@@ -225,8 +192,12 @@ struct AddSetView: View {
         }
 
         Section {
-            TextField("addSet.searchExercises".localized, text: $searchText)
-                .textFieldStyle(.plain)
+            Picker("addSet.sort".localized, selection: $exerciseOrdering) {
+                ForEach(ExerciseOrdering.allCases) { ordering in
+                    Text(ordering.localizedName).tag(ordering)
+                }
+            }
+            .pickerStyle(.menu)
         } header: {
             Text("addSet.exercise".localized)
         } footer: {
@@ -235,7 +206,12 @@ struct AddSetView: View {
             }
         }
 
-        if selectedCategory == .strength {
+        if visibleExercises.isEmpty {
+            Section {
+                Text("addSet.noActiveExercises".localized)
+                    .foregroundStyle(.secondary)
+            }
+        } else if selectedCategory.usesSets {
             ForEach(groupedExercises) { group in
                 Section {
                     ForEach(group.exercises) { exercise in
@@ -382,9 +358,6 @@ struct AddSetView: View {
                 .onChange(of: selectedExercise?.id) { _, _ in
                     scrollToTop(with: proxy, animated: true)
                 }
-                .onChange(of: selectedCategory) { _, _ in
-                    searchText = ""
-                }
                 .onChange(of: selectedDate) { _, _ in
                     if let exercise = selectedExercise {
                         applySuggestedDefaults(for: exercise)
@@ -478,17 +451,7 @@ struct AddSetView: View {
                     }
                 }
 
-                if !exercise.muscleGroup.isEmpty {
-                    Text(exercise.localizedMuscleGroup)
-                        .font(AppTextStyle.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                if exercise.isCardio {
-                    Text(ExerciseCategory.cardio.localizedName)
-                        .font(AppTextStyle.caption)
-                        .foregroundStyle(.teal)
-                }
+                ExerciseClassificationView(exercise: exercise)
 
                 if showExerciseNotes, !exercise.displayNotes.isEmpty {
                     HStack(alignment: .top, spacing: 10) {
@@ -634,11 +597,11 @@ struct AddSetView: View {
         Section("addSet.durationMinutes".localized) {
             HStack {
                 Button {
-                    cardioMinutes = max(1, cardioMinutes - 1)
+                    cardioMinutes = CardioDuration.adjusted(cardioMinutes, increasing: false)
                 } label: {
                     Image(systemName: "minus.circle.fill")
                         .font(.title2)
-                        .foregroundStyle(.teal)
+                        .foregroundStyle(.orange)
                 }
                 .buttonStyle(.plain)
 
@@ -656,11 +619,11 @@ struct AddSetView: View {
                 Spacer()
 
                 Button {
-                    cardioMinutes += 1
+                    cardioMinutes = CardioDuration.adjusted(cardioMinutes, increasing: true)
                 } label: {
                     Image(systemName: "plus.circle.fill")
                         .font(.title2)
-                        .foregroundStyle(.teal)
+                        .foregroundStyle(.orange)
                 }
                 .buttonStyle(.plain)
             }

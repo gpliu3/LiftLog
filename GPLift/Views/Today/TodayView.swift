@@ -65,7 +65,7 @@ private struct TodayContentView: View {
             return (exercise, sets.sorted { $0.setNumber < $1.setNumber })
         }.sorted { lhs, rhs in
             if lhs.0.resolvedCategory != rhs.0.resolvedCategory {
-                return lhs.0.isStrength
+                return lhs.0.resolvedCategory.sortOrder < rhs.0.resolvedCategory.sortOrder
             }
             let lhsLatest = lhs.1.map(\.date).max() ?? .distantPast
             let rhsLatest = rhs.1.map(\.date).max() ?? .distantPast
@@ -85,6 +85,7 @@ private struct TodayContentView: View {
                 [
                     set.id.uuidString,
                     set.exercise?.id.uuidString ?? "",
+                    set.exercise?.resolvedCategory.rawValue ?? "",
                     "\(set.date.timeIntervalSinceReferenceDate)",
                     "\(set.setNumber)",
                     "\(set.weightKg)",
@@ -98,21 +99,7 @@ private struct TodayContentView: View {
             .joined(separator: "|")
     }
 
-    private var totalVolume: Double {
-        todaySets.reduce(0) { $0 + $1.volume }
-    }
-
-    private var strengthSetCount: Int {
-        todaySets.filter { $0.exercise?.isStrength == true }.count
-    }
-
-    private var cardioSessions: Int {
-        todaySets.filter { $0.exercise?.isCardio == true }.count
-    }
-
-    private var cardioMinutes: Int {
-        todaySets.filter { $0.exercise?.isCardio == true }.reduce(0) { $0 + $1.cardioMinutes }
-    }
+    private var totals: TrainingTotals { TrainingTotals(sets: todaySets) }
 
     private var uniqueExercises: Int {
         Set(todaySets.compactMap { $0.exercise?.id }).count
@@ -170,8 +157,8 @@ private struct TodayContentView: View {
         return List {
             statsCard
 
-            if cardioSessions > 0 {
-                cardioSummaryCard
+            if totals.cardioSessions > 0 || totals.rehabilitationSets > 0 {
+                additionalTrainingSummary
             }
 
             ForEach(groups, id: \.0.id) { exercise, sets in
@@ -235,8 +222,9 @@ private struct TodayContentView: View {
                         deleteSet(at: indexSet, from: sets)
                     }
 
-                    // Quick add row at bottom of each exercise
-                    quickAddRow(for: exercise, sets: sets)
+                    if exercise.usesSets {
+                        quickAddRow(for: exercise, sets: sets)
+                    }
                 } header: {
                     ExerciseHeaderView(
                         exercise: exercise,
@@ -286,24 +274,16 @@ private struct TodayContentView: View {
 
         return Button {
             closeInlineEditor()
-            if exercise.isCardio {
-                quickAddExercise = exercise
-            } else {
-                quickAddSet(for: exercise, basedOn: lastSet, todaySetsForExercise: sets)
-            }
+            quickAddSet(for: exercise, basedOn: lastSet, todaySetsForExercise: sets)
         } label: {
             HStack {
                 Image(systemName: "plus.circle.fill")
                     .foregroundStyle(.orange)
-                Text(exercise.isCardio ? "today.addAnotherCardio".localized : "today.addAnotherSet".localized)
+                Text("today.addAnotherSet".localized)
                     .foregroundStyle(.orange)
                 Spacer()
                 if let lastSet = lastSet {
-                    if exercise.isCardio {
-                        Text(lastSet.formattedCardioDuration)
-                            .font(AppTextStyle.caption)
-                            .foregroundStyle(.secondary)
-                    } else if exercise.isTimeOnly {
+                    if exercise.isTimeOnly {
                         Text(lastSet.formattedDuration)
                             .font(AppTextStyle.caption)
                             .foregroundStyle(.secondary)
@@ -448,7 +428,7 @@ private struct TodayContentView: View {
         Section {
             HStack(spacing: 12) {
                 StatItemView(
-                    value: "\(strengthSetCount)",
+                    value: "\(totals.strengthSets)",
                     label: "today.sets".localized,
                     icon: "number"
                 )
@@ -456,7 +436,7 @@ private struct TodayContentView: View {
                 Divider()
 
                 StatItemView(
-                    value: String(format: "%.0f", totalVolume),
+                    value: String(format: "%.0f", totals.strengthVolume),
                     label: "today.volume".localized,
                     icon: "scalemass"
                 )
@@ -473,23 +453,19 @@ private struct TodayContentView: View {
         }
     }
 
-    private var cardioSummaryCard: some View {
+    private var additionalTrainingSummary: some View {
         Section {
-            HStack(spacing: 8) {
-                Image(systemName: "heart.fill")
-                    .foregroundStyle(.teal)
-                Text("today.cardio".localized)
-                    .font(AppTextStyle.bodyStrong)
-                Spacer()
-                Text(WorkoutSet.localizedCardioSummary(
-                    sessions: cardioSessions,
-                    minutes: cardioMinutes,
-                    includesCategory: false
+            if totals.cardioSessions > 0 {
+                TrainingCategorySummary(category: .cardio, text: WorkoutSet.localizedCardioSummary(
+                    sessions: totals.cardioSessions,
+                    minutes: totals.cardioMinutes,
+                    includesCategory: true
                 ))
-                    .font(AppTextStyle.captionStrong)
-                    .foregroundStyle(.teal)
             }
-            .padding(.vertical, 2)
+            if totals.rehabilitationSets > 0 {
+                TrainingCategorySummary(category: .rehabilitation,
+                                        text: "training.rehabilitationSets".localized(with: totals.rehabilitationSets))
+            }
         }
     }
 
@@ -671,22 +647,7 @@ struct SetRowView: View {
                 })
 
             if workoutSet.exercise?.isCardio == true {
-                HStack(spacing: 6) {
-                    Text(workoutSet.formattedCardioDuration)
-                        .font(AppTextStyle.bodyStrong)
-                        .lineLimit(1)
-
-                    if let average = workoutSet.averageHeartRate {
-                        Text("common.averageHeartRateShort".localized(with: average))
-                            .font(AppTextStyle.caption2Strong)
-                            .foregroundStyle(.teal)
-                    }
-                    if let maximum = workoutSet.maxHeartRate {
-                        Text("common.maxHeartRateShort".localized(with: maximum))
-                            .font(AppTextStyle.caption2Strong)
-                            .foregroundStyle(.pink)
-                    }
-                }
+                CardioSetMetrics(workoutSet: workoutSet)
             } else if exerciseType == "timeOnly" {
                 HStack(spacing: 6) {
                     Text(workoutSet.formattedDuration)
@@ -868,7 +829,7 @@ struct InlineCardioEditorRow: View {
                     .foregroundStyle(.secondary)
 
                 Button {
-                    durationMinutes = max(1, durationMinutes - 1)
+                    durationMinutes = CardioDuration.adjusted(durationMinutes, increasing: false)
                 } label: {
                     Image(systemName: "minus")
                 }
@@ -885,7 +846,7 @@ struct InlineCardioEditorRow: View {
                     .foregroundStyle(.secondary)
 
                 Button {
-                    durationMinutes += 1
+                    durationMinutes = CardioDuration.adjusted(durationMinutes, increasing: true)
                 } label: {
                     Image(systemName: "plus")
                 }
@@ -928,12 +889,12 @@ struct InlineCardioEditorRow: View {
                 }
                 .font(AppTextStyle.captionStrong)
                 .buttonStyle(.borderless)
-                .foregroundStyle(.teal)
+                .foregroundStyle(.orange)
                 .disabled(!isValid)
             }
         }
         .padding(8)
-        .background(Color.teal.opacity(0.08))
+        .background(Color.orange.opacity(0.08))
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .onChange(of: durationMinutes) { _, _ in hasPendingChanges = true }
         .onChange(of: averageHeartRateText) { _, _ in hasPendingChanges = true }
@@ -1540,6 +1501,9 @@ struct ExerciseHeaderView: View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
+                    TrainingCategoryIcon(category: exercise.resolvedCategory)
+                        .font(AppTextStyle.captionStrong)
+                        .foregroundStyle(.primary)
                     Text(exercise.displayName)
                         .font(.headline.bold())
                         .foregroundStyle(Color.primary)
@@ -1637,21 +1601,7 @@ struct PreviousDaySetsRow: View {
                             .frame(width: 50, alignment: .leading)
 
                         if exercise.isCardio {
-                            HStack(spacing: 6) {
-                                Text(set.formattedCardioDuration)
-                                    .font(AppTextStyle.captionStrong)
-                                    .lineLimit(1)
-                                if let average = set.averageHeartRate {
-                                    Text("common.averageHeartRateShort".localized(with: average))
-                                        .font(AppTextStyle.caption2Strong)
-                                        .foregroundStyle(.teal)
-                                }
-                                if let maximum = set.maxHeartRate {
-                                    Text("common.maxHeartRateShort".localized(with: maximum))
-                                        .font(AppTextStyle.caption2Strong)
-                                        .foregroundStyle(.pink)
-                                }
-                            }
+                            CardioSetMetrics(workoutSet: set, durationFont: AppTextStyle.captionStrong)
                         } else if exercise.isTimeOnly {
                             HStack(spacing: 6) {
                                 Text(set.formattedDuration)

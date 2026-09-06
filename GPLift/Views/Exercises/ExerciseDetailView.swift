@@ -99,7 +99,7 @@ struct ExerciseDetailView: View {
                 LabeledContent("exerciseDetail.muscleGroup".localized, value: exercise.localizedMuscleGroup)
             }
 
-            if exercise.isStrength && !exercise.isWeightReps {
+            if exercise.usesSets && !exercise.isWeightReps {
                 LabeledContent("exerciseEdit.exerciseType".localized, value: exercise.localizedExerciseType)
             }
 
@@ -153,7 +153,7 @@ struct ExerciseDetailView: View {
                 LabeledContent("progress.totalReps".localized, value: "\(totalReps)")
             }
 
-            if exercise.isStrength {
+            if exercise.usesSets {
                 LabeledContent("exerciseDetail.totalSets".localized, value: "\(exercise.workoutSets.count)")
             }
         }
@@ -179,18 +179,7 @@ struct ExerciseDetailView: View {
                         .foregroundStyle(.secondary)
 
                     if exercise.isCardio {
-                        Text(set.formattedCardioDuration)
-                            .font(AppTextStyle.bodyStrong)
-                        if let average = set.averageHeartRate {
-                            Text("common.averageHeartRateShort".localized(with: average))
-                                .font(AppTextStyle.caption2Strong)
-                                .foregroundStyle(.teal)
-                        }
-                        if let maximum = set.maxHeartRate {
-                            Text("common.maxHeartRateShort".localized(with: maximum))
-                                .font(AppTextStyle.caption2Strong)
-                                .foregroundStyle(.pink)
-                        }
+                        CardioSetMetrics(workoutSet: set)
                     } else if exercise.isTimeOnly {
                         Text(set.formattedDuration)
                             .font(AppTextStyle.bodyStrong)
