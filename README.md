@@ -133,7 +133,7 @@ To run the same database and logic tests on a booted iOS simulator, set `GPLIFT_
 
 ## Release
 
-- Current App Store/TestFlight version prepared in this repo: `1.8 (73)`
+- Current App Store/TestFlight version prepared in this repo: `1.8 (74)`
 - Bundle identifier: `com.gengpuliu.LiftLog`
 - Export compliance: `ITSAppUsesNonExemptEncryption = NO`
 - Build/version values are managed from `GPLift.xcodeproj/project.pbxproj`
