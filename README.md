@@ -23,6 +23,7 @@ GPLift is a compact iOS strength, cardio, and rehabilitation training log focuse
 - **Exercise activity control**: exercises can be marked active or inactive; inactive exercises stay in history and the library but are hidden from the Log Set picker.
 - **Exercise notes in every category**: editing a Cardio exercise preserves its existing notes, just like Strength and Rehab.
 - **History by week, month, or all**: the default History view is `All`, grouped by Monday-based weeks with separate Strength set/volume, Cardio session/minute, and Rehab set totals. Days containing only Cardio or Rehab remain visible with their full training notes.
+- **Readable History summaries**: the scrollable overview and weekly headers share bold, full-size category rows instead of separate metric tiles. Week headings combine the Monday-Sunday date range with training days; Strength shows sessions, sets, and kilograms, while Cardio shows a red heart, sessions, minutes/goal, and recorded average heart rate. Text wraps naturally at larger text sizes. Category tabs already identify activities, so the Log Set picker does not repeat category icons for each exercise.
 - **CSV export**: export workout history and exercises, including Cardio duration and heart-rate fields, to UTF-8 BOM CSV for better Excel compatibility with Chinese text.
 - **Bilingual UI**: English and Simplified Chinese, with in-app language switching.
 
@@ -57,6 +58,7 @@ GPLift is a compact iOS strength, cardio, and rehabilitation training log focuse
 - The weekly Cardio target is stored in `UserDefaults` and defaults to 60 minutes, so it does not require a SwiftData migration.
 - Weekly average heart rate is weighted by each recorded session's duration; sessions without an average heart rate are excluded from that calculation but still count toward Cardio minutes.
 - Shared `TrainingTotals` calculations keep aggregate Strength counts/volume separate from Cardio and Rehab in Today, History, and day details. Rehab sets retain their own weight, reps, duration, volume, and per-exercise PB behavior; Progress charts continue to include only Strength exercises.
+- History training days count distinct dates with Strength or Cardio; mixed days count once. Strength session counts represent distinct dates with Strength sets. Rehab-only dates remain visible but do not increase these counts. These are read-only snapshot calculations with no changes to stored records or the database schema.
 - `Exercise.isActive` is stored as an optional field for backward compatibility with older SwiftData stores.
 - Missing `isActive` values are treated as active, which preserves existing users' exercise visibility after upgrading.
 - The four built-in Cardio activities are seeded once for existing users. If a user later removes one, it is not silently added back.

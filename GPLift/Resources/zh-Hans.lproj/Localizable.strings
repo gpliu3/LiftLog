@@ -123,6 +123,11 @@
 "history.today" = "今天";
 "history.sets" = "%d 组";
 "history.weekRange" = "%@ - %@";
+"history.overview" = "总览";
+"history.summaryHeading.one" = "%@（%d天训练）";
+"history.summaryHeading.other" = "%@（%d天训练）";
+"history.strengthSummary.one" = "力量%d次，%d组，%d公斤";
+"history.strengthSummary.other" = "力量%d次，%d组，%d公斤";
 "history.weekTrainingDays" = "%d 天训练";
 "history.weekVolume" = "%d kg";
 "history.cardioSummary.one" = "有氧%d次，%dm";

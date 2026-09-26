@@ -153,12 +153,8 @@ struct AddSetView: View {
         } label: {
             HStack(alignment: .top, spacing: 8) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Label {
-                        Text(exercise.displayName)
-                    } icon: {
-                        TrainingCategoryIcon(category: exercise.resolvedCategory)
-                    }
-                    .font(AppTextStyle.sectionTitle)
+                    Text(exercise.displayName)
+                        .font(AppTextStyle.sectionTitle)
                     Text(lastTrainedLabel(for: exercise))
                         .font(AppTextStyle.caption2)
                         .foregroundStyle(.secondary)

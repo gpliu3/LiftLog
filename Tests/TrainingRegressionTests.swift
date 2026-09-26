@@ -15,6 +15,7 @@ struct TrainingRegressionTests {
         let legacyURL = URL(fileURLWithPath: CommandLine.arguments[1])
         try verifyUpgrade(at: legacyURL)
         try verifyTrainingFlows(at: legacyURL.deletingLastPathComponent().appendingPathComponent("new.store"))
+        try verifyHistoryDayCounts()
         try verifyOrdering()
         try verifyDuration()
         print("PASS: all training regression checks")
@@ -81,7 +82,7 @@ struct TrainingRegressionTests {
         try expect(records[1].volume == 30, "Individual rehab volume should remain available")
 
         let history = HistorySnapshot.build(from: records.compactMap(HistorySetSnapshot.init), startDate: .distantPast)
-        try expect(history.trainingDaysCount == 2 && history.weeks.count == 2, "Rehab-only day or Monday week boundary lost")
+        try expect(history.trainingDaysCount == 1 && history.days.count == 2 && history.weeks.count == 2, "Training-day count or rehab-only visibility incorrect")
         try expect(history.totalSets == 1 && history.totalVolume == 1000, "History strength totals contaminated")
         try expect(history.totals.rehabilitationSets == 4, "History rehab totals incorrect")
         try expect(history.averageCardioHeartRate == 140, "History average mismatch")
@@ -111,6 +112,36 @@ struct TrainingRegressionTests {
         try expect(exported.prefix(3) == Data([0xef, 0xbb, 0xbf]), "CSV UTF-8 BOM missing")
         try expect(String(data: exported.dropFirst(3), encoding: .utf8)?.contains("复健负重") == true, "CSV Chinese encoding damaged")
         print("PASS: three recording modes, mixed/rehab-only days, weekly/range totals, heart rate, editing/reopen and CSV")
+    }
+
+    @MainActor private static func verifyHistoryDayCounts() throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let monday = calendar.date(from: DateComponents(year: 2026, month: 9, day: 21, hour: 12))!
+        let tuesday = calendar.date(byAdding: .day, value: 1, to: monday)!
+        let sunday = calendar.date(byAdding: .day, value: 6, to: monday)!
+        let nextMonday = calendar.date(byAdding: .day, value: 7, to: monday)!
+        let strength = Exercise(name: "Strength")
+        let cardio = Exercise(name: "Cardio", exerciseType: "cardio", category: .cardio)
+        let rehab = Exercise(name: "Rehab", category: .rehabilitation)
+        let records = [
+            WorkoutSet(exercise: strength, date: monday, weightKg: 20, reps: 10),
+            WorkoutSet(exercise: strength, date: monday, weightKg: 25, reps: 10, setNumber: 2),
+            WorkoutSet(exercise: cardio, date: monday, durationSeconds: 30 * 60),
+            WorkoutSet(exercise: cardio, date: tuesday, durationSeconds: 20 * 60),
+            WorkoutSet(exercise: rehab, date: sunday, weightKg: 5, reps: 10),
+            WorkoutSet(exercise: strength, date: nextMonday, weightKg: 30, reps: 10)
+        ].compactMap(HistorySetSnapshot.init)
+        let history = HistorySnapshot.build(from: records, startDate: .distantPast)
+        try expect(history.trainingDaysCount == 3 && history.days.count == 4, "Mixed days must count once; rehab-only days must remain visible")
+        try expect(history.strengthSessions == 2 && history.totalSets == 3, "Strength sessions must count days, not sets")
+        try expect(history.weeks.count == 2, "Monday must start a new week")
+        let week = history.weeks[1]
+        try expect(week.trainingDaysCount == 2 && week.strengthSessions == 1, "Weekly day/session counts incorrect")
+        try expect(week.totalSets == 2 && week.totalVolume == 450 && week.cardioMinutes == 50, "Weekly categories or volume changed")
+        let filtered = HistorySnapshot.build(from: records, startDate: nextMonday)
+        try expect(filtered.trainingDaysCount == 1 && filtered.strengthSessions == 1, "Selected-period counts include excluded days")
+        try expect(HistorySnapshot.empty.trainingDaysCount == 0 && HistorySnapshot.empty.strengthSessions == 0, "Empty history counts incorrect")
+        print("PASS: mixed/strength/cardio/rehab-only days, distinct Strength sessions, Monday boundary and selected-period counts")
     }
 
     private static func verifyOrdering() throws {

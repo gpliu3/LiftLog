@@ -44,6 +44,7 @@ struct HistoryDaySnapshot: Identifiable, Sendable {
     let totals: TrainingTotals
     var setCount: Int { totals.strengthSets }
     var totalVolume: Double { totals.strengthVolume }
+    var isTrainingDay: Bool { totals.strengthSets > 0 || totals.cardioSessions > 0 }
     let exerciseSummaries: [ExerciseSummary]
     let dayNote: String
 
@@ -60,6 +61,8 @@ struct HistoryWeekSnapshot: Identifiable, Sendable {
     let weekStart: Date
     let days: [HistoryDaySnapshot]
     let totals: TrainingTotals
+    var trainingDaysCount: Int { days.filter(\.isTrainingDay).count }
+    var strengthSessions: Int { days.filter { $0.setCount > 0 }.count }
     var totalSets: Int { totals.strengthSets }
     var totalVolume: Double { totals.strengthVolume }
     var cardioSessions: Int { totals.cardioSessions }
@@ -77,7 +80,8 @@ struct HistorySnapshot: Sendable {
     let weeks: [HistoryWeekSnapshot]
     let days: [HistoryDaySnapshot]
     let totals: TrainingTotals
-    var trainingDaysCount: Int { days.count }
+    var trainingDaysCount: Int { days.filter(\.isTrainingDay).count }
+    var strengthSessions: Int { days.filter { $0.setCount > 0 }.count }
     var totalSets: Int { totals.strengthSets }
     var totalVolume: Double { totals.strengthVolume }
     var cardioSessions: Int { totals.cardioSessions }

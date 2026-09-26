@@ -42,31 +42,6 @@ struct HistoryView: View {
         }
     }
 
-    private var trainingDaysCount: Int {
-        snapshot.trainingDaysCount
-    }
-
-    private var totalVolume: Double {
-        snapshot.totalVolume
-    }
-
-    private var totalSets: Int {
-        snapshot.totalSets
-    }
-
-    private var cardioSessions: Int { snapshot.cardioSessions }
-    private var cardioMinutes: Int { snapshot.cardioMinutes }
-    private var averageCardioHeartRate: Int? { snapshot.averageCardioHeartRate }
-
-    private var cardioSummaryText: String {
-        localizedCardioGoalSummary(
-            sessions: cardioSessions,
-            minutes: cardioMinutes,
-            goalMinutes: settingsManager.weeklyCardioGoalMinutes,
-            averageHeartRate: averageCardioHeartRate
-        )
-    }
-
     private var allSetsSignature: String {
         [
             selectedPeriod.rawValue,
@@ -98,6 +73,8 @@ struct HistoryView: View {
                 periodPicker
 
                 if snapshot.days.isEmpty {
+                    overview
+                        .padding()
                     emptyState
                 } else {
                     historyList
@@ -166,62 +143,29 @@ struct HistoryView: View {
     }
 
     private var periodPicker: some View {
-        VStack(spacing: 4) {
-            Picker("Period", selection: $selectedPeriod) {
-                ForEach(TimePeriod.allCases, id: \.self) { period in
-                    Text(period.localized).tag(period)
-                }
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal)
-
-            HStack(spacing: 8) {
-                HistorySummaryItemView(
-                    value: "\(trainingDaysCount)",
-                    label: "history.trainingDays".localized,
-                    systemImage: "calendar"
-                )
-
-                HistorySummaryItemView(
-                    value: "\(totalSets)",
-                    label: "history.totalSets".localized,
-                    systemImage: "number"
-                )
-
-                HistorySummaryItemView(
-                    value: String(format: "%.0f", totalVolume),
-                    label: "history.totalVolume".localized,
-                    systemImage: "scalemass"
-                )
-            }
-            .padding(.horizontal, 14)
-            .padding(.bottom, 2)
-
-            categoryTotal(.cardio, text: cardioSummaryText)
-
-            if snapshot.totals.rehabilitationSets > 0 {
-                categoryTotal(.rehabilitation,
-                              text: "training.rehabilitationSets".localized(with: snapshot.totals.rehabilitationSets))
+        Picker("Period", selection: $selectedPeriod) {
+            ForEach(TimePeriod.allCases, id: \.self) { period in
+                Text(period.localized).tag(period)
             }
         }
-        .padding(.top, 4)
+        .pickerStyle(.segmented)
+        .padding(.horizontal)
+        .padding(.vertical, 4)
         .background(Color(.systemGroupedBackground))
     }
 
-    private func categoryTotal(_ category: ExerciseCategory, text: String) -> some View {
-        HStack(spacing: 8) {
-            TrainingCategoryIcon(category: category)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.orange)
-            Text(text)
-                .font(.system(size: 20, weight: .bold, design: .rounded))
-                .foregroundStyle(.primary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
+    private var overview: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(historySummaryHeading(title: "history.overview".localized,
+                                       trainingDays: snapshot.trainingDaysCount))
+                .font(AppTextStyle.sectionTitle)
+            Divider()
+            HistoryTotalsView(totals: snapshot.totals,
+                              strengthSessions: snapshot.strengthSessions,
+                              cardioGoalMinutes: settingsManager.weeklyCardioGoalMinutes)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 18)
-        .padding(.bottom, 4)
+        .foregroundStyle(.primary)
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private var emptyState: some View {
@@ -234,6 +178,10 @@ struct HistoryView: View {
 
     private var historyList: some View {
         List {
+            Section {
+                overview
+                    .padding(.vertical, 4)
+            }
             ForEach(snapshot.weeks) { week in
                 Section {
                     ForEach(week.days) { day in
@@ -502,31 +450,6 @@ private struct WeekSummaryHeaderView: View {
         return calendar.date(byAdding: .day, value: 6, to: week.weekStart) ?? week.weekStart
     }
 
-    private var totalSets: Int {
-        week.totalSets
-    }
-
-    private var totalVolume: Double {
-        week.totalVolume
-    }
-
-    private var totalTrainingDays: Int {
-        week.days.count
-    }
-
-    private var cardioSessions: Int { week.cardioSessions }
-    private var cardioMinutes: Int { week.cardioMinutes }
-    private var goalMinutes: Int { max(1, cardioGoalMinutes) }
-
-    private var cardioSummaryText: String {
-        localizedCardioGoalSummary(
-            sessions: cardioSessions,
-            minutes: cardioMinutes,
-            goalMinutes: goalMinutes,
-            averageHeartRate: week.averageCardioHeartRate
-        )
-    }
-
     private var weekRangeText: String {
         let locale = LanguageManager.shared.currentLanguage.locale ?? Locale.current
         return "history.weekRange".localized(
@@ -536,40 +459,60 @@ private struct WeekSummaryHeaderView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(weekRangeText)
-                .font(AppTextStyle.captionStrong)
-                .foregroundStyle(.primary)
+        VStack(alignment: .leading, spacing: 8) {
+            Text(historySummaryHeading(title: weekRangeText, trainingDays: week.trainingDaysCount))
+                .font(AppTextStyle.sectionTitle)
+            HistoryTotalsView(totals: week.totals,
+                              strengthSessions: week.strengthSessions,
+                              cardioGoalMinutes: cardioGoalMinutes)
+        }
+        .foregroundStyle(.primary)
+        .fixedSize(horizontal: false, vertical: true)
+        .textCase(nil)
+        .padding(.vertical, 6)
+    }
+}
 
-            HStack(spacing: 12) {
-                Text("history.weekTrainingDays".localized(with: totalTrainingDays))
-                    .font(AppTextStyle.caption2)
-                    .foregroundStyle(.secondary)
+private func historySummaryHeading(title: String, trainingDays: Int) -> String {
+    let suffix = trainingDays == 1 ? "one" : "other"
+    return "history.summaryHeading.\(suffix)".localized(with: title, trainingDays)
+}
 
-                Label("history.sets".localized(with: totalSets), systemImage: ExerciseCategory.strength.systemImage)
-                    .font(AppTextStyle.caption2)
-                    .foregroundStyle(.secondary)
+/// Shared by the selected-period overview and weekly summaries; only their scope differs.
+private struct HistoryTotalsView: View {
+    @ScaledMetric(relativeTo: .body) private var iconWidth: CGFloat = 22
+    let totals: TrainingTotals
+    let strengthSessions: Int
+    let cardioGoalMinutes: Int
 
-                Text("history.weekVolume".localized(with: Int(totalVolume)))
-                    .font(AppTextStyle.caption2)
-                    .foregroundStyle(.secondary)
-            }
-
-            Label(cardioSummaryText, systemImage: ExerciseCategory.cardio.systemImage)
-                .font(AppTextStyle.caption2)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-
-            if week.totals.rehabilitationSets > 0 {
-                Label("training.rehabilitationSets".localized(with: week.totals.rehabilitationSets),
-                      systemImage: ExerciseCategory.rehabilitation.systemImage)
-                    .font(AppTextStyle.caption2)
-                    .foregroundStyle(.secondary)
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            summaryRow(.strength, text: "history.strengthSummary.\(strengthSessions == 1 ? "one" : "other")".localized(
+                with: strengthSessions, totals.strengthSets, Int(totals.strengthVolume)
+            ))
+            summaryRow(.cardio, text: localizedCardioGoalSummary(
+                sessions: totals.cardioSessions,
+                minutes: totals.cardioMinutes,
+                goalMinutes: max(1, cardioGoalMinutes),
+                averageHeartRate: totals.averageCardioHeartRate
+            ))
+            if totals.rehabilitationSets > 0 {
+                summaryRow(.rehabilitation, text: "training.rehabilitationSets".localized(with: totals.rehabilitationSets))
             }
         }
-        .textCase(nil)
-        .padding(.top, 6)
+        .font(AppTextStyle.bodyStrong)
+        .foregroundStyle(.primary)
+    }
+
+    private func summaryRow(_ category: ExerciseCategory, text: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            TrainingCategoryIcon(category: category)
+                .foregroundStyle(category == .cardio ? Color.red : Color.orange)
+                .frame(width: iconWidth)
+            Text(text)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -673,39 +616,6 @@ private struct DayRowView: View {
                 .foregroundStyle(.tertiary)
         }
         .padding(.vertical, 0)
-    }
-}
-
-private struct HistorySummaryItemView: View {
-    let value: String
-    let label: String
-    let systemImage: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Image(systemName: systemImage)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.orange)
-
-            Text(value)
-                .font(.system(size: 20, weight: .bold, design: .rounded))
-                .foregroundStyle(.primary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-
-            Text(label)
-                .font(.system(size: 10, weight: .medium, design: .rounded))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color(.secondarySystemGroupedBackground))
-        )
     }
 }
 

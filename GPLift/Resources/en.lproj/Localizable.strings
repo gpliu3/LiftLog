@@ -123,6 +123,11 @@
 "history.today" = "Today";
 "history.sets" = "%d sets";
 "history.weekRange" = "%@ - %@";
+"history.overview" = "Overview";
+"history.summaryHeading.one" = "%@ (%d training day)";
+"history.summaryHeading.other" = "%@ (%d training days)";
+"history.strengthSummary.one" = "Strength %d session · %d sets · %d kg";
+"history.strengthSummary.other" = "Strength %d sessions · %d sets · %d kg";
 "history.weekTrainingDays" = "%d training days";
 "history.weekVolume" = "%d kg";
 "history.cardioSummary.one" = "Cardio %d session • %dm";
