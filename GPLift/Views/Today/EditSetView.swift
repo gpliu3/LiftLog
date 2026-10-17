@@ -106,7 +106,7 @@ struct EditSetView: View {
                     } label: {
                         Image(systemName: "info.circle")
                             .font(AppTextStyle.body)
-                            .foregroundStyle(showExerciseNotes ? .orange : .blue)
+                            .foregroundStyle(showExerciseNotes ? .orange : .secondary)
                     }
                     .buttonStyle(.plain)
                     .disabled(exercise.displayNotes.isEmpty)

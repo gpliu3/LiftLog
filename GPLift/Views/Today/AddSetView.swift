@@ -28,7 +28,7 @@ struct AddSetView: View {
     @State private var rirSelection: Int = -1
     @State private var setNotes: String = ""
     @State private var showExerciseNotes: Bool = false
-    @State private var exerciseOrdering: ExerciseOrdering = .due
+    @AppStorage("addSetExerciseOrdering") private var exerciseOrdering: ExerciseOrdering = .due
     @State private var justSaved: Bool = false
     @State private var savedSetNumber: Int = 0
     @State private var cachedNextSetNumber: Int = 1
@@ -428,7 +428,7 @@ struct AddSetView: View {
                     } label: {
                         Image(systemName: "info.circle")
                             .font(AppTextStyle.body)
-                            .foregroundStyle(showExerciseNotes ? .orange : .blue)
+                            .foregroundStyle(showExerciseNotes ? .orange : .secondary)
                     }
                     .buttonStyle(.plain)
                     .disabled(exercise.displayNotes.isEmpty)

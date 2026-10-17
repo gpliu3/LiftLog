@@ -133,6 +133,7 @@ xcodebuild \
   -configuration Release \
   -destination "generic/platform=iOS" \
   -archivePath "$ARCHIVE_PATH" \
+  -allowProvisioningUpdates \
   archive
 
 echo "==> Step 2/5: Export IPA"
@@ -140,7 +141,8 @@ xcodebuild \
   -exportArchive \
   -archivePath "$ARCHIVE_PATH" \
   -exportPath "$EXPORT_PATH" \
-  -exportOptionsPlist "$EXPORT_OPTIONS"
+  -exportOptionsPlist "$EXPORT_OPTIONS" \
+  -allowProvisioningUpdates
 
 if [[ ! -f "$IPA_PATH" ]]; then
   echo "IPA not found after export: $IPA_PATH" >&2

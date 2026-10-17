@@ -22,8 +22,8 @@ GPLift is a compact iOS strength, cardio, and rehabilitation training log focuse
 - **Optional RIR**: `0`, `1`, `2`, or blank, editable later.
 - **Exercise activity control**: exercises can be marked active or inactive; inactive exercises stay in history and the library but are hidden from the Log Set picker.
 - **Exercise notes in every category**: editing a Cardio exercise preserves its existing notes, just like Strength and Rehab.
-- **History by week, month, or all**: the default History view is `All`, grouped by Monday-based weeks with separate Strength set/volume, Cardio session/minute, and Rehab set totals. Days containing only Cardio or Rehab remain visible with their full training notes.
-- **Readable History summaries**: the scrollable overview and weekly headers share bold, full-size category rows instead of separate metric tiles. Week headings combine the Monday-Sunday date range with training days; Strength shows sessions, sets, and kilograms, while Cardio shows a red heart, sessions, minutes/goal, and recorded average heart rate. Text wraps naturally at larger text sizes. Category tabs already identify activities, so the Log Set picker does not repeat category icons for each exercise.
+- **History by week, month, or all**: the default History view is the current `Week`, shown as a single summary card above its days (no duplicate week header); `Month` and `All` stay grouped by Monday-based weeks with separate Strength set/volume, Cardio session/minute, and Rehab set totals. Days containing only Cardio or Rehab remain visible with their full training notes.
+- **Readable History summaries**: the scrollable overview and weekly headers share compact subheadline-sized category rows instead of separate metric tiles; day labels are sized to sit comfortably next to their training details. Week headings combine the Monday-Sunday date range with training days; Strength shows sessions, sets, and kilograms, while Cardio shows a red heart, sessions, minutes/goal, and recorded average heart rate. Text wraps naturally at larger text sizes. Category tabs already identify activities, so the Log Set picker does not repeat category icons for each exercise.
 - **CSV export**: export workout history and exercises, including Cardio duration and heart-rate fields, to UTF-8 BOM CSV for better Excel compatibility with Chinese text.
 - **Bilingual UI**: English and Simplified Chinese, with in-app language switching.
 
@@ -33,7 +33,7 @@ GPLift is a compact iOS strength, cardio, and rehabilitation training log focuse
 |---|---|
 | Log new training | Tap the floating `+` button in Today, then choose Strength, Cardio, or Rehab |
 | Choose a Strength or Rehab exercise | Browse active exercises grouped by muscle group; the picker has no search field |
-| Choose sorting | Longest due is initially selected, with never-trained exercises/groups last; Default order uses fixed muscle groups and localized exercise names within each group |
+| Choose sorting | Longest due is selected the first time and your last choice is remembered afterwards, with never-trained exercises/groups last; Default order uses fixed muscle groups and localized exercise names within each group |
 | Choose a Cardio activity | Browse active Cardio activities sorted from longest due to most recently trained |
 | Enter weight | Tap either `kg` or `lb`; both stay in sync |
 | Record Cardio | Enter whole minutes and, optionally, average and maximum heart rate |
@@ -135,7 +135,7 @@ To run the same database and logic tests on a booted iOS simulator, set `GPLIFT_
 
 ## Release
 
-- Current App Store/TestFlight version prepared in this repo: `1.8 (75)`
+- Current App Store/TestFlight version prepared in this repo: `1.8 (76)`
 - Bundle identifier: `com.gengpuliu.LiftLog`
 - Export compliance: `ITSAppUsesNonExemptEncryption = NO`
 - Build/version values are managed from `GPLift.xcodeproj/project.pbxproj`

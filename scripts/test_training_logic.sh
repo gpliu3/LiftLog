@@ -24,7 +24,7 @@ fi
   "$test_dir/legacy/Exercise.swift" "$test_dir/legacy/WorkoutSet.swift" \
   GPLift/Utilities/LanguageManager.swift Tests/StoreFixture.swift Tests/LegacyFixtureWriter.swift \
   -o "$test_dir/write-fixture"
-"${runner[@]}" "$test_dir/write-fixture" "$test_dir/legacy.store"
+${runner[@]+"${runner[@]}"} "$test_dir/write-fixture" "$test_dir/legacy.store"
 
 "${compiler[@]}" "${common_args[@]}" \
   GPLift/Models/Exercise.swift GPLift/Models/WorkoutSet.swift \
@@ -32,4 +32,4 @@ fi
   GPLift/Utilities/ExerciseOrdering.swift GPLift/Utilities/HistorySnapshot.swift \
   GPLift/Utilities/CSVExport.swift Tests/StoreFixture.swift Tests/TrainingRegressionTests.swift \
   -o "$test_dir/test-training"
-"${runner[@]}" "$test_dir/test-training" "$test_dir/legacy.store"
+${runner[@]+"${runner[@]}"} "$test_dir/test-training" "$test_dir/legacy.store"

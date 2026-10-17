@@ -165,7 +165,7 @@ private struct TodayContentView: View {
                 Section {
                     if expandedNotes.contains(exercise.id) {
                         NotesEditorRow(exercise: exercise)
-                            .listRowBackground(Color.blue.opacity(0.05))
+                            .listRowBackground(Color.orange.opacity(0.05))
                     }
 
                     if expandedPreviousDay.contains(exercise.id) {
@@ -173,7 +173,7 @@ private struct TodayContentView: View {
                             exercise: exercise,
                             sets: previousDaySets(for: exercise)
                         )
-                        .listRowBackground(Color.teal.opacity(0.07))
+                        .listRowBackground(Color.orange.opacity(0.05))
                     }
 
                     ForEach(sets) { set in
@@ -663,8 +663,8 @@ struct SetRowView: View {
                             .font(AppTextStyle.caption2Strong)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(Color.blue.opacity(0.15))
-                            .foregroundStyle(.blue)
+                            .background(Color(.tertiarySystemFill))
+                            .foregroundStyle(.secondary)
                             .clipShape(Capsule())
                             .contentShape(Rectangle())
                             .highPriorityGesture(TapGesture().onEnded {
@@ -687,8 +687,8 @@ struct SetRowView: View {
                             .font(AppTextStyle.caption2Strong)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(Color.blue.opacity(0.15))
-                            .foregroundStyle(.blue)
+                            .background(Color(.tertiarySystemFill))
+                            .foregroundStyle(.secondary)
                             .clipShape(Capsule())
                             .contentShape(Rectangle())
                             .highPriorityGesture(TapGesture().onEnded {
@@ -769,8 +769,8 @@ struct SetRowView: View {
                     .font(AppTextStyle.caption2Strong)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(Color.blue.opacity(0.15))
-                    .foregroundStyle(.blue)
+                    .background(Color(.tertiarySystemFill))
+                    .foregroundStyle(.secondary)
                     .clipShape(Capsule())
                     .contentShape(Rectangle())
                     .highPriorityGesture(TapGesture().onEnded {
@@ -1503,9 +1503,9 @@ struct ExerciseHeaderView: View {
                 HStack(spacing: 4) {
                     TrainingCategoryIcon(category: exercise.resolvedCategory)
                         .font(AppTextStyle.captionStrong)
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(.secondary)
                     Text(exercise.displayName)
-                        .font(.headline.bold())
+                        .font(AppTextStyle.sectionTitle)
                         .foregroundStyle(Color.primary)
 
                     if hasNotes, let onInfoTap = onInfoTap {
@@ -1513,8 +1513,8 @@ struct ExerciseHeaderView: View {
                             onInfoTap()
                         } label: {
                             Image(systemName: "info.circle")
-                                .font(AppTextStyle.body)
-                                .foregroundStyle(.blue)
+                                .font(AppTextStyle.subheadline)
+                                .foregroundStyle(.orange)
                                 .frame(width: 32, height: 32)
                                 .contentShape(Rectangle())
                         }
@@ -1526,8 +1526,8 @@ struct ExerciseHeaderView: View {
                             onPreviousDayTap()
                         } label: {
                             Image(systemName: "clock.arrow.circlepath")
-                                .font(AppTextStyle.body)
-                                .foregroundStyle(.teal)
+                                .font(AppTextStyle.subheadline)
+                                .foregroundStyle(.orange)
                                 .frame(width: 32, height: 32)
                                 .contentShape(Rectangle())
                         }
@@ -1575,7 +1575,7 @@ struct PreviousDaySetsRow: View {
             HStack(spacing: 8) {
                 Text("today.previousDay.title".localized)
                     .font(AppTextStyle.captionStrong)
-                    .foregroundStyle(.teal)
+                    .foregroundStyle(.orange)
                 Spacer(minLength: 8)
                 Text(subtitle)
                     .font(AppTextStyle.caption2)
@@ -1613,8 +1613,8 @@ struct PreviousDaySetsRow: View {
                                         .font(AppTextStyle.caption2Strong)
                                         .padding(.horizontal, 6)
                                         .padding(.vertical, 2)
-                                        .background(Color.blue.opacity(0.15))
-                                        .foregroundStyle(.blue)
+                                        .background(Color(.tertiarySystemFill))
+                                        .foregroundStyle(.secondary)
                                         .clipShape(Capsule())
                                 }
                             }
@@ -1629,8 +1629,8 @@ struct PreviousDaySetsRow: View {
                                         .font(AppTextStyle.caption2Strong)
                                         .padding(.horizontal, 6)
                                         .padding(.vertical, 2)
-                                        .background(Color.blue.opacity(0.15))
-                                        .foregroundStyle(.blue)
+                                        .background(Color(.tertiarySystemFill))
+                                        .foregroundStyle(.secondary)
                                         .clipShape(Capsule())
                                 }
                             }
@@ -1649,8 +1649,8 @@ struct PreviousDaySetsRow: View {
                                             .font(AppTextStyle.caption2Strong)
                                             .padding(.horizontal, 6)
                                             .padding(.vertical, 2)
-                                            .background(Color.blue.opacity(0.15))
-                                            .foregroundStyle(.blue)
+                                            .background(Color(.tertiarySystemFill))
+                                            .foregroundStyle(.secondary)
                                             .clipShape(Capsule())
                                     }
                                 }
@@ -1668,8 +1668,8 @@ struct PreviousDaySetsRow: View {
                                             .font(AppTextStyle.caption2Strong)
                                             .padding(.horizontal, 6)
                                             .padding(.vertical, 2)
-                                            .background(Color.blue.opacity(0.15))
-                                            .foregroundStyle(.blue)
+                                            .background(Color(.tertiarySystemFill))
+                                            .foregroundStyle(.secondary)
                                             .clipShape(Capsule())
                                     }
                                 }

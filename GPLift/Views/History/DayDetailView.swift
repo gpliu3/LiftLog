@@ -229,8 +229,8 @@ struct DaySetRowView: View {
                             .font(AppTextStyle.caption2Strong)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(Color.blue.opacity(0.15))
-                            .foregroundStyle(.blue)
+                            .background(Color(.tertiarySystemFill))
+                            .foregroundStyle(.secondary)
                             .clipShape(Capsule())
                     }
                 }
@@ -245,8 +245,8 @@ struct DaySetRowView: View {
                             .font(AppTextStyle.caption2Strong)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(Color.blue.opacity(0.15))
-                            .foregroundStyle(.blue)
+                            .background(Color(.tertiarySystemFill))
+                            .foregroundStyle(.secondary)
                             .clipShape(Capsule())
                     }
                 }
@@ -265,8 +265,8 @@ struct DaySetRowView: View {
                                 .font(AppTextStyle.caption2Strong)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
-                                .background(Color.blue.opacity(0.15))
-                                .foregroundStyle(.blue)
+                                .background(Color(.tertiarySystemFill))
+                                .foregroundStyle(.secondary)
                                 .clipShape(Capsule())
                         }
                     }
@@ -284,8 +284,8 @@ struct DaySetRowView: View {
                                 .font(AppTextStyle.caption2Strong)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
-                                .background(Color.blue.opacity(0.15))
-                                .foregroundStyle(.blue)
+                                .background(Color(.tertiarySystemFill))
+                                .foregroundStyle(.secondary)
                                 .clipShape(Capsule())
                         }
                     }

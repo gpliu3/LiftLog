@@ -88,7 +88,7 @@ struct SettingsView: View {
                     }
                     Spacer(minLength: 8)
                     Text("settings.cardioGoalMinutes".localized(with: settingsManager.weeklyCardioGoalMinutes))
-                        .foregroundStyle(.teal)
+                        .foregroundStyle(.red)
                         .monospacedDigit()
                 }
             }
@@ -253,7 +253,7 @@ struct CardioGoalSelectionView: View {
                         Spacer()
                         Text("settings.cardioGoalMinutes".localized(with: settingsManager.weeklyCardioGoalMinutes))
                             .fontWeight(.semibold)
-                            .foregroundStyle(.teal)
+                            .foregroundStyle(.red)
                             .monospacedDigit()
                     }
                 }

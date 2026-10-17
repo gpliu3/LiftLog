@@ -8,7 +8,7 @@ struct HistoryView: View {
     @State private var languageManager = LanguageManager.shared
     @State private var settingsManager = SettingsManager.shared
 
-    @State private var selectedPeriod: TimePeriod = .all
+    @State private var selectedPeriod: TimePeriod = .week
     @State private var selectedDay: Date?
     @State private var showingExportSheet = false
     @State private var now = Date()
@@ -154,9 +154,15 @@ struct HistoryView: View {
         .background(Color(.systemGroupedBackground))
     }
 
+    /// In Week mode the overview already covers exactly the current week, so it takes the
+    /// week's date range as its title and the list drops the duplicate week header.
+    private var overviewTitle: String {
+        selectedPeriod == .week ? historyWeekRangeText(weekStart: now.startOfWeek) : "history.overview".localized
+    }
+
     private var overview: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(historySummaryHeading(title: "history.overview".localized,
+        VStack(alignment: .leading, spacing: 8) {
+            Text(historySummaryHeading(title: overviewTitle,
                                        trainingDays: snapshot.trainingDaysCount))
                 .font(AppTextStyle.sectionTitle)
             Divider()
@@ -192,10 +198,12 @@ struct HistoryView: View {
                             }
                     }
                 } header: {
-                    WeekSummaryHeaderView(
-                        week: week,
-                        cardioGoalMinutes: settingsManager.weeklyCardioGoalMinutes
-                    )
+                    if selectedPeriod != .week {
+                        WeekSummaryHeaderView(
+                            week: week,
+                            cardioGoalMinutes: settingsManager.weeklyCardioGoalMinutes
+                        )
+                    }
                 }
             }
         }
@@ -444,33 +452,32 @@ private struct WeekSummaryHeaderView: View {
     let week: HistoryWeekSnapshot
     let cardioGoalMinutes: Int
 
-    private var weekEnd: Date {
-        var calendar = Calendar.current
-        calendar.firstWeekday = 2
-        return calendar.date(byAdding: .day, value: 6, to: week.weekStart) ?? week.weekStart
-    }
-
-    private var weekRangeText: String {
-        let locale = LanguageManager.shared.currentLanguage.locale ?? Locale.current
-        return "history.weekRange".localized(
-            with: DateFormatters.monthDayLabel(for: week.weekStart, locale: locale),
-            DateFormatters.monthDayLabel(for: weekEnd, locale: locale)
-        )
-    }
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(historySummaryHeading(title: weekRangeText, trainingDays: week.trainingDaysCount))
-                .font(AppTextStyle.sectionTitle)
+        VStack(alignment: .leading, spacing: 6) {
+            Text(historySummaryHeading(title: historyWeekRangeText(weekStart: week.weekStart),
+                                       trainingDays: week.trainingDaysCount))
+                .font(AppTextStyle.subheadlineStrong)
             HistoryTotalsView(totals: week.totals,
                               strengthSessions: week.strengthSessions,
-                              cardioGoalMinutes: cardioGoalMinutes)
+                              cardioGoalMinutes: cardioGoalMinutes,
+                              font: AppTextStyle.footnote)
         }
         .foregroundStyle(.primary)
         .fixedSize(horizontal: false, vertical: true)
         .textCase(nil)
-        .padding(.vertical, 6)
+        .padding(.vertical, 4)
     }
+}
+
+private func historyWeekRangeText(weekStart: Date) -> String {
+    var calendar = Calendar.current
+    calendar.firstWeekday = 2
+    let weekEnd = calendar.date(byAdding: .day, value: 6, to: weekStart) ?? weekStart
+    let locale = LanguageManager.shared.currentLanguage.locale ?? Locale.current
+    return "history.weekRange".localized(
+        with: DateFormatters.monthDayLabel(for: weekStart, locale: locale),
+        DateFormatters.monthDayLabel(for: weekEnd, locale: locale)
+    )
 }
 
 private func historySummaryHeading(title: String, trainingDays: Int) -> String {
@@ -480,13 +487,14 @@ private func historySummaryHeading(title: String, trainingDays: Int) -> String {
 
 /// Shared by the selected-period overview and weekly summaries; only their scope differs.
 private struct HistoryTotalsView: View {
-    @ScaledMetric(relativeTo: .body) private var iconWidth: CGFloat = 22
+    @ScaledMetric(relativeTo: .subheadline) private var iconWidth: CGFloat = 18
     let totals: TrainingTotals
     let strengthSessions: Int
     let cardioGoalMinutes: Int
+    var font: Font = AppTextStyle.subheadline
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 4) {
             summaryRow(.strength, text: "history.strengthSummary.\(strengthSessions == 1 ? "one" : "other")".localized(
                 with: strengthSessions, totals.strengthSets, Int(totals.strengthVolume)
             ))
@@ -500,12 +508,12 @@ private struct HistoryTotalsView: View {
                 summaryRow(.rehabilitation, text: "training.rehabilitationSets".localized(with: totals.rehabilitationSets))
             }
         }
-        .font(AppTextStyle.bodyStrong)
+        .font(font)
         .foregroundStyle(.primary)
     }
 
     private func summaryRow(_ category: ExerciseCategory, text: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
             TrainingCategoryIcon(category: category)
                 .foregroundStyle(category == .cardio ? Color.red : Color.orange)
                 .frame(width: iconWidth)
@@ -555,7 +563,7 @@ private struct DayRowView: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Text(formattedDayLabel)
-                        .font(AppTextStyle.sectionTitle)
+                        .font(AppTextStyle.subheadlineStrong)
 
                     if isToday {
                         Text("history.today".localized)
@@ -578,12 +586,12 @@ private struct DayRowView: View {
                 if !day.dayNote.isEmpty {
                     HStack(alignment: .top, spacing: 4) {
                         Image(systemName: "exclamationmark.bubble.fill")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(AppTextStyle.caption2Strong)
                             .foregroundStyle(.orange)
                             .padding(.top, 2)
 
                         Text(day.dayNote)
-                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .font(AppTextStyle.captionStrong)
                             .foregroundStyle(Color.orange.opacity(0.95))
                             .lineLimit(nil)
                             .multilineTextAlignment(.leading)
@@ -603,7 +611,7 @@ private struct DayRowView: View {
             if day.setCount > 0 {
                 VStack(alignment: .trailing, spacing: 4) {
                     Text("history.sets".localized(with: day.setCount))
-                        .font(AppTextStyle.body)
+                        .font(AppTextStyle.subheadline)
 
                     Text("\(Int(day.totalVolume)) kg")
                         .font(AppTextStyle.caption)

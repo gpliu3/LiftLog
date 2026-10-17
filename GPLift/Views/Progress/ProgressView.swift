@@ -268,7 +268,7 @@ struct ProgressChartView: View {
     private var volumeChart: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("progress.volumePerSession".localized)
-                .font(.headline)
+                .font(AppTextStyle.sectionTitle)
 
             Chart(sessionData, id: \.0) { item in
                 LineMark(
@@ -300,20 +300,20 @@ struct ProgressChartView: View {
     private var maxWeightChart: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("progress.maxWeightPerSession".localized)
-                .font(.headline)
+                .font(AppTextStyle.sectionTitle)
 
             Chart(sessionData, id: \.0) { item in
                 LineMark(
                     x: .value("Date", item.0),
                     y: .value("Weight", item.2)
                 )
-                .foregroundStyle(Color.blue)
+                .foregroundStyle(Color.orange)
 
                 PointMark(
                     x: .value("Date", item.0),
                     y: .value("Weight", item.2)
                 )
-                .foregroundStyle(Color.blue)
+                .foregroundStyle(Color.orange)
             }
             .frame(height: 200)
             .chartYAxisLabel("kg")
@@ -326,20 +326,20 @@ struct ProgressChartView: View {
     private var oneRMChart: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("progress.estimated1RM".localized)
-                .font(.headline)
+                .font(AppTextStyle.sectionTitle)
 
             Chart(sessionData, id: \.0) { item in
                 LineMark(
                     x: .value("Date", item.0),
                     y: .value("1RM", item.3)
                 )
-                .foregroundStyle(Color.green)
+                .foregroundStyle(Color.orange)
 
                 PointMark(
                     x: .value("Date", item.0),
                     y: .value("1RM", item.3)
                 )
-                .foregroundStyle(Color.green)
+                .foregroundStyle(Color.orange)
             }
             .frame(height: 200)
             .chartYAxisLabel("kg")
@@ -354,7 +354,7 @@ struct ProgressChartView: View {
     private var durationChart: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("progress.durationPerSession".localized)
-                .font(.headline)
+                .font(AppTextStyle.sectionTitle)
 
             Chart(durationSessionData, id: \.0) { item in
                 LineMark(
@@ -388,7 +388,7 @@ struct ProgressChartView: View {
     private var repsChart: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("progress.repsPerSession".localized)
-                .font(.headline)
+                .font(AppTextStyle.sectionTitle)
 
             Chart(repsSessionData, id: \.0) { item in
                 LineMark(
@@ -432,10 +432,10 @@ struct ProgressChartView: View {
                 StatCard(title: "progress.bestVolume".localized, value: "\(Int(best)) kg", icon: "flame.fill", color: .orange)
             }
 
-            StatCard(title: "progress.lifetimeVolume".localized, value: "\(Int(totalLifetimeVolume)) kg", icon: "sum", color: .blue)
-            StatCard(title: "progress.avgReps".localized, value: String(format: "%.1f", averageReps), icon: "repeat", color: .purple)
-            StatCard(title: "progress.sessionsPerWeek".localized, value: String(format: "%.1f", sessionsPerWeek), icon: "calendar", color: .green)
-            StatCard(title: "progress.totalSets".localized, value: "\(filteredSets.count)", icon: "number", color: .indigo)
+            StatCard(title: "progress.lifetimeVolume".localized, value: "\(Int(totalLifetimeVolume)) kg", icon: "sum", color: .orange)
+            StatCard(title: "progress.avgReps".localized, value: String(format: "%.1f", averageReps), icon: "repeat", color: .orange)
+            StatCard(title: "progress.sessionsPerWeek".localized, value: String(format: "%.1f", sessionsPerWeek), icon: "calendar", color: .orange)
+            StatCard(title: "progress.totalSets".localized, value: "\(filteredSets.count)", icon: "number", color: .orange)
         }
     }
 
@@ -448,8 +448,8 @@ struct ProgressChartView: View {
                 StatCard(title: "progress.bestDuration".localized, value: WorkoutSet.formatDuration(best), icon: "trophy.fill", color: .yellow)
             }
 
-            StatCard(title: "progress.sessionsPerWeek".localized, value: String(format: "%.1f", sessionsPerWeek), icon: "calendar", color: .green)
-            StatCard(title: "progress.totalSets".localized, value: "\(filteredSets.count)", icon: "number", color: .indigo)
+            StatCard(title: "progress.sessionsPerWeek".localized, value: String(format: "%.1f", sessionsPerWeek), icon: "calendar", color: .orange)
+            StatCard(title: "progress.totalSets".localized, value: "\(filteredSets.count)", icon: "number", color: .orange)
         }
     }
 
@@ -462,10 +462,10 @@ struct ProgressChartView: View {
                 StatCard(title: "progress.bestReps".localized, value: "\(best)", icon: "trophy.fill", color: .yellow)
             }
 
-            StatCard(title: "progress.totalReps".localized, value: "\(totalLifetimeReps)", icon: "sum", color: .blue)
-            StatCard(title: "progress.avgReps".localized, value: String(format: "%.1f", averageReps), icon: "repeat", color: .purple)
-            StatCard(title: "progress.sessionsPerWeek".localized, value: String(format: "%.1f", sessionsPerWeek), icon: "calendar", color: .green)
-            StatCard(title: "progress.totalSets".localized, value: "\(filteredSets.count)", icon: "number", color: .indigo)
+            StatCard(title: "progress.totalReps".localized, value: "\(totalLifetimeReps)", icon: "sum", color: .orange)
+            StatCard(title: "progress.avgReps".localized, value: String(format: "%.1f", averageReps), icon: "repeat", color: .orange)
+            StatCard(title: "progress.sessionsPerWeek".localized, value: String(format: "%.1f", sessionsPerWeek), icon: "calendar", color: .orange)
+            StatCard(title: "progress.totalSets".localized, value: "\(filteredSets.count)", icon: "number", color: .orange)
         }
     }
 }
@@ -485,7 +485,7 @@ struct StatCard: View {
             }
 
             Text(value)
-                .font(.title2.bold())
+                .font(AppTextStyle.metric)
 
             Text(title)
                 .font(.caption)

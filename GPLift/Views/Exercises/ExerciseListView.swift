@@ -346,29 +346,20 @@ struct ExerciseRowView: View {
         HStack(alignment: .center, spacing: 12) {
             Button(action: onOpenDetails) {
                 VStack(alignment: .leading, spacing: 6) {
+                    // The section header already names the muscle group, so the row
+                    // gives the full width to the exercise name.
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
                         TrainingCategoryIcon(category: exercise.resolvedCategory)
                             .font(AppTextStyle.caption)
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(.secondary)
                         Text(exercise.displayName)
-                            .font(AppTextStyle.sectionTitle)
+                            .font(AppTextStyle.subheadlineStrong)
                             .foregroundStyle(.primary)
-                            .lineLimit(1)
-
-                        if !exercise.muscleGroup.isEmpty {
-                            Text(exercise.localizedMuscleGroup)
-                                .font(.system(size: 10, weight: .semibold, design: .rounded))
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.orange.opacity(0.16))
-                                .foregroundStyle(.orange)
-                                .clipShape(Capsule())
-                                .lineLimit(1)
-                        }
+                            .lineLimit(2)
                     }
 
                     Text(lastTrainedLabel)
-                        .font(AppTextStyle.caption2)
+                        .font(AppTextStyle.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
                 }
@@ -385,7 +376,12 @@ struct ExerciseRowView: View {
                         .lineLimit(1)
                 }
 
-                HStack(spacing: 6) {
+                HStack(spacing: 8) {
+                    Text(exercise.isActiveResolved ? "exerciseEdit.active".localized : "exerciseEdit.inactive".localized)
+                        .font(AppTextStyle.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+
                     Toggle(isOn: Binding(
                         get: { exercise.isActiveResolved },
                         set: { newValue in
@@ -394,28 +390,23 @@ struct ExerciseRowView: View {
                         }
                     )) {
                         Text("exerciseEdit.active".localized)
-                            .font(AppTextStyle.caption2)
-                            .foregroundStyle(exercise.isActiveResolved ? .green : .secondary)
                     }
                     .toggleStyle(.switch)
                     .labelsHidden()
-                    .scaleEffect(0.78)
-                    .frame(width: 38)
-
-                    Text(exercise.isActiveResolved ? "exerciseEdit.active".localized : "exerciseEdit.inactive".localized)
-                        .font(AppTextStyle.caption2)
-                        .foregroundStyle(exercise.isActiveResolved ? .green : .secondary)
-                        .lineLimit(1)
+                    .controlSize(.mini)
+                    .fixedSize()
 
                     Button {
                         onQuickAdd()
                     } label: {
                         Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 15, weight: .semibold))
+                            .font(.title3)
                             .foregroundStyle(.orange)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                 }
+                .fixedSize()
             }
         }
         .padding(.vertical, 2)
