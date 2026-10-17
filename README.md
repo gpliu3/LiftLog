@@ -135,7 +135,7 @@ To run the same database and logic tests on a booted iOS simulator, set `GPLIFT_
 
 ## Release
 
-- Current App Store/TestFlight version prepared in this repo: `1.8 (76)`
+- Current App Store/TestFlight version prepared in this repo: `1.8 (77)`
 - Bundle identifier: `com.gengpuliu.LiftLog`
 - Export compliance: `ITSAppUsesNonExemptEncryption = NO`
 - Build/version values are managed from `GPLift.xcodeproj/project.pbxproj`
@@ -147,9 +147,9 @@ Use the scripted flow to reduce failed upload attempts and notification emails:
 ```bash
 cd /Users/gengpuliu/Projects/LiftLog/LiftLog
 ./scripts/release_testflight.sh \
-  --api-key AAN76TPC9V \
+  --api-key WGL74Z87GV \
   --issuer 33142954-a2ca-4a17-96b9-ee0cda4a3382 \
-  --p8 /Users/gengpuliu/.appstoreconnect/private_keys/AuthKey_AAN76TPC9V.p8
+  --p8 /Users/gengpuliu/.appstoreconnect/private_keys/AuthKey_WGL74Z87GV.p8
 ```
 
 What it does:

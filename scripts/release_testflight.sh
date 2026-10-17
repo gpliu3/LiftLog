@@ -86,6 +86,13 @@ mkdir -p "$BUILD_DIR"
 export API_PRIVATE_KEYS_DIR
 API_PRIVATE_KEYS_DIR="$(dirname "$P8_PATH")"
 
+# Sign with the API key so archive/export do not depend on an Xcode account session.
+AUTH_ARGS=(
+  -authenticationKeyPath "$P8_PATH"
+  -authenticationKeyID "$API_KEY_ID"
+  -authenticationKeyIssuerID "$API_ISSUER_ID"
+)
+
 SETTINGS="$(xcodebuild -project "$PROJECT_PATH" -scheme "$SCHEME" -showBuildSettings 2>/dev/null)"
 MARKETING_VERSION="$(printf "%s\n" "$SETTINGS" | awk -F' = ' '/MARKETING_VERSION = /{print $2; exit}')"
 BUILD_NUMBER="$(printf "%s\n" "$SETTINGS" | awk -F' = ' '/CURRENT_PROJECT_VERSION = /{print $2; exit}')"
@@ -134,6 +141,7 @@ xcodebuild \
   -destination "generic/platform=iOS" \
   -archivePath "$ARCHIVE_PATH" \
   -allowProvisioningUpdates \
+  "${AUTH_ARGS[@]}" \
   archive
 
 echo "==> Step 2/5: Export IPA"
@@ -142,7 +150,8 @@ xcodebuild \
   -archivePath "$ARCHIVE_PATH" \
   -exportPath "$EXPORT_PATH" \
   -exportOptionsPlist "$EXPORT_OPTIONS" \
-  -allowProvisioningUpdates
+  -allowProvisioningUpdates \
+  "${AUTH_ARGS[@]}"
 
 if [[ ! -f "$IPA_PATH" ]]; then
   echo "IPA not found after export: $IPA_PATH" >&2
