@@ -166,9 +166,10 @@ struct HistoryView: View {
                                        trainingDays: snapshot.trainingDaysCount))
                 .font(AppTextStyle.sectionTitle)
             Divider()
+            // The Cardio goal is weekly, so Month/All totals show achieved minutes only.
             HistoryTotalsView(totals: snapshot.totals,
                               strengthSessions: snapshot.strengthSessions,
-                              cardioGoalMinutes: settingsManager.weeklyCardioGoalMinutes)
+                              cardioGoalMinutes: selectedPeriod == .week ? settingsManager.weeklyCardioGoalMinutes : nil)
         }
         .foregroundStyle(.primary)
         .fixedSize(horizontal: false, vertical: true)
@@ -490,7 +491,8 @@ private struct HistoryTotalsView: View {
     @ScaledMetric(relativeTo: .subheadline) private var iconWidth: CGFloat = 18
     let totals: TrainingTotals
     let strengthSessions: Int
-    let cardioGoalMinutes: Int
+    /// nil when the totals span more than one week, where a weekly target does not apply.
+    let cardioGoalMinutes: Int?
     var font: Font = AppTextStyle.subheadline
 
     var body: some View {
@@ -501,7 +503,7 @@ private struct HistoryTotalsView: View {
             summaryRow(.cardio, text: localizedCardioGoalSummary(
                 sessions: totals.cardioSessions,
                 minutes: totals.cardioMinutes,
-                goalMinutes: max(1, cardioGoalMinutes),
+                goalMinutes: cardioGoalMinutes.map { max(1, $0) },
                 averageHeartRate: totals.averageCardioHeartRate
             ))
             if totals.rehabilitationSets > 0 {
@@ -527,10 +529,20 @@ private struct HistoryTotalsView: View {
 private func localizedCardioGoalSummary(
     sessions: Int,
     minutes: Int,
-    goalMinutes: Int,
+    goalMinutes: Int?,
     averageHeartRate: Int?
 ) -> String {
     let suffix = sessions == 1 ? "one" : "other"
+    guard let goalMinutes else {
+        if let averageHeartRate {
+            return "history.cardioMinutesSummaryWithHeartRate.\(suffix)".localized(
+                with: sessions,
+                minutes,
+                averageHeartRate
+            )
+        }
+        return "history.cardioMinutesSummary.\(suffix)".localized(with: sessions, minutes)
+    }
     if let averageHeartRate {
         return "history.cardioGoalSummaryWithHeartRate.\(suffix)".localized(
             with: sessions,

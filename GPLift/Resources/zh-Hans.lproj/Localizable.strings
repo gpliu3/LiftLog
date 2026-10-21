@@ -138,6 +138,10 @@
 "history.cardioGoalSummary.other" = "有氧 %d次，%dm/%dm";
 "history.cardioGoalSummaryWithHeartRate.one" = "有氧 %d次，%dm/%dm，平均心率 %d";
 "history.cardioGoalSummaryWithHeartRate.other" = "有氧 %d次，%dm/%dm，平均心率 %d";
+"history.cardioMinutesSummary.one" = "有氧 %d次，%dm";
+"history.cardioMinutesSummary.other" = "有氧 %d次，%dm";
+"history.cardioMinutesSummaryWithHeartRate.one" = "有氧 %d次，%dm，平均心率 %d";
+"history.cardioMinutesSummaryWithHeartRate.other" = "有氧 %d次，%dm，平均心率 %d";
 "history.export" = "导出";
 "history.export.title" = "导出 CSV";
 "history.export.range" = "日期范围";
