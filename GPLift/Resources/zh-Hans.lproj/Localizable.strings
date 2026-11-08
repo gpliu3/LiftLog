@@ -12,7 +12,6 @@
 "today.volume" = "容量 (kg)";
 "today.exercises" = "动作数";
 "today.addAnotherSet" = "添加下一组";
-"today.duplicate" = "复制";
 "today.cardio" = "有氧";
 "today.cardioSummary.one" = "%d 次 • %d 分钟";
 "today.cardioSummary.other" = "%d 次 • %d 分钟";

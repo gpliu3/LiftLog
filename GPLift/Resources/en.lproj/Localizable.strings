@@ -12,7 +12,6 @@
 "today.volume" = "Volume (kg)";
 "today.exercises" = "Exercises";
 "today.addAnotherSet" = "Add another set";
-"today.duplicate" = "Duplicate";
 "today.cardio" = "Cardio";
 "today.cardioSummary.one" = "%d session • %d min";
 "today.cardioSummary.other" = "%d sessions • %d min";

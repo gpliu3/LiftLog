@@ -16,18 +16,11 @@ struct DayDetailView: View {
 
     private var groupedByExercise: [(Exercise, [WorkoutSet])] {
         let grouped = Dictionary(grouping: daySets) { $0.exercise }
-        return grouped.compactMap { (exercise, sets) in
+        let groups: [(Exercise, [WorkoutSet])] = grouped.compactMap { (exercise, sets) in
             guard let exercise = exercise else { return nil }
             return (exercise, sets.sorted(by: WorkoutSet.trainingOrder(lhs:rhs:)))
-        }.sorted { lhs, rhs in
-            if lhs.0.resolvedCategory != rhs.0.resolvedCategory {
-                return lhs.0.resolvedCategory.sortOrder < rhs.0.resolvedCategory.sortOrder
-            }
-            let lhsLatest = lhs.1.map(\.date).max() ?? .distantPast
-            let rhsLatest = rhs.1.map(\.date).max() ?? .distantPast
-            if lhsLatest != rhsLatest { return lhsLatest > rhsLatest }
-            return lhs.0.displayName < rhs.0.displayName
         }
+        return DayExerciseOrder.sorted(groups) { $0.map(\.date) }
     }
 
     private var totals: TrainingTotals { TrainingTotals(sets: daySets) }

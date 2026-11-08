@@ -1,5 +1,33 @@
 import Foundation
 
+/// Order of exercise sections within one training day (Today and History day detail).
+///
+/// Sections are grouped by category, then the most recently *started* exercise comes first.
+/// Ordering by start time (the earliest set of the day) rather than the latest set keeps each
+/// exercise in place while more sets are added, so the list never reshuffles under the user.
+enum DayExerciseOrder {
+    static func sorted<Sets>(
+        _ groups: [(Exercise, Sets)],
+        setDates: (Sets) -> [Date]
+    ) -> [(Exercise, Sets)] {
+        groups
+            .map { group in (group: group, start: setDates(group.1).min() ?? .distantPast) }
+            .sorted { lhs, rhs in
+                let lhsExercise = lhs.group.0
+                let rhsExercise = rhs.group.0
+                if lhsExercise.resolvedCategory != rhsExercise.resolvedCategory {
+                    return lhsExercise.resolvedCategory.sortOrder < rhsExercise.resolvedCategory.sortOrder
+                }
+                if lhs.start != rhs.start { return lhs.start > rhs.start }
+                if lhsExercise.displayName != rhsExercise.displayName {
+                    return lhsExercise.displayName < rhsExercise.displayName
+                }
+                return lhsExercise.id.uuidString < rhsExercise.id.uuidString
+            }
+            .map(\.group)
+    }
+}
+
 enum ExerciseOrdering: String, CaseIterable, Identifiable {
     case due
     case standard

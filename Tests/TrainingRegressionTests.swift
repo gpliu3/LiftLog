@@ -158,7 +158,23 @@ struct TrainingRegressionTests {
         try expect(ExerciseOrdering.due.groupPrecedes("Back", "Chest", lhsDate: dates[old.id], rhsDate: dates[recent.id]), "Due group order must use dates")
         try expect(!ExerciseOrdering.due.groupPrecedes("Chest", "Back", lhsDate: nil, rhsDate: dates[recent.id]), "Never-trained group must stay at bottom")
         try expect(ExerciseCategory.allCases.map(\.sortOrder) == [0, 1, 2], "Category ordering unstable")
-        print("PASS: category, fixed muscle group/name, overdue and never-trained ordering")
+
+        // Day sections: newest-started first, and adding sets must never reorder them.
+        let benchA = Exercise(name: "Bench A")
+        let rowB = Exercise(name: "Row B")
+        let swim = Exercise(name: "Swim", exerciseType: "cardio", category: .cardio)
+        func at(_ seconds: TimeInterval) -> Date { Date(timeIntervalSince1970: seconds) }
+        func order(_ groups: [(Exercise, [Date])]) -> [UUID] {
+            DayExerciseOrder.sorted(groups) { $0 }.map(\.0.id)
+        }
+        let started = [(benchA, [at(100), at(110)]), (rowB, [at(200), at(210)])]
+        try expect(order(started) == [rowB.id, benchA.id], "Newest-started exercise must be on top")
+        let moreBench = [(benchA, [at(100), at(110), at(300)]), (rowB, [at(200), at(210)])]
+        try expect(order(moreBench) == [rowB.id, benchA.id], "Adding a set must not move an exercise to the top")
+        let withCardio = [(swim, [at(400)]), (benchA, [at(100)]), (rowB, [at(200)])]
+        try expect(order(withCardio) == [rowB.id, benchA.id, swim.id], "Categories must stay grouped before start time")
+        try expect(order(started.reversed()) == order(started), "Day order must not depend on input order")
+        print("PASS: category, fixed muscle group/name, overdue, never-trained and stable day-section ordering")
     }
 
     private static func verifyDuration() throws {

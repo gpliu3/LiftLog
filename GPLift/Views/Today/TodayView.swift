@@ -30,7 +30,6 @@ private struct TodayContentView: View {
     @Query private var daySets: [WorkoutSet]
 
     @State private var showingAddSet = false
-    @State private var quickAddExercise: Exercise?
     @State private var editingSet: WorkoutSet?
     @State private var editingExercise: Exercise?
     @State private var expandedNotes: Set<UUID> = []
@@ -60,18 +59,15 @@ private struct TodayContentView: View {
 
     private var groupedSets: [(Exercise, [WorkoutSet])] {
         let grouped = Dictionary(grouping: todaySets) { $0.exercise }
-        return grouped.compactMap { (exercise, sets) in
+        let groups: [(Exercise, [WorkoutSet])] = grouped.compactMap { (exercise, sets) in
             guard let exercise = exercise else { return nil }
             return (exercise, sets.sorted { $0.setNumber < $1.setNumber })
-        }.sorted { lhs, rhs in
-            if lhs.0.resolvedCategory != rhs.0.resolvedCategory {
-                return lhs.0.resolvedCategory.sortOrder < rhs.0.resolvedCategory.sortOrder
-            }
-            let lhsLatest = lhs.1.map(\.date).max() ?? .distantPast
-            let rhsLatest = rhs.1.map(\.date).max() ?? .distantPast
-            if lhsLatest != rhsLatest { return lhsLatest > rhsLatest }
-            return lhs.0.displayName < rhs.0.displayName
         }
+        return DayExerciseOrder.sorted(groups) { $0.map(\.date) }
+    }
+
+    private var todayExerciseIDs: [UUID] {
+        groupedSets.map(\.0.id)
     }
 
     private var sortedTodaySets: [WorkoutSet] {
@@ -119,14 +115,14 @@ private struct TodayContentView: View {
                         addSetButton
                     }
                 }
+                .onChange(of: todayExerciseIDs) { oldIDs, newIDs in
+                    revealNewlyStartedExercise(oldIDs: oldIDs, newIDs: newIDs, with: proxy)
+                }
             }
             .navigationTitle(todayDateString)
             .font(AppTextStyle.body)
             .sheet(isPresented: $showingAddSet) {
                 AddSetView()
-            }
-            .sheet(item: $quickAddExercise) { exercise in
-                AddSetView(preselectedExercise: exercise)
             }
             .sheet(item: $editingSet) { set in
                 EditSetView(workoutSet: set)
@@ -206,12 +202,6 @@ private struct TodayContentView: View {
                                 if inlineEditingSetID == set.id {
                                     scrollToSet(set.id, with: proxy)
                                 }
-                            }, onDuplicate: {
-                                if exercise.isCardio {
-                                    quickAddExercise = exercise
-                                } else {
-                                    quickAddSet(for: exercise, basedOn: set, todaySetsForExercise: sets)
-                                }
                             }, onEdit: {
                                 editingSet = set
                             })
@@ -259,6 +249,17 @@ private struct TodayContentView: View {
         }
         .listStyle(.plain)
         .environment(\.defaultMinListRowHeight, 24)
+    }
+
+    /// Sections never move when sets are added, but a newly started exercise is inserted at the
+    /// top of its category; bring it into view so the user is not left looking at another one.
+    private func revealNewlyStartedExercise(oldIDs: [UUID], newIDs: [UUID], with proxy: ScrollViewProxy) {
+        guard !oldIDs.isEmpty else { return }
+        let previous = Set(oldIDs)
+        guard let newExerciseID = newIDs.first(where: { !previous.contains($0) }),
+              let firstSetID = groupedSets.first(where: { $0.0.id == newExerciseID })?.1.first?.id
+        else { return }
+        scrollToSet(firstSetID, with: proxy)
     }
 
     private func scrollToSet(_ id: UUID, with proxy: ScrollViewProxy) {
@@ -615,7 +616,6 @@ struct SetRowView: View {
     let workoutSet: WorkoutSet
     let isPersonalBest: Bool
     var onTap: ((InlineEditTarget) -> Void)?
-    var onDuplicate: (() -> Void)?
     var onEdit: (() -> Void)?
 
     private var exerciseType: String {
@@ -720,14 +720,6 @@ struct SetRowView: View {
             let generator = UIImpactFeedbackGenerator(style: .medium)
             generator.impactOccurred()
             onEdit?()
-        }
-        .swipeActions(edge: .leading) {
-            Button {
-                onDuplicate?()
-            } label: {
-                Label("today.duplicate".localized, systemImage: "doc.on.doc")
-            }
-            .tint(.orange)
         }
     }
 
