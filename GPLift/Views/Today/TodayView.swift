@@ -293,9 +293,11 @@ private struct TodayContentView: View {
                             .font(AppTextStyle.caption)
                             .foregroundStyle(.secondary)
                     } else {
-                        Text("\(String(format: "%.1f", lastSet.weightKg)) kg × \(lastSet.reps)")
+                        Text("\(WeightUnit.kg.displayText(fromKilograms: lastSet.weightKg)) · \(WeightUnit.lb.displayText(fromKilograms: lastSet.weightKg)) × \(lastSet.reps)")
                             .font(AppTextStyle.caption)
                             .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
                     }
                 }
             }
@@ -626,6 +628,10 @@ struct SetRowView: View {
         "\(String(format: "%.1f", workoutSet.weightKg)) kg"
     }
 
+    private var poundsText: String {
+        WeightUnit.lb.displayText(fromKilograms: workoutSet.weightKg)
+    }
+
     private var repsText: String {
         "\(workoutSet.reps) \("common.reps".localized)"
     }
@@ -659,13 +665,7 @@ struct SetRowView: View {
                         })
 
                     if let rir = workoutSet.rir {
-                        Text("RIR \(rir)")
-                            .font(AppTextStyle.caption2Strong)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color(.tertiarySystemFill))
-                            .foregroundStyle(.secondary)
-                            .clipShape(Capsule())
+                        RIRBadge(rir: rir)
                             .contentShape(Rectangle())
                             .highPriorityGesture(TapGesture().onEnded {
                                 onTap?(.automatic)
@@ -683,13 +683,7 @@ struct SetRowView: View {
                         })
 
                     if let rir = workoutSet.rir {
-                        Text("RIR \(rir)")
-                            .font(AppTextStyle.caption2Strong)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color(.tertiarySystemFill))
-                            .foregroundStyle(.secondary)
-                            .clipShape(Capsule())
+                        RIRBadge(rir: rir)
                             .contentShape(Rectangle())
                             .highPriorityGesture(TapGesture().onEnded {
                                 onTap?(.automatic)
@@ -736,6 +730,17 @@ struct SetRowView: View {
                     onTap?(.weightKg)
                 })
 
+            Text(poundsText)
+                .font(AppTextStyle.subheadline)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(minimumScaleFactor)
+                .allowsTightening(true)
+                .contentShape(Rectangle())
+                .highPriorityGesture(TapGesture().onEnded {
+                    onTap?(.weightLb)
+                })
+
             Text("×")
                 .font(AppTextStyle.bodyStrong)
                 .foregroundStyle(.secondary)
@@ -757,13 +762,7 @@ struct SetRowView: View {
                 })
 
             if let rir = workoutSet.rir {
-                Text("RIR \(rir)")
-                    .font(AppTextStyle.caption2Strong)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color(.tertiarySystemFill))
-                    .foregroundStyle(.secondary)
-                    .clipShape(Capsule())
+                RIRBadge(rir: rir)
                     .contentShape(Rectangle())
                     .highPriorityGesture(TapGesture().onEnded {
                         onTap?(.automatic)
@@ -1548,8 +1547,12 @@ struct PreviousDaySetsRow: View {
         sets.sorted(by: WorkoutSet.trainingOrder(lhs:rhs:))
     }
 
-    private func weightRepsMetric(for set: WorkoutSet) -> String {
-        "\(String(format: "%.1f", set.weightKg)) kg × \(set.reps) \("common.reps".localized)"
+    private func weightRepsMetric(for set: WorkoutSet) -> Text {
+        let kilograms = Text(WeightUnit.kg.displayText(fromKilograms: set.weightKg))
+        let pounds = Text(WeightUnit.lb.displayText(fromKilograms: set.weightKg))
+            .fontWeight(.regular)
+            .foregroundStyle(.secondary)
+        return Text("\(kilograms) \(pounds) × \(set.reps) \("common.reps".localized)")
     }
 
     private var subtitle: String {
@@ -1601,13 +1604,7 @@ struct PreviousDaySetsRow: View {
                                     .lineLimit(1)
 
                                 if let rir = set.rir {
-                                    Text("RIR \(rir)")
-                                        .font(AppTextStyle.caption2Strong)
-                                        .padding(.horizontal, 6)
-                                        .padding(.vertical, 2)
-                                        .background(Color(.tertiarySystemFill))
-                                        .foregroundStyle(.secondary)
-                                        .clipShape(Capsule())
+                                    RIRBadge(rir: rir)
                                 }
                             }
                         } else if exercise.isRepsOnly {
@@ -1617,19 +1614,13 @@ struct PreviousDaySetsRow: View {
                                     .lineLimit(1)
 
                                 if let rir = set.rir {
-                                    Text("RIR \(rir)")
-                                        .font(AppTextStyle.caption2Strong)
-                                        .padding(.horizontal, 6)
-                                        .padding(.vertical, 2)
-                                        .background(Color(.tertiarySystemFill))
-                                        .foregroundStyle(.secondary)
-                                        .clipShape(Capsule())
+                                    RIRBadge(rir: rir)
                                 }
                             }
                         } else {
                             ViewThatFits(in: .horizontal) {
                                 HStack(spacing: 6) {
-                                    Text(weightRepsMetric(for: set))
+                                    WeightRepsText.make(for: set)
                                         .font(AppTextStyle.captionStrong)
                                         .lineLimit(1)
                                         .minimumScaleFactor(0.74)
@@ -1637,18 +1628,12 @@ struct PreviousDaySetsRow: View {
                                         .layoutPriority(1)
 
                                     if let rir = set.rir {
-                                        Text("RIR \(rir)")
-                                            .font(AppTextStyle.caption2Strong)
-                                            .padding(.horizontal, 6)
-                                            .padding(.vertical, 2)
-                                            .background(Color(.tertiarySystemFill))
-                                            .foregroundStyle(.secondary)
-                                            .clipShape(Capsule())
+                                        RIRBadge(rir: rir)
                                     }
                                 }
 
                                 HStack(spacing: 6) {
-                                    Text(weightRepsMetric(for: set))
+                                    WeightRepsText.make(for: set)
                                         .font(AppTextStyle.captionStrong)
                                         .lineLimit(1)
                                         .minimumScaleFactor(0.7)
@@ -1656,13 +1641,7 @@ struct PreviousDaySetsRow: View {
                                         .layoutPriority(1)
 
                                     if let rir = set.rir {
-                                        Text("RIR \(rir)")
-                                            .font(AppTextStyle.caption2Strong)
-                                            .padding(.horizontal, 6)
-                                            .padding(.vertical, 2)
-                                            .background(Color(.tertiarySystemFill))
-                                            .foregroundStyle(.secondary)
-                                            .clipShape(Capsule())
+                                        RIRBadge(rir: rir)
                                     }
                                 }
                             }

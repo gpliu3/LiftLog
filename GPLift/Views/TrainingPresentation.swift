@@ -66,3 +66,29 @@ struct CardioSetMetrics: View {
         .minimumScaleFactor(0.75)
     }
 }
+
+/// Small "RIR n" capsule shown next to a set's metrics.
+struct RIRBadge: View {
+    let rir: Int
+
+    var body: some View {
+        Text("RIR \(rir)")
+            .font(AppTextStyle.caption2Strong)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Color(.tertiarySystemFill))
+            .foregroundStyle(.secondary)
+            .clipShape(Capsule())
+    }
+}
+
+/// Read-only "20.0 kg 44 lb × 10 reps" line, with pounds de-emphasised.
+enum WeightRepsText {
+    static func make(for set: WorkoutSet) -> Text {
+        let kilograms = Text(WeightUnit.kg.displayText(fromKilograms: set.weightKg))
+        let pounds = Text(WeightUnit.lb.displayText(fromKilograms: set.weightKg))
+            .fontWeight(.regular)
+            .foregroundStyle(.secondary)
+        return Text("\(kilograms) \(pounds) × \(set.reps) \("common.reps".localized)")
+    }
+}

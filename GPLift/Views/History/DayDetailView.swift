@@ -193,10 +193,6 @@ struct DaySetRowView: View {
         workoutSet.exercise?.exerciseType ?? "weightReps"
     }
 
-    private var weightRepsMetric: String {
-        "\(String(format: "%.1f", workoutSet.weightKg)) kg × \(workoutSet.reps) \("common.reps".localized)"
-    }
-
     var body: some View {
         HStack(spacing: 8) {
             Text(workoutSet.exercise?.isCardio == true
@@ -218,13 +214,7 @@ struct DaySetRowView: View {
                         .lineLimit(1)
 
                     if let rir = workoutSet.rir {
-                        Text("RIR \(rir)")
-                            .font(AppTextStyle.caption2Strong)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color(.tertiarySystemFill))
-                            .foregroundStyle(.secondary)
-                            .clipShape(Capsule())
+                        RIRBadge(rir: rir)
                     }
                 }
             } else if exerciseType == "repsOnly" {
@@ -234,19 +224,13 @@ struct DaySetRowView: View {
                         .lineLimit(1)
 
                     if let rir = workoutSet.rir {
-                        Text("RIR \(rir)")
-                            .font(AppTextStyle.caption2Strong)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color(.tertiarySystemFill))
-                            .foregroundStyle(.secondary)
-                            .clipShape(Capsule())
+                        RIRBadge(rir: rir)
                     }
                 }
             } else {
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 6) {
-                        Text(weightRepsMetric)
+                        WeightRepsText.make(for: workoutSet)
                             .font(AppTextStyle.bodyStrong)
                             .lineLimit(1)
                             .minimumScaleFactor(0.72)
@@ -254,18 +238,12 @@ struct DaySetRowView: View {
                             .layoutPriority(1)
 
                         if let rir = workoutSet.rir {
-                            Text("RIR \(rir)")
-                                .font(AppTextStyle.caption2Strong)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color(.tertiarySystemFill))
-                                .foregroundStyle(.secondary)
-                                .clipShape(Capsule())
+                            RIRBadge(rir: rir)
                         }
                     }
 
                     HStack(spacing: 6) {
-                        Text(weightRepsMetric)
+                        WeightRepsText.make(for: workoutSet)
                             .font(AppTextStyle.bodyStrong)
                             .lineLimit(1)
                             .minimumScaleFactor(0.68)
@@ -273,13 +251,7 @@ struct DaySetRowView: View {
                             .layoutPriority(1)
 
                         if let rir = workoutSet.rir {
-                            Text("RIR \(rir)")
-                                .font(AppTextStyle.caption2Strong)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color(.tertiarySystemFill))
-                                .foregroundStyle(.secondary)
-                                .clipShape(Capsule())
+                            RIRBadge(rir: rir)
                         }
                     }
                 }

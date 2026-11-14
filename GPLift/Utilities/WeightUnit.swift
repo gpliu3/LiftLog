@@ -52,6 +52,11 @@ enum WeightUnit: String, CaseIterable, Identifiable {
         }
     }
 
+    /// Read-only display with the unit, e.g. "20.0 kg" or "44 lb".
+    func displayText(fromKilograms kilograms: Double) -> String {
+        "\(formattedInputText(fromKilograms: kilograms)) \(rawValue)"
+    }
+
     func formattedInputText(fromKilograms kilograms: Double) -> String {
         switch self {
         case .kg:

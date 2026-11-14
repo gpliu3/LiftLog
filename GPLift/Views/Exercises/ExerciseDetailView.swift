@@ -192,13 +192,7 @@ struct ExerciseDetailView: View {
                     }
 
                     if let rir = set.rir {
-                        Text("RIR \(rir)")
-                            .font(AppTextStyle.caption2Strong)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color(.tertiarySystemFill))
-                            .foregroundStyle(.secondary)
-                            .clipShape(Capsule())
+                        RIRBadge(rir: rir)
                     }
 
                     if cachedPersonalBestSetIDs.contains(set.id) {
