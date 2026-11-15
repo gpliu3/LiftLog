@@ -468,6 +468,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "GP Lift";
 				INFOPLIST_KEY_CFBundleName = GymLog;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "GP Lift does not save anything to Health. It only reads your daily steps and time asleep.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "GP Lift reads your daily steps and time asleep to show them next to your training in History. Nothing is written to Health and the data stays on your device.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -502,6 +503,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "GP Lift";
 				INFOPLIST_KEY_CFBundleName = GymLog;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "GP Lift does not save anything to Health. It only reads your daily steps and time asleep.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "GP Lift reads your daily steps and time asleep to show them next to your training in History. Nothing is written to Health and the data stays on your device.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
