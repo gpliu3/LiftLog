@@ -10,7 +10,8 @@ struct GPLiftApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Exercise.self,
-            WorkoutSet.self
+            WorkoutSet.self,
+            DailyLog.self
         ])
         let modelConfiguration = ModelConfiguration(
             schema: schema,

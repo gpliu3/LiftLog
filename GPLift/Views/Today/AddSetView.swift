@@ -29,6 +29,9 @@ struct AddSetView: View {
     @State private var setNotes: String = ""
     @State private var showExerciseNotes: Bool = false
     @AppStorage("addSetExerciseOrdering") private var exerciseOrdering: ExerciseOrdering = .due
+    /// Muscle groups in the user's own order (newline separated), used by the custom sort.
+    @AppStorage("addSetCustomGroupOrder") private var customGroupOrderRaw: String = ""
+    @State private var showingGroupOrder = false
     @State private var justSaved: Bool = false
     @State private var savedSetNumber: Int = 0
     @State private var cachedNextSetNumber: Int = 1
@@ -89,8 +92,34 @@ struct AddSetView: View {
         exerciseOrdering.precedes(lhs, rhs, lastTrainedDates: lastTrainedDates)
     }
 
+    private var customGroupOrder: [String] {
+        customGroupOrderRaw.split(separator: "\n").map(String.init)
+    }
+
+    /// Saves the dragged order as explicit positions for every exercise in that list.
+    private func moveExercises(_ ordered: [Exercise], from source: IndexSet, to destination: Int) {
+        let reordered = ExerciseOrdering.moved(ordered, from: source, to: destination)
+        for (index, exercise) in reordered.enumerated() where exercise.customOrder != index {
+            exercise.customOrder = index
+        }
+        do {
+            try modelContext.save()
+        } catch {
+            assertionFailure("Failed to save exercise order: \(error)")
+        }
+    }
+
+    /// Groups reordered in the sheet come first; groups not shown there keep their saved place after them.
+    private func saveGroupOrder(_ visibleOrder: [String]) {
+        let others = customGroupOrder.filter { !visibleOrder.contains($0) }
+        customGroupOrderRaw = (visibleOrder + others).joined(separator: "\n")
+    }
+
     private func compareExerciseGroups(lhs: ExerciseGroupSection, rhs: ExerciseGroupSection) -> Bool {
-        exerciseOrdering.groupPrecedes(lhs.muscleGroup, rhs.muscleGroup,
+        if exerciseOrdering == .custom {
+            return ExerciseOrdering.customGroupPrecedes(lhs.muscleGroup, rhs.muscleGroup, savedOrder: customGroupOrder)
+        }
+        return exerciseOrdering.groupPrecedes(lhs.muscleGroup, rhs.muscleGroup,
                                       lhsDate: lhs.sortDate, rhsDate: rhs.sortDate)
     }
 
@@ -141,6 +170,9 @@ struct AddSetView: View {
     private var exerciseOrderingHint: String {
         if visibleExercises.isEmpty { return "" }
         if exerciseOrdering == .standard { return "addSet.standardOrderingHint".localized }
+        if exerciseOrdering == .custom {
+            return (selectedCategory.usesSets ? "addSet.customOrderingHint" : "addSet.customOrderingHintCardio").localized
+        }
         if selectedCategory == .cardio { return "addSet.cardioOrderingHint".localized }
         return "addSet.orderingHint".localized(with: trainedCount, neverTrainedCount)
     }
@@ -213,9 +245,18 @@ struct AddSetView: View {
                     ForEach(group.exercises) { exercise in
                         exerciseRow(for: exercise)
                     }
+                    .onMove(perform: exerciseOrdering == .custom ? { source, destination in
+                        moveExercises(group.exercises, from: source, to: destination)
+                    } : nil)
                 } header: {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text(group.localizedTitle)
+                        if exerciseOrdering == .custom {
+                            Image(systemName: "arrow.up.arrow.down")
+                                .font(AppTextStyle.caption2Strong)
+                                .foregroundStyle(.orange)
+                                .accessibilityLabel("addSet.reorderGroups".localized)
+                        }
                         Spacer(minLength: 8)
                         if let sortDate = group.sortDate {
                             Text(groupDateLabel(for: sortDate))
@@ -224,6 +265,13 @@ struct AddSetView: View {
                                 .textCase(nil)
                         }
                     }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        if exerciseOrdering == .custom { showingGroupOrder = true }
+                    }
+                    .onLongPressGesture {
+                        if exerciseOrdering == .custom { showingGroupOrder = true }
+                    }
                 }
             }
         } else {
@@ -231,6 +279,9 @@ struct AddSetView: View {
                 ForEach(orderedCardioExercises) { exercise in
                     exerciseRow(for: exercise)
                 }
+                .onMove(perform: exerciseOrdering == .custom ? { source, destination in
+                    moveExercises(orderedCardioExercises, from: source, to: destination)
+                } : nil)
             }
         }
     }
@@ -305,6 +356,12 @@ struct AddSetView: View {
                 }
                 .navigationTitle("addSet.title".localized)
                 .navigationBarTitleDisplayMode(.inline)
+                .sheet(isPresented: $showingGroupOrder) {
+                    GroupOrderSheet(
+                        groups: groupedExercises.map(\.muscleGroup),
+                        onSave: saveGroupOrder
+                    )
+                }
                 .font(AppTextStyle.body)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
@@ -1014,4 +1071,39 @@ struct AddSetView: View {
 #Preview {
     AddSetView()
         .modelContainer(for: [Exercise.self, WorkoutSet.self], inMemory: true)
+}
+
+/// Drag list for arranging muscle groups in the custom Log Set order.
+private struct GroupOrderSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State var groups: [String]
+    let onSave: ([String]) -> Void
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(groups, id: \.self) { group in
+                    Text(Exercise.localizedMuscleGroupName(for: group))
+                }
+                .onMove { source, destination in
+                    groups = ExerciseOrdering.moved(groups, from: source, to: destination)
+                }
+            }
+            .environment(\.editMode, .constant(.active))
+            .navigationTitle("addSet.reorderGroups".localized)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("common.cancel".localized) { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("common.done".localized) {
+                        onSave(groups)
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
 }

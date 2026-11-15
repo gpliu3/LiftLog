@@ -29,6 +29,8 @@
 		E51000012B5A00000016 /* EditSetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51000002B5A00000016 /* EditSetView.swift */; };
 		E51000012B5A00000017 /* CSVExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51000002B5A00000017 /* CSVExport.swift */; };
 		E51000012B5A00000018 /* WeightUnit.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51000002B5A00000018 /* WeightUnit.swift */; };
+		E51000012B5A00000020 /* KneeCheckIn.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51000002B5A00000020 /* KneeCheckIn.swift */; };
+		E51000012B5A0000001F /* DailyLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51000002B5A0000001F /* DailyLog.swift */; };
 		E51000012B5A0000001E /* HealthDataStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51000002B5A0000001E /* HealthDataStore.swift */; };
 		E51000012B5A0000001D /* DailyHealth.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51000002B5A0000001D /* DailyHealth.swift */; };
 		E51000012B5A00000019 /* TrainingTotals.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51000002B5A00000019 /* TrainingTotals.swift */; };
@@ -62,6 +64,8 @@
 		E51000002B5A00000016 /* EditSetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditSetView.swift; sourceTree = "<group>"; };
 		E51000002B5A00000017 /* CSVExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVExport.swift; sourceTree = "<group>"; };
 		E51000002B5A00000018 /* WeightUnit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeightUnit.swift; sourceTree = "<group>"; };
+		E51000002B5A00000020 /* KneeCheckIn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KneeCheckIn.swift; sourceTree = "<group>"; };
+		E51000002B5A0000001F /* DailyLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyLog.swift; sourceTree = "<group>"; };
 		E51000002B5A0000001E /* HealthDataStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthDataStore.swift; sourceTree = "<group>"; };
 		E51000002B5A0000001D /* DailyHealth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyHealth.swift; sourceTree = "<group>"; };
 		E51000002B5A00000019 /* TrainingTotals.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingTotals.swift; sourceTree = "<group>"; };
@@ -114,6 +118,7 @@
 			children = (
 				E51000002B5A00000002 /* Exercise.swift */,
 				E51000002B5A00000003 /* WorkoutSet.swift */,
+				E51000002B5A0000001F /* DailyLog.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -122,6 +127,7 @@
 			isa = PBXGroup;
 			children = (
 				E51000002B5A0000001C /* TrainingPresentation.swift */,
+				E51000002B5A00000020 /* KneeCheckIn.swift */,
 				E51000002B5A00000004 /* MainTabView.swift */,
 				E51000062B5A00000000 /* Today */,
 				E51000072B5A00000000 /* Exercises */,
@@ -307,6 +313,8 @@
 				E51000012B5A00000016 /* EditSetView.swift in Sources */,
 				E51000012B5A00000017 /* CSVExport.swift in Sources */,
 				E51000012B5A00000018 /* WeightUnit.swift in Sources */,
+				E51000012B5A00000020 /* KneeCheckIn.swift in Sources */,
+				E51000012B5A0000001F /* DailyLog.swift in Sources */,
 				E51000012B5A0000001E /* HealthDataStore.swift in Sources */,
 				E51000012B5A0000001D /* DailyHealth.swift in Sources */,
 			);

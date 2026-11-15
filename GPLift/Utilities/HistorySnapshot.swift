@@ -6,6 +6,7 @@ struct HistorySetSnapshot: Sendable {
     let exerciseID: UUID
     let exerciseName: String
     let category: ExerciseCategory
+    let isKneeLoad: Bool
     let durationMinutes: Int
     let averageHeartRate: Int?
     let volume: Double
@@ -20,6 +21,7 @@ struct HistorySetSnapshot: Sendable {
         exerciseID = exercise.id
         exerciseName = exercise.displayName
         category = exercise.resolvedCategory
+        isKneeLoad = exercise.isKneeLoad
         durationMinutes = workoutSet.cardioMinutes
         averageHeartRate = workoutSet.averageHeartRate
         volume = workoutSet.volume
@@ -37,6 +39,11 @@ struct HistoryDaySnapshot: Identifiable, Sendable {
         let category: ExerciseCategory
         let totalMinutes: Int
         let latestDate: Date
+        var isKneeLoad = false
+
+        var summaryText: String {
+            category == .cardio ? "\(name)x\(totalMinutes)m" : "\(name)x\(count)"
+        }
     }
 
     var id: TimeInterval { date.timeIntervalSinceReferenceDate }
@@ -45,14 +52,17 @@ struct HistoryDaySnapshot: Identifiable, Sendable {
     var setCount: Int { totals.strengthSets }
     var totalVolume: Double { totals.strengthVolume }
     var isTrainingDay: Bool { totals.strengthSets > 0 || totals.cardioSessions > 0 }
+    /// True when any exercise logged that day is flagged as knee load.
+    var hasKneeLoad: Bool { exerciseSummaries.contains(where: \.isKneeLoad) }
+
+    func summaries(for category: ExerciseCategory) -> [ExerciseSummary] {
+        exerciseSummaries.filter { $0.category == category }
+    }
     let exerciseSummaries: [ExerciseSummary]
     let dayNote: String
 
     func summaryText(for category: ExerciseCategory) -> String {
-        exerciseSummaries
-            .filter { $0.category == category }
-            .map { category == .cardio ? "\($0.name)x\($0.totalMinutes)m" : "\($0.name)x\($0.count)" }
-            .joined(separator: ", ")
+        summaries(for: category).map(\.summaryText).joined(separator: ", ")
     }
 }
 
@@ -109,7 +119,8 @@ struct HistorySnapshot: Sendable {
                     count: exerciseSets.count,
                     category: first.category,
                     totalMinutes: exerciseSets.reduce(0) { $0 + $1.durationMinutes },
-                    latestDate: latest
+                    latestDate: latest,
+                    isKneeLoad: first.isKneeLoad
                 )
             }
             .sorted {

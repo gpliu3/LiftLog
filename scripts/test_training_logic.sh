@@ -27,7 +27,7 @@ fi
 ${runner[@]+"${runner[@]}"} "$test_dir/write-fixture" "$test_dir/legacy.store"
 
 "${compiler[@]}" "${common_args[@]}" \
-  GPLift/Models/Exercise.swift GPLift/Models/WorkoutSet.swift \
+  GPLift/Models/Exercise.swift GPLift/Models/WorkoutSet.swift GPLift/Models/DailyLog.swift \
   GPLift/Utilities/LanguageManager.swift GPLift/Utilities/TrainingTotals.swift \
   GPLift/Utilities/ExerciseOrdering.swift GPLift/Utilities/HistorySnapshot.swift \
   GPLift/Utilities/CSVExport.swift GPLift/Utilities/DailyHealth.swift Tests/StoreFixture.swift Tests/TrainingRegressionTests.swift \

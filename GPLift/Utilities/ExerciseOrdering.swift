@@ -31,11 +31,16 @@ enum DayExerciseOrder {
 enum ExerciseOrdering: String, CaseIterable, Identifiable {
     case due
     case standard
+    /// The user's own drag-and-drop order for groups and exercises.
+    case custom
 
     var id: String { rawValue }
     var localizedName: String { "addSet.sort.\(rawValue)".localized }
 
     func precedes(_ lhs: Exercise, _ rhs: Exercise, lastTrainedDates: [UUID: Date]) -> Bool {
+        if self == .custom, let order = Self.comparePositions(lhs.customOrder, rhs.customOrder) {
+            return order
+        }
         if self == .due,
            let dateOrder = Self.compareDates(lastTrainedDates[lhs.id], lastTrainedDates[rhs.id]) {
             return dateOrder
@@ -57,6 +62,35 @@ enum ExerciseOrdering: String, CaseIterable, Identifiable {
         let rhsIndex = Exercise.muscleGroups.firstIndex(of: rhs) ?? Exercise.muscleGroups.count
         if lhsIndex != rhsIndex { return lhsIndex < rhsIndex }
         return lhs.localizedStandardCompare(rhs) == .orderedAscending
+    }
+
+    /// Custom group order: groups the user has placed come first in their saved order;
+    /// groups never placed keep the standard order after them.
+    static func customGroupPrecedes(_ lhs: String, _ rhs: String, savedOrder: [String]) -> Bool {
+        if let order = comparePositions(savedOrder.firstIndex(of: lhs), savedOrder.firstIndex(of: rhs)) {
+            return order
+        }
+        return standardGroupPrecedes(lhs, rhs)
+    }
+
+    /// Moves one item within `items` the way SwiftUI's `onMove` reports it.
+    static func moved<Item>(_ items: [Item], from source: IndexSet, to destination: Int) -> [Item] {
+        var result = items
+        let picked = source.sorted().map { result[$0] }
+        for index in source.sorted(by: >) { result.remove(at: index) }
+        let insertAt = destination - source.filter { $0 < destination }.count
+        result.insert(contentsOf: picked, at: min(max(insertAt, 0), result.count))
+        return result
+    }
+
+    /// Placed items come before unplaced ones; nil when the positions do not decide the order.
+    private static func comparePositions(_ lhs: Int?, _ rhs: Int?) -> Bool? {
+        switch (lhs, rhs) {
+        case let (lhs?, rhs?) where lhs != rhs: return lhs < rhs
+        case (_?, nil): return true
+        case (nil, _?): return false
+        default: return nil
+        }
     }
 
     private static func compareDates(_ lhs: Date?, _ rhs: Date?) -> Bool? {

@@ -5,6 +5,7 @@ import UIKit
 struct HistoryView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Query(sort: \WorkoutSet.date, order: .reverse) private var allSets: [WorkoutSet]
+    @Query private var dailyLogs: [DailyLog]
     @State private var languageManager = LanguageManager.shared
     @State private var settingsManager = SettingsManager.shared
     @State private var healthStore = HealthDataStore.shared
@@ -58,6 +59,7 @@ struct HistoryView: View {
                     "\(set.reps)",
                     "\(set.durationSeconds)",
                     set.exercise?.resolvedCategory.rawValue ?? ExerciseCategory.strength.rawValue,
+                    set.exercise?.isKneeLoad == true ? "k" : "",
                     "\(set.averageHeartRate ?? 0)",
                     "\(set.maxHeartRate ?? 0)",
                     "\(set.setNumber)",
@@ -84,7 +86,14 @@ struct HistoryView: View {
 
     var body: some View {
         let health = visibleHealth
-        let timeline = HistoryTimeline.build(snapshot: snapshot, health: health, startDate: startDate, today: now)
+        let checkIns = DailyLog.checkInsByDay(dailyLogs)
+        let timeline = HistoryTimeline.build(
+            snapshot: snapshot,
+            health: health,
+            checkInDays: Set(checkIns.filter { !$0.value.isEmpty }.keys),
+            startDate: startDate,
+            today: now
+        )
 
         return NavigationStack {
             VStack(spacing: 0) {
@@ -95,7 +104,7 @@ struct HistoryView: View {
                         .padding()
                     emptyState
                 } else {
-                    historyList(timeline: timeline, health: health)
+                    historyList(timeline: timeline, health: health, checkIns: checkIns)
                 }
             }
             .navigationTitle("history.title".localized)
@@ -116,6 +125,7 @@ struct HistoryView: View {
             .sheet(isPresented: $showingExportSheet) {
                 HistoryExportView(
                     allSets: allSets,
+                    checkIns: DailyLog.checkInsByDay(dailyLogs),
                     defaultStartDate: startDate,
                     defaultEndDate: now
                 )
@@ -206,7 +216,11 @@ struct HistoryView: View {
         )
     }
 
-    private func historyList(timeline: HistoryTimeline, health: [Date: DailyHealth]) -> some View {
+    private func historyList(
+        timeline: HistoryTimeline,
+        health: [Date: DailyHealth],
+        checkIns: [Date: DailyCheckIn]
+    ) -> some View {
         List {
             Section {
                 overview(health: health)
@@ -222,13 +236,17 @@ struct HistoryView: View {
                     ForEach(week.rows) { row in
                         switch row {
                         case .logged(let day):
-                            DayRowView(day: day, health: health[day.date])
+                            DayRowView(day: day, health: health[day.date], checkIn: checkIns[day.date])
                                 .contentShape(Rectangle())
                                 .onTapGesture {
                                     selectedDay = day.date
                                 }
                         case .rest(let date):
-                            RestDayRowView(date: date, health: health[date] ?? DailyHealth())
+                            RestDayRowView(date: date, health: health[date] ?? DailyHealth(), checkIn: checkIns[date])
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    selectedDay = date
+                                }
                         }
                     }
                 } header: {
@@ -250,6 +268,7 @@ private struct HistoryExportView: View {
     @Environment(\.dismiss) private var dismiss
 
     let allSets: [WorkoutSet]
+    var checkIns: [Date: DailyCheckIn] = [:]
     let defaultStartDate: Date
     let defaultEndDate: Date
 
@@ -280,8 +299,9 @@ private struct HistoryExportView: View {
         }
     }
 
-    init(allSets: [WorkoutSet], defaultStartDate: Date, defaultEndDate: Date) {
+    init(allSets: [WorkoutSet], checkIns: [Date: DailyCheckIn] = [:], defaultStartDate: Date, defaultEndDate: Date) {
         self.allSets = allSets
+        self.checkIns = checkIns
         self.defaultStartDate = defaultStartDate
         self.defaultEndDate = defaultEndDate
         _fromDate = State(initialValue: defaultStartDate)
@@ -493,13 +513,24 @@ private struct HistoryExportView: View {
         // lists each day's training totals.
         let start = normalizedStart
         let end = normalizedEnd
-        let training = Dictionary(grouping: filteredSets) { Calendar.current.startOfDay(for: $0.date) }
-            .mapValues { TrainingTotals(sets: $0) }
+        let setsByDay = Dictionary(grouping: filteredSets) { Calendar.current.startOfDay(for: $0.date) }
+        let training = setsByDay.mapValues { TrainingTotals(sets: $0) }
+        let rangeCheckIns = checkIns.filter { $0.key >= start && $0.key <= end }
+        // A check-in note wins; days without one keep the older note saved with their sets.
+        var notes = setsByDay.mapValues { sets in sets.first.map { WorkoutSet.dayNote(for: $0.date, in: sets) } ?? "" }
+        for (day, checkIn) in rangeCheckIns { notes[day] = checkIn.trimmedNote }
+        let kneeLoadDays = Set(setsByDay.filter { $0.value.contains { $0.exercise?.isKneeLoad == true } }.keys)
         let filename = exportFilename.replacingOccurrences(of: "gplift_", with: "gplift_daily_")
         Task {
             let health = await HealthDataStore.shared.refresh(from: start, to: end)
             guard start == normalizedStart, end == normalizedEnd else { return }
-            let dailyCSV = DailySummaryCSVExporter.makeCSV(training: training, health: health)
+            let dailyCSV = DailySummaryCSVExporter.makeCSV(
+                training: training,
+                health: health,
+                checkIns: rangeCheckIns,
+                notes: notes,
+                kneeLoadDays: kneeLoadDays
+            )
             dailySummaryFileURL = try? CSVDocumentWriter.writeCSVFile(content: dailyCSV, filename: filename)
         }
     }
@@ -687,10 +718,12 @@ private struct HealthConnectHintRow: View {
     }
 }
 
-/// A day without logged training that still has steps or sleep: one slim, non-tappable line.
+/// A day without logged training that still has steps, sleep or a knee check-in.
+/// Tapping it opens the day so the check-in can be added or corrected.
 private struct RestDayRowView: View {
     let date: Date
     let health: DailyHealth
+    var checkIn: DailyCheckIn?
 
     private var formattedDayLabel: String {
         let locale = LanguageManager.shared.currentLanguage.locale ?? Locale.current
@@ -698,20 +731,28 @@ private struct RestDayRowView: View {
     }
 
     var body: some View {
-        HStack(spacing: 8) {
-            Text(formattedDayLabel)
-                .font(AppTextStyle.subheadline)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-            Text("health.rest".localized)
-                .font(AppTextStyle.caption2)
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 1)
-                .background(Color(.tertiarySystemFill))
-                .clipShape(Capsule())
-            Spacer(minLength: 4)
-            HealthMetricsLine(health: health, showsStepsUnit: false)
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Text(formattedDayLabel)
+                    .font(AppTextStyle.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                Text("health.rest".localized)
+                    .font(AppTextStyle.caption2)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 1)
+                    .background(Color(.tertiarySystemFill))
+                    .clipShape(Capsule())
+                Spacer(minLength: 4)
+                HealthMetricsLine(health: health, showsStepsUnit: false)
+            }
+            if let checkIn {
+                KneeCheckInSummaryLine(checkIn: checkIn)
+                if !checkIn.trimmedNote.isEmpty {
+                    DayNoteBubble(note: checkIn.trimmedNote)
+                }
+            }
         }
         .padding(.vertical, 1)
     }
@@ -720,6 +761,23 @@ private struct RestDayRowView: View {
 private struct DayRowView: View {
     let day: HistoryDaySnapshot
     var health: DailyHealth?
+    var checkIn: DailyCheckIn?
+
+    /// A check-in note replaces the older note that was saved with the day's sets.
+    private var note: String {
+        checkIn.map(\.trimmedNote) ?? day.dayNote
+    }
+
+    /// Exercise summary with knee-load exercises picked out in their own colour.
+    private func summaryText(_ summaries: [HistoryDaySnapshot.ExerciseSummary]) -> Text {
+        summaries.enumerated().reduce(Text("")) { result, item in
+            let separator = item.offset == 0 ? "" : ", "
+            let piece = item.element.isKneeLoad
+                ? Text(item.element.summaryText).foregroundStyle(Color.kneeLoad).fontWeight(.semibold)
+                : Text(item.element.summaryText)
+            return Text("\(result)\(separator)\(piece)")
+        }
+    }
 
     private var isToday: Bool {
         Calendar.current.isDateInToday(day.date)
@@ -746,13 +804,21 @@ private struct DayRowView: View {
                             .foregroundStyle(.white)
                             .cornerRadius(4)
                     }
+
+                    if day.hasKneeLoad {
+                        KneeLoadBadge()
+                    }
                 }
 
                 ForEach(ExerciseCategory.allCases) { category in
-                    let summary = day.summaryText(for: category)
-                    if !summary.isEmpty {
-                        TrainingCategorySummary(category: category, text: summary)
+                    let summaries = day.summaries(for: category)
+                    if !summaries.isEmpty {
+                        TrainingCategorySummary(category: category, content: summaryText(summaries))
                     }
+                }
+
+                if let checkIn {
+                    KneeCheckInSummaryLine(checkIn: checkIn)
                 }
 
                 if let health, !health.isEmpty {
@@ -760,26 +826,9 @@ private struct DayRowView: View {
                         .padding(.top, 1)
                 }
 
-                if !day.dayNote.isEmpty {
-                    HStack(alignment: .top, spacing: 4) {
-                        Image(systemName: "exclamationmark.bubble.fill")
-                            .font(AppTextStyle.caption2Strong)
-                            .foregroundStyle(.orange)
-                            .padding(.top, 2)
-
-                        Text(day.dayNote)
-                            .font(AppTextStyle.captionStrong)
-                            .foregroundStyle(Color.orange.opacity(0.95))
-                            .lineLimit(nil)
-                            .multilineTextAlignment(.leading)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 4)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.orange.opacity(0.10))
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    .padding(.top, 1)
+                if !note.isEmpty {
+                    DayNoteBubble(note: note)
+                        .padding(.top, 1)
                 }
             }
 

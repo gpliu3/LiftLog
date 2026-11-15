@@ -13,6 +13,7 @@ struct ExerciseEditView: View {
     @State private var muscleGroup: String = ""
     @State private var notes: String = ""
     @State private var isActive = true
+    @State private var countsTowardKneeLoad = false
     @State private var showingDeleteAlert = false
 
     init(exercise: Exercise?, initialCategory: ExerciseCategory = .strength) {
@@ -87,6 +88,21 @@ struct ExerciseEditView: View {
                     }
                 }
 
+                Section {
+                    Toggle(isOn: $countsTowardKneeLoad) {
+                        Label {
+                            Text("exerciseEdit.kneeLoad".localized)
+                        } icon: {
+                            Image(systemName: "circle.fill")
+                                .imageScale(.small)
+                                .foregroundStyle(Color.kneeLoad)
+                        }
+                    }
+                    .tint(Color.kneeLoad)
+                } footer: {
+                    Text("exerciseEdit.kneeLoadHint".localized)
+                }
+
                 Section("exerciseEdit.visibility".localized) {
                     Toggle("exerciseEdit.active".localized, isOn: $isActive)
 
@@ -135,6 +151,7 @@ struct ExerciseEditView: View {
                     muscleGroup = exercise.muscleGroup
                     notes = exercise.notes
                     isActive = exercise.isActiveResolved
+                    countsTowardKneeLoad = exercise.isKneeLoad
                 }
             }
             .onChange(of: category) { _, newCategory in
@@ -161,6 +178,10 @@ struct ExerciseEditView: View {
             }
             exercise.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
             exercise.isActive = isActive
+            // Leave untouched exercises as "never set" rather than writing false everywhere.
+            if exercise.isKneeLoad != countsTowardKneeLoad {
+                exercise.countsTowardKneeLoad = countsTowardKneeLoad
+            }
         } else {
             // Create new
             let newExercise = Exercise(
@@ -171,6 +192,9 @@ struct ExerciseEditView: View {
                 category: category,
                 isActive: isActive
             )
+            if countsTowardKneeLoad {
+                newExercise.countsTowardKneeLoad = true
+            }
             modelContext.insert(newExercise)
         }
 

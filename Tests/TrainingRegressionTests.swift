@@ -9,6 +9,12 @@ private func expect(_ condition: @autoclosure () -> Bool, _ message: String) thr
     if !condition() { throw TestFailure(description: message) }
 }
 
+/// The schema the app ships now; the legacy fixture is written with the released two-model schema.
+private func currentContainer(at url: URL) throws -> ModelContainer {
+    let schema = Schema([Exercise.self, WorkoutSet.self, DailyLog.self])
+    return try ModelContainer(for: schema, configurations: [ModelConfiguration(schema: schema, url: url)])
+}
+
 @main
 struct TrainingRegressionTests {
     @MainActor static func main() throws {
@@ -19,11 +25,12 @@ struct TrainingRegressionTests {
         try verifyOrdering()
         try verifyDuration()
         try verifyHealth()
+        try verifyKneeCheckIn(at: legacyURL)
         print("PASS: all training regression checks")
     }
 
     @MainActor private static func verifyUpgrade(at url: URL) throws {
-        let container = try StoreFixture.container(at: url)
+        let container = try currentContainer(at: url)
         let context = container.mainContext
         let expected = try Data(contentsOf: url.appendingPathExtension("json"))
         let original = try StoreFixture.fingerprint(context)
@@ -41,14 +48,14 @@ struct TrainingRegressionTests {
         try expect(history.totalSets == totals.strengthSets && history.totalVolume == totals.strengthVolume, "Today/History totals diverged")
         try expect(history.cardioMinutes == totals.cardioMinutes, "Cardio duration changed")
         try context.save()
-        let reopened = try StoreFixture.container(at: url)
+        let reopened = try currentContainer(at: url)
         let fingerprint = try StoreFixture.fingerprint(reopened.mainContext)
         try expect(fingerprint == expected, "Save/reopen changed historical data")
         print("PASS: released store upgrade and reopen preserve all 611 records and exercise preferences")
     }
 
     @MainActor private static func verifyTrainingFlows(at url: URL) throws {
-        let container = try StoreFixture.container(at: url)
+        let container = try currentContainer(at: url)
         let context = container.mainContext
         let strength = Exercise(name: "Strength", muscleGroup: "Legs")
         let cardio = Exercise(name: "Cardio", exerciseType: "cardio", category: .cardio)
@@ -101,7 +108,7 @@ struct TrainingRegressionTests {
         records[4].durationSeconds = CardioDuration.adjusted(20, increasing: true) * 60
         try context.save()
         let expected = try StoreFixture.fingerprint(context)
-        let reopened = try StoreFixture.container(at: url)
+        let reopened = try currentContainer(at: url)
         let actual = try StoreFixture.fingerprint(reopened.mainContext)
         try expect(actual == expected, "Rehab or cardio edits did not persist")
 
@@ -229,9 +236,96 @@ struct TrainingRegressionTests {
             health: [at(10, 0): DailyHealth(steps: 9000, sleepMinutes: 420), at(8, 0): DailyHealth(steps: 5000, sleepMinutes: nil)]
         ).components(separatedBy: "\n")
         try expect(csv.count == 3 && csv[0].hasPrefix("date,steps,sleep_minutes"), "Daily CSV header or row count")
-        try expect(csv[1] == "2026-11-08,5000,,0,0.00,0,0,0", "Rest day row must carry steps and empty sleep")
-        try expect(csv[2] == "2026-11-10,9000,420,1,500.00,0,0,0", "Training day row must combine Health and totals")
+        try expect(csv[1] == "2026-11-08,5000,,,\"\",0,\"\",0,0.00,0,0,0", "Rest day row must carry steps and empty sleep")
+        try expect(csv[2] == "2026-11-10,9000,420,,\"\",0,\"\",1,500.00,0,0,0", "Training day row must combine Health and totals")
         print("PASS: sleep-night attribution, Health averages, rest-day timeline and daily summary CSV")
+    }
+
+    @MainActor private static func verifyKneeCheckIn(at legacyURL: URL) throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone.current
+        func day(_ value: Int) -> Date {
+            calendar.date(from: DateComponents(year: 2026, month: 11, day: value))!
+        }
+
+        // New records and fields live beside upgraded data without touching it.
+        let expected = try Data(contentsOf: legacyURL.appendingPathExtension("json"))
+        do {
+            let container = try currentContainer(at: legacyURL)
+            let context = container.mainContext
+            let exercises = try context.fetch(FetchDescriptor<Exercise>())
+            try expect(exercises.allSatisfy { !$0.isKneeLoad && $0.customOrder == nil }, "Upgraded exercises must start unflagged and unordered")
+            let checkIn = DailyCheckIn(kneeScore: 8, kneeTags: [.heavy, .stiff], note: "晚上有点沉\nok")
+            try DailyLog.save(checkIn, for: day(10).addingTimeInterval(3600 * 9), in: context, calendar: calendar)
+            try DailyLog.save(DailyCheckIn(kneeScore: 99, kneeTags: [], note: ""), for: day(11), in: context, calendar: calendar)
+            var edited = checkIn
+            edited.kneeScore = 7
+            try DailyLog.save(edited, for: day(10), in: context, calendar: calendar)
+        }
+        do {
+            let container = try currentContainer(at: legacyURL)
+            let context = container.mainContext
+            let logs = try context.fetch(FetchDescriptor<DailyLog>())
+            try expect(logs.count == 2, "A day must keep a single check-in record")
+            let byDay = DailyLog.checkInsByDay(logs, calendar: calendar)
+            try expect(byDay[day(10)] == DailyCheckIn(kneeScore: 7, kneeTags: [.stiff, .heavy], note: "晚上有点沉\nok"),
+                       "Check-in must reopen with score, canonical tag order and note")
+            try expect(byDay[day(11)]?.kneeScore == 10, "Scores must be clamped to 1–10")
+            try expect(DailyLog.record(for: day(12), in: context, calendar: calendar) == nil, "Days without a check-in have no record")
+            let fingerprint = try StoreFixture.fingerprint(context)
+            try expect(fingerprint == expected, "Check-ins changed existing exercises or sets")
+            for log in logs { context.delete(log) }
+            try context.save()
+        }
+
+        try expect(KneeTag.decode("heavy,unknown,stiff,heavy") == [.stiff, .heavy], "Unknown or repeated tags must be ignored")
+        try expect(DailyCheckIn(kneeScore: nil, kneeTags: [], note: " \n").isEmpty && !DailyCheckIn(kneeScore: 9).isEmpty, "Empty check-in detection")
+        try expect(DailyCheckIn.level(for: 9) == .good && DailyCheckIn.level(for: 7) == .fair && DailyCheckIn.level(for: 6) == .poor, "Score levels")
+
+        // Knee-load flag follows the exercise into History.
+        let squat = Exercise(name: "Squat")
+        squat.countsTowardKneeLoad = true
+        let press = Exercise(name: "Press")
+        let sets = [
+            WorkoutSet(exercise: squat, date: day(10).addingTimeInterval(3600), weightKg: 60, reps: 5, setNumber: 1),
+            WorkoutSet(exercise: press, date: day(10).addingTimeInterval(3700), weightKg: 40, reps: 5, setNumber: 1),
+            WorkoutSet(exercise: press, date: day(9).addingTimeInterval(3600), weightKg: 40, reps: 5, setNumber: 1)
+        ]
+        let snapshot = HistorySnapshot.build(from: sets.compactMap(HistorySetSnapshot.init), startDate: day(1))
+        let loadDays = Set(snapshot.days.filter(\.hasKneeLoad).map(\.date))
+        try expect(loadDays == [day(10)], "Only days with a flagged exercise are knee-load days")
+        try expect(snapshot.days.first { $0.date == day(10) }?.summaries(for: .strength).map(\.isKneeLoad).sorted { !$0 && $1 } == [false, true],
+                   "Flag must be per exercise, not per day")
+
+        // Rest days with only a check-in appear, today included; Health rows still wait a day.
+        let timeline = HistoryTimeline.build(
+            snapshot: snapshot, health: [day(12): DailyHealth(steps: 5000, sleepMinutes: nil)],
+            checkInDays: [day(12), day(8), day(10)], startDate: day(9), today: day(12).addingTimeInterval(3600)
+        )
+        try expect(timeline.weeks.flatMap(\.rows).map(\.date) == [day(12), day(10), day(9)],
+                   "Check-in rest days must respect the period and never duplicate logged days")
+
+        let csv = DailySummaryCSVExporter.makeCSV(
+            training: [day(10): TrainingTotals(sets: Array(sets.prefix(2)))], health: [:],
+            checkIns: [day(10): DailyCheckIn(kneeScore: 7, kneeTags: [.stiff, .heavy], note: "a, \"b\""), day(11): DailyCheckIn(kneeScore: 9)],
+            notes: [day(9): "older note"], kneeLoadDays: loadDays
+        ).components(separatedBy: "\n")
+        try expect(csv[0] == "date,steps,sleep_minutes,knee_score,knee_tags,knee_load,note,strength_sets,strength_volume_kg,cardio_sessions,cardio_minutes,rehabilitation_sets", "Daily CSV header")
+        try expect(csv[1] == "2026-11-09,,,,\"\",0,\"older note\",0,0.00,0,0,0", "Older day notes must still export")
+        try expect(csv[2] == "2026-11-10,,,7,\"stiff;heavy\",1,\"a, \"\"b\"\"\",2,500.00,0,0,0", "Check-in, load flag and escaped note")
+        try expect(csv[3] == "2026-11-11,,,9,\"\",0,\"\",0,0.00,0,0,0", "Rest day with a score only")
+
+        // Custom Log Set order.
+        let a = Exercise(name: "A"), b = Exercise(name: "B"), c = Exercise(name: "C")
+        c.customOrder = 0
+        a.customOrder = 1
+        let custom = [a, b, c].sorted { ExerciseOrdering.custom.precedes($0, $1, lastTrainedDates: [:]) }
+        try expect(custom.map(\.name) == ["C", "A", "B"], "Placed exercises first in saved order, unplaced after by name")
+        try expect(ExerciseOrdering.customGroupPrecedes("Legs", "Chest", savedOrder: ["Legs"]), "Saved group order wins")
+        try expect(ExerciseOrdering.customGroupPrecedes("Chest", "Back", savedOrder: ["Legs"]), "Unplaced groups keep the standard order")
+        try expect(ExerciseOrdering.moved(["a", "b", "c", "d"], from: IndexSet(integer: 0), to: 3) == ["b", "c", "a", "d"], "Move down")
+        try expect(ExerciseOrdering.moved(["a", "b", "c", "d"], from: IndexSet(integer: 3), to: 0) == ["d", "a", "b", "c"], "Move up")
+        print("PASS: knee check-in storage beside upgraded data, load flag, check-in rest days, daily CSV and custom order")
     }
 
     private static func verifyDuration() throws {

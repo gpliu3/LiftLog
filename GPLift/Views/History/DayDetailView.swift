@@ -55,6 +55,7 @@ struct DayDetailView: View {
                     } header: {
                         HStack {
                             TrainingCategoryIcon(category: exercise.resolvedCategory)
+                                .foregroundStyle(exercise.isKneeLoad ? Color.kneeLoad : Color.primary)
                             Text(exercise.displayName)
                             if !exercise.muscleGroup.isEmpty {
                                 Spacer()
@@ -179,8 +180,8 @@ struct DayDetailView: View {
     }
 
     private var dayNoteSection: some View {
-        Section("dayNote.title".localized) {
-            DayNoteEditor(day: date, sets: daySets)
+        Section {
+            KneeCheckInCard(day: date, legacyNote: WorkoutSet.dayNote(for: date, in: daySets), startsExpanded: true)
                 .id(Calendar.current.startOfDay(for: date))
         }
     }

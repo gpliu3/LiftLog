@@ -9,6 +9,48 @@ struct DailyHealth: Equatable, Sendable {
     var isEmpty: Bool { steps == nil && sleepMinutes == nil }
 }
 
+enum KneeTag: String, CaseIterable, Identifiable, Sendable {
+    case stiff
+    case swollen
+    case heavy
+    case sharpFront
+    case unstable
+    case flexionPain
+
+    var id: String { rawValue }
+    var localizedName: String { "knee.tag.\(rawValue)".localized }
+
+    static func decode(_ stored: String) -> [KneeTag] {
+        let selected = Set(stored.split(separator: ",").compactMap { KneeTag(rawValue: String($0)) })
+        return allCases.filter(selected.contains)
+    }
+
+    static func encode(_ tags: [KneeTag]) -> String {
+        let selected = Set(tags)
+        return allCases.filter(selected.contains).map(\.rawValue).joined(separator: ",")
+    }
+}
+
+/// A day's knee score, symptom tags and note, detached from storage.
+struct DailyCheckIn: Equatable, Sendable {
+    static let scoreRange = 1...10
+
+    var kneeScore: Int?
+    var kneeTags: [KneeTag] = []
+    var note: String = ""
+
+    var trimmedNote: String { note.trimmingCharacters(in: .whitespacesAndNewlines) }
+    var isEmpty: Bool { kneeScore == nil && kneeTags.isEmpty && trimmedNote.isEmpty }
+
+    enum Level: Sendable { case good, fair, poor }
+
+    /// 9–10 reads as fine, 7–8 as "not so good", anything lower as a bad day.
+    static func level(for score: Int) -> Level {
+        if score >= 9 { return .good }
+        return score >= 7 ? .fair : .poor
+    }
+}
+
 enum HealthFormat {
     static func steps(_ steps: Int) -> String {
         let formatter = NumberFormatter()
@@ -101,11 +143,12 @@ struct HistoryTimeline: Sendable {
     let weeks: [Week]
     var isEmpty: Bool { weeks.isEmpty }
 
-    /// Rest rows are added only for completed days (before `today`) inside the selected period,
-    /// and only when Health has something to show, so History is unchanged without Health data.
+    /// Rest rows are added only inside the selected period, for days that have Health data
+    /// (completed days only) or a knee check-in, so History is unchanged without either.
     static func build(
         snapshot: HistorySnapshot,
         health: [Date: DailyHealth],
+        checkInDays: Set<Date> = [],
         startDate: Date,
         today: Date
     ) -> HistoryTimeline {
@@ -116,8 +159,10 @@ struct HistoryTimeline: Sendable {
         let loggedDates = Set(snapshot.days.map(\.date))
         let firstDay = calendar.startOfDay(for: startDate)
         let endDay = calendar.startOfDay(for: today)
-        let restRows: [Row] = health.compactMap { date, value in
-            guard !value.isEmpty, date >= firstDay, date < endDay, !loggedDates.contains(date) else { return nil }
+        let healthDays = health.filter { !$0.value.isEmpty && $0.key < endDay }.keys
+        let restDays = Set(healthDays).union(checkInDays.filter { $0 <= endDay })
+        let restRows: [Row] = restDays.compactMap { date in
+            guard date >= firstDay, !loggedDates.contains(date) else { return nil }
             return .rest(date)
         }
 
@@ -151,6 +196,10 @@ enum DailySummaryCSVExporter {
         "date",
         "steps",
         "sleep_minutes",
+        "knee_score",
+        "knee_tags",
+        "knee_load",
+        "note",
         "strength_sets",
         "strength_volume_kg",
         "cardio_sessions",
@@ -158,20 +207,38 @@ enum DailySummaryCSVExporter {
         "rehabilitation_sets"
     ].joined(separator: ",")
 
-    static func makeCSV(training: [Date: TrainingTotals], health: [Date: DailyHealth]) -> String {
+    /// `kneeLoadDays` are days with at least one exercise flagged as knee load.
+    /// `notes` carries the resolved day note (check-in note, or the older per-set day note).
+    static func makeCSV(
+        training: [Date: TrainingTotals],
+        health: [Date: DailyHealth],
+        checkIns: [Date: DailyCheckIn] = [:],
+        notes: [Date: String] = [:],
+        kneeLoadDays: Set<Date> = []
+    ) -> String {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
         dateFormatter.locale = Locale(identifier: "en_US_POSIX")
 
-        let days = Set(training.keys).union(health.filter { !$0.value.isEmpty }.keys).sorted()
+        let days = Set(training.keys)
+            .union(health.filter { !$0.value.isEmpty }.keys)
+            .union(checkIns.filter { !$0.value.isEmpty }.keys)
+            .union(notes.filter { !$0.value.isEmpty }.keys)
+            .sorted()
         var lines = [header]
         for day in days {
             let totals = training[day] ?? TrainingTotals()
             let metrics = health[day]
+            let checkIn = checkIns[day]
+            let note = notes[day] ?? checkIn?.trimmedNote ?? ""
             let row: [String] = [
                 dateFormatter.string(from: day),
                 metrics?.steps.map(String.init) ?? "",
                 metrics?.sleepMinutes.map(String.init) ?? "",
+                checkIn?.kneeScore.map(String.init) ?? "",
+                CSVDocumentWriter.csvEscape((checkIn?.kneeTags ?? []).map(\.rawValue).joined(separator: ";")),
+                kneeLoadDays.contains(day) ? "1" : "0",
+                CSVDocumentWriter.csvEscape(note),
                 "\(totals.strengthSets)",
                 String(format: "%.2f", totals.strengthVolume),
                 "\(totals.cardioSessions)",

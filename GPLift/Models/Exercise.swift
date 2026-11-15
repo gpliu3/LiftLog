@@ -46,6 +46,9 @@ final class Exercise {
     var category: String?
     var isActive: Bool?
     var createdAt: Date
+    // Optional so existing exercises migrate untouched: nil means "not flagged" / "no custom position".
+    var countsTowardKneeLoad: Bool? = nil
+    var customOrder: Int? = nil
 
     @Relationship(deleteRule: .cascade, inverse: \WorkoutSet.exercise)
     var workoutSets: [WorkoutSet] = []
@@ -82,6 +85,7 @@ final class Exercise {
     var isRepsOnly: Bool { usesSets && exerciseType == "repsOnly" }
     var isTimeOnly: Bool { usesSets && exerciseType == "timeOnly" }
     var isActiveResolved: Bool { isActive ?? true }
+    var isKneeLoad: Bool { countsTowardKneeLoad ?? false }
 
     var localizedExerciseType: String {
         Exercise.localizedExerciseTypeName(for: exerciseType)

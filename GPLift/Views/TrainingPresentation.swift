@@ -11,13 +11,22 @@ struct TrainingCategoryIcon: View {
 
 struct TrainingCategorySummary: View {
     let category: ExerciseCategory
-    let text: String
+    let content: Text
+
+    init(category: ExerciseCategory, text: String) {
+        self.init(category: category, content: Text(text))
+    }
+
+    init(category: ExerciseCategory, content: Text) {
+        self.category = category
+        self.content = content
+    }
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 5) {
             TrainingCategoryIcon(category: category)
                 .frame(width: 16)
-            Text(text)
+            content
                 .fixedSize(horizontal: false, vertical: true)
         }
         .font(AppTextStyle.caption)

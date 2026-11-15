@@ -70,10 +70,6 @@ private struct TodayContentView: View {
         groupedSets.map(\.0.id)
     }
 
-    private var sortedTodaySets: [WorkoutSet] {
-        todaySets.sorted(by: WorkoutSet.trainingOrder(lhs:rhs:))
-    }
-
     private var todaySetSignature: String {
         todaySets
             .sorted { $0.id.uuidString < $1.id.uuidString }
@@ -105,11 +101,7 @@ private struct TodayContentView: View {
         NavigationStack {
             ScrollViewReader { proxy in
                 ZStack(alignment: .bottomTrailing) {
-                    if todaySets.isEmpty {
-                        emptyState
-                    } else {
-                        workoutList(proxy: proxy)
-                    }
+                    workoutList(proxy: proxy)
 
                     if inlineEditingSetID == nil {
                         addSetButton
@@ -151,10 +143,18 @@ private struct TodayContentView: View {
         let groups = groupedSets
 
         return List {
-            statsCard
+            kneeCheckInSection
 
-            if totals.cardioSessions > 0 || totals.rehabilitationSets > 0 {
-                additionalTrainingSummary
+            if groups.isEmpty {
+                emptyState
+                    .frame(maxWidth: .infinity, minHeight: 320)
+                    .listRowSeparator(.hidden)
+            } else {
+                statsCard
+
+                if totals.cardioSessions > 0 || totals.rehabilitationSets > 0 {
+                    additionalTrainingSummary
+                }
             }
 
             ForEach(groups, id: \.0.id) { exercise, sets in
@@ -244,8 +244,6 @@ private struct TodayContentView: View {
                     )
                 }
             }
-
-            dayNoteCard
         }
         .listStyle(.plain)
         .environment(\.defaultMinListRowHeight, 24)
@@ -472,16 +470,11 @@ private struct TodayContentView: View {
         }
     }
 
-    private var dayNoteCard: some View {
+    /// Knee score, tags and the day's note; shown on rest days too, before anything is logged.
+    private var kneeCheckInSection: some View {
         Section {
-            DayNoteEditor(day: todayAnchor, sets: sortedTodaySets)
+            KneeCheckInCard(day: todayAnchor, legacyNote: WorkoutSet.dayNote(for: todayAnchor, in: todaySets))
                 .id(todayAnchor)
-        } header: {
-            Text("dayNote.title".localized)
-                .font(AppTextStyle.sectionTitle)
-                .fontWeight(.bold)
-                .foregroundStyle(.orange)
-                .textCase(nil)
         }
     }
 
@@ -542,76 +535,6 @@ enum InlineEditTarget {
     case weightLb
     case reps
     case duration
-}
-
-struct DayNoteEditor: View {
-    @Environment(\.modelContext) private var modelContext
-    @Environment(\.scenePhase) private var scenePhase
-    let day: Date
-    let sets: [WorkoutSet]
-
-    @State private var noteText = ""
-    @State private var lastPersistedNote = ""
-    @FocusState private var isFocused: Bool
-
-    var body: some View {
-        TextEditor(text: $noteText)
-            .font(AppTextStyle.body)
-            .frame(minHeight: 88)
-            .focused($isFocused)
-            .onAppear {
-                syncFromData()
-            }
-            .onChange(of: sets.count) { _, _ in
-                if !isFocused {
-                    syncFromData()
-                }
-            }
-            .onChange(of: isFocused) { _, focused in
-                if !focused {
-                    flushSave()
-                }
-            }
-            .onChange(of: scenePhase) { _, newPhase in
-                if newPhase != .active {
-                    flushSave()
-                }
-            }
-            .onDisappear {
-                flushSave()
-            }
-            .overlay(alignment: .topLeading) {
-                if noteText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Text("dayNote.placeholder".localized)
-                        .font(AppTextStyle.body)
-                        .foregroundStyle(.secondary)
-                        .padding(.top, 8)
-                        .padding(.leading, 4)
-                        .allowsHitTesting(false)
-                }
-            }
-    }
-
-    private func syncFromData() {
-        let note = WorkoutSet.dayNote(for: day, in: sets)
-        noteText = note
-        lastPersistedNote = note
-    }
-
-    private func flushSave() {
-        persistIfNeeded(noteText)
-    }
-
-    private func persistIfNeeded(_ note: String) {
-        guard note != lastPersistedNote else { return }
-        guard WorkoutSet.setDayNote(note, for: day, in: sets) else { return }
-        do {
-            try modelContext.save()
-            lastPersistedNote = note
-        } catch {
-            assertionFailure("Failed to save day note: \(error)")
-        }
-    }
 }
 
 struct SetRowView: View {
@@ -1494,7 +1417,7 @@ struct ExerciseHeaderView: View {
                 HStack(spacing: 4) {
                     TrainingCategoryIcon(category: exercise.resolvedCategory)
                         .font(AppTextStyle.captionStrong)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(exercise.isKneeLoad ? Color.kneeLoad : Color.secondary)
                     Text(exercise.displayName)
                         .font(AppTextStyle.sectionTitle)
                         .foregroundStyle(Color.primary)
