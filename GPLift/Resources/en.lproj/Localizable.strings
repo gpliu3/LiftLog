@@ -362,8 +362,8 @@
 "knee.scoreBadge" = "Knee %d";
 "knee.scoreAccessibility" = "Knee score %d of 10";
 "knee.loadBadge" = "Knee load";
-"knee.expand" = "Show tags and note";
-"knee.collapse" = "Hide tags and note";
+"knee.expand" = "Show score, tags and note";
+"knee.collapse" = "Hide score, tags and note";
 "knee.tag.stiff" = "Stiff";
 "knee.tag.swollen" = "Swollen";
 "knee.tag.heavy" = "Heavy";

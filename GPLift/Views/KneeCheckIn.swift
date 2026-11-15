@@ -100,7 +100,7 @@ struct DayNoteBubble: View {
 }
 
 /// Daily knee check-in: a 1–10 score, symptom tags and the day's note.
-/// Collapsed it is just the score row; expanding reveals tags and the note.
+/// Collapsed it is one header line (plus a summary); expanding reveals the score row, tags and note.
 struct KneeCheckInCard: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
@@ -143,9 +143,9 @@ struct KneeCheckInCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             header
-            scoreRow
 
             if isExpanded {
+                scoreRow
                 tagGrid
                 noteEditor
             } else if !collapsedDetail.isEmpty {
@@ -176,33 +176,36 @@ struct KneeCheckInCard: View {
         .onDisappear { persist() }
     }
 
+    /// The whole header toggles the card, so the score, tags and note open together.
     private var header: some View {
-        HStack(spacing: 6) {
-            Text("knee.title".localized)
-                .font(AppTextStyle.subheadlineStrong)
-            if let score = draft.kneeScore {
-                KneeScoreBadge(score: score, showsLabel: false)
-            } else {
-                Text("knee.scoreHint".localized)
-                    .font(AppTextStyle.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-            }
-            Spacer(minLength: 4)
-            Button {
-                withAnimation(.snappy(duration: 0.2)) { isExpanded.toggle() }
-                if !isExpanded { isNoteFocused = false }
-            } label: {
+        Button {
+            withAnimation(.snappy(duration: 0.2)) { isExpanded.toggle() }
+            if !isExpanded { isNoteFocused = false }
+        } label: {
+            HStack(spacing: 6) {
+                Text("knee.title".localized)
+                    .font(AppTextStyle.subheadlineStrong)
+                    .foregroundStyle(.primary)
+                if let score = draft.kneeScore {
+                    KneeScoreBadge(score: score, showsLabel: false)
+                } else {
+                    Text("knee.scoreHint".localized)
+                        .font(AppTextStyle.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+                Spacer(minLength: 4)
                 Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                     .font(AppTextStyle.captionStrong)
+                    .foregroundStyle(.secondary)
                     .frame(width: 30, height: 24)
-                    .contentShape(Rectangle())
             }
-            .buttonStyle(.borderless)
-            .tint(.secondary)
-            .accessibilityLabel((isExpanded ? "knee.collapse" : "knee.expand").localized)
+            .contentShape(Rectangle())
         }
+        // Plain keeps the title black instead of tinting it like a link.
+        .buttonStyle(.plain)
+        .accessibilityHint((isExpanded ? "knee.collapse" : "knee.expand").localized)
     }
 
     private var scoreRow: some View {

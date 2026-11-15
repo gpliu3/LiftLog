@@ -362,8 +362,8 @@
 "knee.scoreBadge" = "膝 %d";
 "knee.scoreAccessibility" = "膝盖评分 %d 分（满分 10）";
 "knee.loadBadge" = "膝负荷";
-"knee.expand" = "显示标签和备注";
-"knee.collapse" = "收起标签和备注";
+"knee.expand" = "显示评分、标签和备注";
+"knee.collapse" = "收起评分、标签和备注";
 "knee.tag.stiff" = "僵硬";
 "knee.tag.swollen" = "胀";
 "knee.tag.heavy" = "沉重";
