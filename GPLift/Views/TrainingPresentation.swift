@@ -92,3 +92,46 @@ enum WeightRepsText {
         return Text("\(kilograms) \(pounds) × \(set.reps) \("common.reps".localized)")
     }
 }
+
+/// Steps and time asleep for one day, e.g. "8,432 steps · 7h 12m", read from Apple Health.
+struct HealthMetricsLine: View {
+    let health: DailyHealth
+    var showsStepsUnit = true
+    var font: Font = AppTextStyle.caption
+
+    var body: some View {
+        HStack(spacing: 10) {
+            if let steps = health.steps {
+                metric(
+                    icon: "figure.walk",
+                    tint: .green,
+                    text: showsStepsUnit ? "health.steps".localized(with: HealthFormat.steps(steps)) : HealthFormat.steps(steps),
+                    label: "health.steps".localized(with: HealthFormat.steps(steps))
+                )
+            }
+            if let minutes = health.sleepMinutes {
+                metric(
+                    icon: "bed.double.fill",
+                    tint: .indigo,
+                    text: HealthFormat.sleep(minutes: minutes),
+                    label: "health.sleepLabel".localized(with: HealthFormat.sleep(minutes: minutes))
+                )
+            }
+        }
+        .font(font)
+        .foregroundStyle(.secondary)
+    }
+
+    private func metric(icon: String, tint: Color, text: String, label: String) -> some View {
+        HStack(spacing: 3) {
+            Image(systemName: icon)
+                .foregroundStyle(tint)
+                .imageScale(.small)
+            Text(text)
+                .monospacedDigit()
+                .lineLimit(1)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(label)
+    }
+}

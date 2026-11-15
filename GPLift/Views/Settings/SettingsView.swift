@@ -6,6 +6,7 @@ struct SettingsView: View {
     @Query(sort: \Exercise.name) private var exercises: [Exercise]
     @State private var languageManager = LanguageManager.shared
     @State private var settingsManager = SettingsManager.shared
+    @State private var healthStore = HealthDataStore.shared
     @State private var showingRestoreDefaultsAlert = false
     @State private var restoredExerciseCount = 0
     @State private var showRestoreResult = false
@@ -18,6 +19,7 @@ struct SettingsView: View {
                 }
                 languageSection
                 workoutSection
+                healthSection
                 exerciseLibrarySection
                 aboutSection
             }
@@ -96,6 +98,34 @@ struct SettingsView: View {
             Text("settings.workoutSection".localized)
         } footer: {
             Text("settings.defaultSetFooter".localized)
+        }
+    }
+
+    private var healthSection: some View {
+        Section {
+            Toggle(isOn: Binding(
+                get: { healthStore.isEnabled },
+                set: { enabled in
+                    if enabled {
+                        Task { await healthStore.enable() }
+                    } else {
+                        healthStore.disable()
+                    }
+                }
+            )) {
+                Label {
+                    Text("settings.health.toggle".localized)
+                } icon: {
+                    Image(systemName: "heart.text.square.fill")
+                        .foregroundStyle(.pink)
+                }
+            }
+            .tint(.orange)
+            .disabled(!healthStore.isAvailable)
+        } header: {
+            Text("settings.health".localized)
+        } footer: {
+            Text((healthStore.isAvailable ? "settings.health.footer" : "settings.health.unavailable").localized)
         }
     }
 

@@ -341,3 +341,19 @@
 "addSet.sort.standard" = "Default order";
 "addSet.standardOrderingHint" = "Fixed muscle group order; exercises sorted by name.";
 "addSet.noActiveExercises" = "No active exercises in this category. Add or activate one in Exercises.";
+
+"health.steps" = "%@ steps";
+"health.sleepDuration" = "%dh %02dm";
+"health.sleepLabel" = "%@ asleep";
+"health.rest" = "Rest";
+"health.averageSummary.both" = "Avg %@ steps · %@ sleep";
+"health.averageSummary.steps" = "Avg %@ steps";
+"health.averageSummary.sleep" = "Avg %@ sleep";
+"health.hint.title" = "Show daily steps and sleep from Apple Health";
+"health.hint.connect" = "Connect";
+"settings.health" = "Apple Health";
+"settings.health.toggle" = "Steps and sleep in History";
+"settings.health.footer" = "GP Lift only reads your daily steps and time asleep. Nothing is written to Health and the data stays on your device. Steps appear once the day is over. If nothing shows, allow access in the Health app under Sharing > Apps.";
+"settings.health.unavailable" = "Health data is not available on this device.";
+"history.export.shareDaily" = "Share Daily Summary CSV";
+"history.export.dailyFooter" = "The daily summary has one row per day with steps, sleep and training totals, including rest days.";

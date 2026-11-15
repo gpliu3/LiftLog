@@ -36,6 +36,7 @@ struct DayDetailView: View {
         NavigationStack {
             List {
                 summarySection
+                healthSection
                 dayNoteSection
 
                 ForEach(groupedByExercise, id: \.0.id) { exercise, sets in
@@ -78,6 +79,19 @@ struct DayDetailView: View {
                         dismiss()
                     }
                 }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var healthSection: some View {
+        let store = HealthDataStore.shared
+        if store.isEnabled,
+           let health = store.metrics[Calendar.current.startOfDay(for: date)],
+           !health.isEmpty {
+            Section {
+                HealthMetricsLine(health: health, font: AppTextStyle.subheadline)
+                    .frame(maxWidth: .infinity, alignment: .center)
             }
         }
     }

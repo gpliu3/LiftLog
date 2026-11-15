@@ -18,6 +18,7 @@ struct TrainingRegressionTests {
         try verifyHistoryDayCounts()
         try verifyOrdering()
         try verifyDuration()
+        try verifyHealth()
         print("PASS: all training regression checks")
     }
 
@@ -175,6 +176,62 @@ struct TrainingRegressionTests {
         try expect(order(withCardio) == [rowB.id, benchA.id, swim.id], "Categories must stay grouped before start time")
         try expect(order(started.reversed()) == order(started), "Day order must not depend on input order")
         print("PASS: category, fixed muscle group/name, overdue, never-trained and stable day-section ordering")
+    }
+
+    private static func verifyHealth() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone.current
+        func at(_ day: Int, _ hour: Int, _ minute: Int = 0) -> Date {
+            calendar.date(from: DateComponents(year: 2026, month: 11, day: day, hour: hour, minute: minute))!
+        }
+        func span(_ start: Date, _ end: Date) -> DateInterval { DateInterval(start: start, end: end) }
+
+        // A night counts for the day it ends on; overlapping sources are merged, naps are added.
+        let sleep = SleepAggregator.minutesByDay(asleep: [
+            span(at(9, 22, 30), at(10, 2)), span(at(10, 2), at(10, 6, 30)),
+            span(at(9, 23), at(10, 1)),
+            span(at(10, 14), at(10, 14, 30)),
+            span(at(11, 1), at(11, 8))
+        ], calendar: calendar)
+        try expect(sleep[at(10, 0)] == 510, "Night ending on the 10th plus nap must total 8h30m without double counting")
+        try expect(sleep[at(11, 0)] == 420, "After-midnight bedtime must count for the same morning")
+        try expect(sleep[at(9, 0)] == nil, "Evening bedtime must not count for the day it starts on")
+
+        let averages = HealthAverages(days: [
+            DailyHealth(steps: 8000, sleepMinutes: nil), DailyHealth(steps: 10001, sleepMinutes: 400), DailyHealth()
+        ])
+        try expect(averages.steps == 9001 && averages.sleepMinutes == 400, "Averages must skip days without a value")
+        try expect(HealthAverages(days: []).isEmpty, "No Health data must produce no averages")
+
+        // Timeline: rest days appear only with Health data, before today, inside the period.
+        let squat = Exercise(name: "Squat")
+        let trained = WorkoutSet(exercise: squat, date: at(10, 9), weightKg: 100, reps: 5, setNumber: 1)
+        let snapshot = HistorySnapshot.build(from: [trained].compactMap(HistorySetSnapshot.init), startDate: at(1, 0))
+        let health: [Date: DailyHealth] = [
+            at(10, 0): DailyHealth(steps: 9000, sleepMinutes: 420),
+            at(8, 0): DailyHealth(steps: 5000, sleepMinutes: nil),
+            at(3, 0): DailyHealth(steps: 4000, sleepMinutes: nil),
+            at(12, 0): DailyHealth(steps: nil, sleepMinutes: 400),
+            at(11, 0): DailyHealth(),
+            calendar.date(from: DateComponents(year: 2026, month: 10, day: 20))!: DailyHealth(steps: 1, sleepMinutes: nil)
+        ]
+        let timeline = HistoryTimeline.build(snapshot: snapshot, health: health, startDate: at(1, 0), today: at(12, 10))
+        let rows = timeline.weeks.flatMap(\.rows)
+        try expect(rows.map(\.date) == [at(10, 0), at(8, 0), at(3, 0)], "Timeline must merge logged and rest days, newest first")
+        try expect(timeline.weeks.count == 2 && timeline.weeks[0].hasLoggedDays && !timeline.weeks[1].hasLoggedDays,
+                   "Rest-only weeks must appear without training totals")
+        try expect(timeline.weeks[0].summary.totalSets == 1, "Rest days must not change training totals")
+        let plain = HistoryTimeline.build(snapshot: snapshot, health: [:], startDate: at(1, 0), today: at(12, 10))
+        try expect(plain.weeks.flatMap(\.rows).map(\.date) == [at(10, 0)], "Without Health data History must be unchanged")
+
+        let csv = DailySummaryCSVExporter.makeCSV(
+            training: [at(10, 0): TrainingTotals(sets: [trained])],
+            health: [at(10, 0): DailyHealth(steps: 9000, sleepMinutes: 420), at(8, 0): DailyHealth(steps: 5000, sleepMinutes: nil)]
+        ).components(separatedBy: "\n")
+        try expect(csv.count == 3 && csv[0].hasPrefix("date,steps,sleep_minutes"), "Daily CSV header or row count")
+        try expect(csv[1] == "2026-11-08,5000,,0,0.00,0,0,0", "Rest day row must carry steps and empty sleep")
+        try expect(csv[2] == "2026-11-10,9000,420,1,500.00,0,0,0", "Training day row must combine Health and totals")
+        print("PASS: sleep-night attribution, Health averages, rest-day timeline and daily summary CSV")
     }
 
     private static func verifyDuration() throws {

@@ -341,3 +341,19 @@
 "addSet.sort.standard" = "默认排序";
 "addSet.standardOrderingHint" = "按肌群固定顺序排列，组内按动作名称排序。";
 "addSet.noActiveExercises" = "此类别暂无启用的动作，请在动作库中创建或启用动作。";
+
+"health.steps" = "%@ 步";
+"health.sleepDuration" = "%d小时%02d分";
+"health.sleepLabel" = "睡眠 %@";
+"health.rest" = "休息";
+"health.averageSummary.both" = "日均 %@ 步 · 睡眠 %@";
+"health.averageSummary.steps" = "日均 %@ 步";
+"health.averageSummary.sleep" = "日均睡眠 %@";
+"health.hint.title" = "显示来自 Apple 健康的每日步数和睡眠";
+"health.hint.connect" = "连接";
+"settings.health" = "Apple 健康";
+"settings.health.toggle" = "在历史中显示步数和睡眠";
+"settings.health.footer" = "GP Lift 只读取每日步数和睡眠时长，不会向“健康”写入任何数据，数据仅保留在你的设备上。步数在当天结束后显示。如果没有数据，请在“健康”App 的“共享 > App”中允许访问。";
+"settings.health.unavailable" = "此设备不支持健康数据。";
+"history.export.shareDaily" = "分享每日汇总 CSV";
+"history.export.dailyFooter" = "每日汇总每天一行，包含步数、睡眠和训练总量，也包括休息日。";

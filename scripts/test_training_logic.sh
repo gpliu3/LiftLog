@@ -30,6 +30,6 @@ ${runner[@]+"${runner[@]}"} "$test_dir/write-fixture" "$test_dir/legacy.store"
   GPLift/Models/Exercise.swift GPLift/Models/WorkoutSet.swift \
   GPLift/Utilities/LanguageManager.swift GPLift/Utilities/TrainingTotals.swift \
   GPLift/Utilities/ExerciseOrdering.swift GPLift/Utilities/HistorySnapshot.swift \
-  GPLift/Utilities/CSVExport.swift Tests/StoreFixture.swift Tests/TrainingRegressionTests.swift \
+  GPLift/Utilities/CSVExport.swift GPLift/Utilities/DailyHealth.swift Tests/StoreFixture.swift Tests/TrainingRegressionTests.swift \
   -o "$test_dir/test-training"
 ${runner[@]+"${runner[@]}"} "$test_dir/test-training" "$test_dir/legacy.store"
